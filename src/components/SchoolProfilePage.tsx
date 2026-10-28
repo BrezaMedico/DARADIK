@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
   Share2,
@@ -18,14 +18,17 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Cpu,
+  Sparkles,
   Upload,
   EyeOff,
-  ArrowDown,
-  Check,
   RefreshCw,
   Scale,
-  RotateCcw,
+  Wallet,
+  ReceiptText,
+  ScanLine,
+  X,
+  Building2,
+  Camera,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -35,6 +38,7 @@ import {
   formatRupiah,
 } from '../data/schoolsData';
 import { InteractiveDonutChart } from './DonutChart';
+import { WaScannerWorkspace } from './WaScannerWorkspace';
 
 export type ProfileTab = 'summary' | 'items-ai' | 'wa-scanner';
 
@@ -59,6 +63,44 @@ const QUICK_CHIPS = [
   'kamar mandi',
 ];
 
+/**
+ * Smooth animation progress hook (0 -> 1) for count-up numbers and progress bars.
+ * Respects `prefers-reduced-motion: reduce` and always finishes at exact 1.
+ */
+function useAnimatedProgress(triggerKey: string, duration = 550): number {
+  const [progress, setProgress] = useState<number>(1);
+
+  useEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      setProgress(1);
+      return;
+    }
+
+    let frameId: number;
+    const start = performance.now();
+    setProgress(0);
+
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setProgress(eased);
+      if (t < 1) {
+        frameId = requestAnimationFrame(step);
+      }
+    };
+
+    frameId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frameId);
+  }, [triggerKey, duration]);
+
+  return progress;
+}
+
 export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
   school,
   activeTab,
@@ -77,35 +119,33 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     school.items[0]?.id || 'item-kipas-01'
   );
 
-  // Tab 3 State: WA Screenshot Scanner
-  const [selectedScenarioKey, setSelectedScenarioKey] = useState<
-    'scenario-a' | 'scenario-b'
-  >('scenario-a');
-  const [customUploadedFileName, setCustomUploadedFileName] = useState<
-    string | null
-  >(null);
-  const [isScanningWa, setIsScanningWa] = useState<boolean>(false);
-  const [showUploadPicker, setShowUploadPicker] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   // PDF Download simulation state
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
-  // Helper to render item icon without OS emojis
+  // Animation progress for numbers & bars on school/tab change
+  const animProgress = useAnimatedProgress(`${school.id}-${activeTab}`, 560);
+
+  const maxItemAmount = useMemo(
+    () => Math.max(...school.items.map((i) => i.amount), 1),
+    [school.items]
+  );
+
+  // Render clean item icon with palette primary Navy accent
   const renderItemIcon = (type: BospRealizationItem['iconType']) => {
+    const iconProps = { className: 'w-5 h-5 text-[#2E6496] shrink-0' };
     switch (type) {
       case 'fan':
-        return <Wind className="w-5 h-5 text-[#2E6496] shrink-0" />;
+        return <Wind {...iconProps} />;
       case 'paint':
-        return <Paintbrush className="w-5 h-5 text-[#2E6496] shrink-0" />;
+        return <Paintbrush {...iconProps} />;
       case 'book':
-        return <BookMarked className="w-5 h-5 text-[#2E6496] shrink-0" />;
+        return <BookMarked {...iconProps} />;
       case 'projector':
-        return <Monitor className="w-5 h-5 text-[#2E6496] shrink-0" />;
+        return <Monitor {...iconProps} />;
       case 'sanitation':
-        return <Droplets className="w-5 h-5 text-[#2E6496] shrink-0" />;
+        return <Droplets {...iconProps} />;
       case 'desk':
-        return <Armchair className="w-5 h-5 text-[#2E6496] shrink-0" />;
+        return <Armchair {...iconProps} />;
     }
   };
 
@@ -135,7 +175,6 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     };
   }, [itemSearchQuery, school.items]);
 
-  // Handle keyword chip or search typing
   const handleSelectQuickChip = (chip: string) => {
     setItemSearchQuery(chip);
     const q = chip.toLowerCase();
@@ -149,7 +188,6 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     }
   };
 
-  // Share button handler
   const handleShareSchool = async () => {
     const shareUrl = `${window.location.origin}/?npsn=${school.npsn}`;
     const shareText = `Ringkasan Transparansi BOSP ${school.name} (NPSN: ${school.npsn}) — Total Dana Cair: ${formatRupiah(
@@ -168,11 +206,9 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     );
   };
 
-  // Download PDF simulation handler
   const handleDownloadPdf = () => {
     setIsDownloadingPdf(true);
     setTimeout(() => {
-      // Create a clean text/summary report blob so the user actually gets a real file download too
       const reportContent = [
         '====================================================================',
         'LAPORAN RINGKAS TRANSPARANSI DANA BOSP TAHUN ANGGARAN 2026 (DARADIK)',
@@ -215,52 +251,22 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     }, 500);
   };
 
-  // Switch WA Scenario with brief AI scanning feedback
-  const handleSelectScenario = (key: 'scenario-a' | 'scenario-b') => {
-    setIsScanningWa(true);
-    setCustomUploadedFileName(null);
-    setShowUploadPicker(false);
-    setTimeout(() => {
-      setSelectedScenarioKey(key);
-      setIsScanningWa(false);
-    }, 320);
-  };
-
-  // Handle custom image upload from device
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsScanningWa(true);
-    setShowUploadPicker(false);
-    setTimeout(() => {
-      setCustomUploadedFileName(file.name);
-      // If filename hints at outing/kas/kaos, show scenario-b, else scenario-a
-      if (
-        file.name.toLowerCase().includes('kas') ||
-        file.name.toLowerCase().includes('pentas') ||
-        file.name.toLowerCase().includes('outing')
-      ) {
-        setSelectedScenarioKey('scenario-b');
-      } else {
-        setSelectedScenarioKey('scenario-a');
-      }
-      setIsScanningWa(false);
-    }, 400);
-  };
-
-  const activeScenario = WA_SCENARIOS[selectedScenarioKey];
-  const displayedFileName = customUploadedFileName || activeScenario.fileName;
+  const stage1SharePct = Math.round(
+    (school.tahap1.amount / Math.max(school.totalBosp, 1)) * 100
+  );
+  const stage2SharePct = Math.round(
+    (school.tahap2.amount / Math.max(school.totalBosp, 1)) * 100
+  );
 
   return (
-    <div className="w-full py-8 px-4 sm:px-6 animate-view-enter">
-      {/* 1 CENTRAL COLUMN CONTAINER (max-w-[760px] per instructions) */}
-      <div className="max-w-[760px] mx-auto">
-        {/* TOP NAVIGATION BAR */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E4E0D8]">
+    <div className="w-full py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        {/* TOP UTILITY BAR */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 animate-school-header">
           <button
             type="button"
             onClick={onBackToLanding}
-            className="px-3.5 py-2 rounded-md bg-[#FFFFFF] border border-[#E4E0D8] text-xs sm:text-sm font-semibold text-[#1E293B] hover:bg-[#F4F1EA] active:translate-y-[1px] transition-all duration-150 flex items-center gap-2"
+            className="school-btn-secondary px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
             <span>Kembali ke Pencarian</span>
@@ -270,7 +276,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             <button
               type="button"
               onClick={handleShareSchool}
-              className="px-3.5 py-2 rounded-md bg-[#FFFFFF] border border-[#E4E0D8] text-xs sm:text-sm font-semibold text-[#1E293B] hover:bg-[#F4F1EA] active:translate-y-[1px] transition-all duration-150 flex items-center gap-1.5"
+              className="school-btn-secondary px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer"
             >
               <Share2 className="w-4 h-4 text-[#2E6496]" />
               <span>Bagikan</span>
@@ -280,484 +286,624 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               type="button"
               onClick={handleDownloadPdf}
               disabled={isDownloadingPdf}
-              className="px-3.5 py-2 rounded-md bg-[#FFFFFF] border border-[#E4E0D8] text-xs sm:text-sm font-semibold text-[#1E293B] hover:bg-[#F4F1EA] active:translate-y-[1px] transition-all duration-150 flex items-center gap-1.5 disabled:opacity-60"
+              className="school-btn-secondary px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
             >
               <Download className="w-4 h-4 text-[#2E6496]" />
-              <span>{isDownloadingPdf ? 'Menyiapkan...' : 'Unduh PDF'}</span>
+              <span>{isDownloadingPdf ? 'Menyiapkan...' : 'Unduh Ringkasan'}</span>
             </button>
           </div>
         </div>
 
-        {/* SCHOOL IDENTITY HEADER */}
-        <div className="mt-5 bg-[#FFFFFF] border border-[#C8DFDC] rounded-lg p-5 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#EBF7EE] border border-[#2E7D32]/30 text-xs font-mono font-semibold text-[#2E7D32]">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {school.status}
-            </span>
-            <span className="text-xs font-mono text-[#475569] tabular-nums">
-              • Tahun Anggaran 2026
-            </span>
+        {/* SCHOOL PROFILE CARD — PHOTO FRAME ON LEFT, STRUCTURED SPECS TABLE ON RIGHT */}
+        <section
+          className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-7 shadow-xs animate-school-header"
+          style={{ animationDelay: '40ms' }}
+        >
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-6">
+            {/* FOTO FRAME SEKOLAH DI KIRI */}
+            <div className="w-full sm:w-48 md:w-56 h-48 sm:h-52 rounded-xl border border-[#C9DFDC] bg-gradient-to-b from-[#F2EFE8] via-[#EAF2F1] to-[#DDECEB] flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden shadow-xs select-none">
+              <div className="w-14 h-14 rounded-2xl bg-[#FFFFFF] border border-[#C9DFDC] flex items-center justify-center text-[#2E6496] shadow-xs mb-2">
+                <Building2 className="w-7 h-7" />
+              </div>
+              <span className="text-xs font-bold text-[#1E293B]">
+                Profil Satuan Pendidikan
+              </span>
+              <span className="text-[11px] text-[#475569] mt-0.5">
+                Arsip Data Dapodik
+              </span>
+              <div className="mt-2.5 inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#FFFFFF]/90 border border-[#C9DFDC] text-[10px] font-mono text-[#2E6496]">
+                <Camera className="w-3 h-3" />
+                <span>NPSN: {school.npsn}</span>
+              </div>
+            </div>
+
+            {/* TABEL INFORMASI DETAIL SEKOLAH DI KANAN */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#C9DFDC]/60">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-semibold text-[#2E6496]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496]" />
+                    <span>{school.status}</span>
+                  </span>
+                  <span className="text-xs font-mono text-[#475569] px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#C9DFDC] tabular-nums">
+                    TA 2026
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onOpenKamusModal}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:text-[#1E293B] hover:underline cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Panduan Juknis BOSP</span>
+                </button>
+              </div>
+
+              {/* Tabel Bersih & Rapi dengan format Nama Sekolah : , dll */}
+              <table className="w-full text-xs sm:text-sm text-[#1E293B] border-collapse">
+                <tbody className="divide-y divide-[#C9DFDC]/40">
+                  <tr>
+                    <td className="py-2 pr-2 font-semibold text-[#475569] w-[130px] sm:w-[150px] whitespace-nowrap">
+                      Nama Sekolah
+                    </td>
+                    <td className="py-2 px-1 font-bold text-[#64748B] w-[12px]">:</td>
+                    <td className="py-2 pl-2 font-bold text-[#1E293B] text-sm sm:text-base">
+                      {school.name}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                      NPSN
+                    </td>
+                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2 pl-2 font-mono font-semibold text-[#1E293B]">
+                      {school.npsn}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                      Alamat / Wilayah
+                    </td>
+                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2 pl-2 text-[#1E293B]">
+                      {school.address || `Kec. ${school.kecamatan}, ${school.kabupaten}, ${school.provinsi}`}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                      Kepala Sekolah
+                    </td>
+                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2 pl-2 text-[#1E293B]">
+                      {school.items[0]?.invoice?.principalName || 'Drs. H. Bambang Sutrisno, M.Pd.'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                      Jumlah Siswa
+                    </td>
+                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2 pl-2 font-mono text-[#1E293B] tabular-nums">
+                      {school.studentCount} Siswa (Penerima Manfaat BOSP)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+        </section>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
-            {school.name}
-          </h1>
-
-          <p className="mt-1.5 text-xs sm:text-sm text-[#475569] font-medium flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono font-semibold text-[#1E293B] tabular-nums">
-              NPSN: {school.npsn}
-            </span>
-            <span>•</span>
-            <span>
-              {school.kecamatan}, {school.kabupaten}, {school.provinsi}
-            </span>
-            <span>•</span>
-            <span>Status: {school.status}</span>
-          </p>
-
-          {/* 3 SEGMENTED PILL CONTROL TABS */}
-          <div
-            className="mt-5 p-1 bg-[#F4F1EA] border border-[#E4E0D8] rounded-md grid grid-cols-1 sm:grid-cols-3 gap-1"
-            role="tablist"
-            aria-label="Navigasi Audit Transparansi Sekolah"
+        {/* 3 STANDALONE NAVIGATION TABS (DITARUH DI BAWAH KARTU PROFIL) */}
+        <div
+          className="mt-6 p-1.5 bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-1.5 shadow-xs"
+          role="tablist"
+          aria-label="Navigasi informasi dana sekolah"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'summary'}
+            onClick={() => onTabChange('summary')}
+            className={`py-3 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'summary'
+                ? 'bg-[#2E6496] text-[#FFFFFF] shadow-sm'
+                : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
+            }`}
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'summary'}
-              onClick={() => onTabChange('summary')}
-              className={`py-2.5 px-3 rounded-md text-xs sm:text-sm font-bold transition-all duration-150 flex items-center justify-center gap-2 ${
-                activeTab === 'summary'
-                  ? 'bg-[#2E6496] text-[#FFFFFF] shadow-sm'
-                  : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
-              }`}
-            >
-              <span className="font-mono text-xs tabular-nums">
-                {activeTab === 'summary' ? '(●)' : '( )'} 1.
-              </span>
-              <span>Ringkasan Dana</span>
-            </button>
+            <Wallet className="w-4 h-4 shrink-0" />
+            <span>Ringkasan Dana</span>
+          </button>
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'items-ai'}
-              onClick={() => onTabChange('items-ai')}
-              className={`py-2.5 px-3 rounded-md text-xs sm:text-sm font-bold transition-all duration-150 flex items-center justify-center gap-2 ${
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'items-ai'}
+            onClick={() => onTabChange('items-ai')}
+            className={`py-3 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'items-ai'
+                ? 'bg-[#2E6496] text-[#FFFFFF] shadow-sm'
+                : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
+            }`}
+          >
+            <ReceiptText className="w-4 h-4 shrink-0" />
+            <span>Bukti Belanja</span>
+            <span
+              className={`px-2 py-0.5 rounded-full font-mono text-[11px] tabular-nums ${
                 activeTab === 'items-ai'
-                  ? 'bg-[#2E6496] text-[#FFFFFF] shadow-sm'
-                  : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
+                  ? 'bg-[#FFFFFF]/25 text-[#FFFFFF]'
+                  : 'bg-[#C9DFDC]/60 text-[#2E6496]'
               }`}
             >
-              <span className="font-mono text-xs tabular-nums">
-                {activeTab === 'items-ai' ? '(●)' : '( )'} 2.
-              </span>
-              <span>Cek Barang (AI)</span>
-            </button>
+              {school.items.length}
+            </span>
+          </button>
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'wa-scanner'}
-              onClick={() => onTabChange('wa-scanner')}
-              className={`py-2.5 px-3 rounded-md text-xs sm:text-sm font-bold transition-all duration-150 flex items-center justify-center gap-2 ${
-                activeTab === 'wa-scanner'
-                  ? 'bg-[#2E6496] text-[#FFFFFF] shadow-sm'
-                  : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
-              }`}
-            >
-              <span className="font-mono text-xs tabular-nums">
-                {activeTab === 'wa-scanner' ? '(●)' : '( )'} 3.
-              </span>
-              <span>Cek Chat WA</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'wa-scanner'}
+            onClick={() => onTabChange('wa-scanner')}
+            className={`py-3 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === 'wa-scanner'
+                ? 'bg-[#2E6496] text-[#FFFFFF] shadow-sm'
+                : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
+            }`}
+          >
+            <ScanLine className="w-4 h-4 shrink-0" />
+            <span>Cek Iuran WA</span>
+          </button>
         </div>
 
         {/* ===================================================================
             TAB 1: RINGKASAN DANA
            =================================================================== */}
         {activeTab === 'summary' && (
-          <div className="mt-6 space-y-6 animate-view-enter">
-            {/* CARD 1: DANA BOSP DITERIMA TAHUN INI */}
-            <div className="bg-[#FFFFFF] border border-[#E4E0D8] rounded-lg shadow-sm overflow-hidden divide-y divide-[#E4E0D8]">
-              <div className="px-6 py-3.5 bg-[#FAF8F5] flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider font-bold text-[#1E293B]">
-                  01 / DANA BOSP DITERIMA TAHUN INI
-                </span>
-                <span className="text-xs font-mono text-[#2E7D32] font-semibold">
-                  Sinkronisasi RKAS & OM-SPAN Kemenkeu
-                </span>
-              </div>
-
-              {/* 3-Column Hairline Grid inside Main Card */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#E4E0D8]">
-                {/* Col 1: Total Dana Masuk */}
-                <div className="p-5 bg-[#FFFFFF]">
-                  <span className="text-xs font-semibold text-[#475569] block">
-                    Total Dana Masuk
-                  </span>
-                  <div className="font-mono text-2xl font-extrabold text-[#2E6496] mt-1.5 tabular-nums">
-                    {formatRupiah(school.totalBosp)}
-                  </div>
-                  <span className="inline-block mt-2 text-[11px] font-mono text-[#475569]">
-                    Pagu Reguler 1 Tahun Penuh
-                  </span>
-                </div>
-
-                {/* Col 2: Tahap 1 */}
-                <div className="p-5 bg-[#FFFFFF]">
-                  <div className="flex items-center justify-between gap-1">
+          <div className="mt-6 space-y-6">
+            {/* 3 STAT CARDS WITH STAGGERED ENTRANCE & COUNT-UP */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Stat Card 1: Total Dana BOSP */}
+              <div
+                className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between animate-school-item"
+                style={{ animationDelay: '60ms' }}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-[#475569]">
-                      Tahap 1 ({school.tahap1.period} • Cair)
+                      Total Pagu BOSP 2026
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC] font-mono text-[11px] font-semibold">
+                      1 Tahun Penuh
                     </span>
                   </div>
-                  <div className="font-mono text-xl font-bold text-[#1E293B] mt-1.5 tabular-nums">
-                    {formatRupiah(school.tahap1.amount)}
+                  <div className="font-mono text-2xl sm:text-3xl font-extrabold text-[#2E6496] mt-2 tabular-nums tracking-tight">
+                    {formatRupiah(Math.round(school.totalBosp * animProgress))}
                   </div>
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF7EE] border border-[#2E7D32]/30 text-[11px] font-mono font-semibold text-[#2E7D32]">
-                      <CheckCircle2 className="w-3 h-3" />
+                </div>
+
+                <div className="mt-4 pt-3.5 border-t border-[#C9DFDC]/60 flex items-center justify-between gap-2 text-xs text-[#475569]">
+                  <span>Indeks wilayah ({school.kabupaten})</span>
+                  <span className="font-mono font-bold text-[#1E293B] tabular-nums">
+                    ~{formatRupiah(school.perStudentEstimate)}/siswa
+                  </span>
+                </div>
+              </div>
+
+              {/* Stat Card 2: Pencairan Tahap 1 */}
+              <div
+                className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between animate-school-item"
+                style={{ animationDelay: '120ms' }}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-[#475569]">
+                      Tahap 1 ({school.tahap1.period})
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] font-mono font-semibold text-[#2E6496] border border-[#C9DFDC]">
+                      <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
                       {school.tahap1.status}
                     </span>
-                    <span className="text-[11px] font-mono text-[#475569] tabular-nums">
-                      {school.tahap1.disbursedDate}
-                    </span>
+                  </div>
+                  <div className="font-mono text-xl sm:text-2xl font-bold text-[#1E293B] mt-2 tabular-nums">
+                    {formatRupiah(
+                      Math.round(school.tahap1.amount * animProgress)
+                    )}
                   </div>
                 </div>
 
-                {/* Col 3: Tahap 2 */}
-                <div className="p-5 bg-[#FFFFFF]">
-                  <div className="flex items-center justify-between gap-1">
+                <div className="mt-4 space-y-2">
+                  <div className="w-full h-2 bg-[#FAF8F5] border border-[#C9DFDC] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#2E6496] rounded-full transition-[width] duration-150"
+                      style={{ width: `${stage1SharePct * animProgress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[#475569] tabular-nums">
+                    <span>Cair: {school.tahap1.disbursedDate}</span>
+                    <span className="font-semibold text-[#2E6496]">{stage1SharePct}% Pagu</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stat Card 3: Pencairan Tahap 2 */}
+              <div
+                className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between animate-school-item"
+                style={{ animationDelay: '180ms' }}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-[#475569]">
-                      Tahap 2 ({school.tahap2.period} • Cair)
+                      Tahap 2 ({school.tahap2.period})
                     </span>
-                  </div>
-                  <div className="font-mono text-xl font-bold text-[#1E293B] mt-1.5 tabular-nums">
-                    {formatRupiah(school.tahap2.amount)}
-                  </div>
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF7EE] border border-[#2E7D32]/30 text-[11px] font-mono font-semibold text-[#2E7D32]">
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] font-mono font-semibold text-[#2E6496] border border-[#C9DFDC]">
+                      <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
                       {school.tahap2.status}
                     </span>
-                    <span className="text-[11px] font-mono text-[#475569] tabular-nums">
-                      {school.tahap2.disbursedDate}
-                    </span>
+                  </div>
+                  <div className="font-mono text-xl sm:text-2xl font-bold text-[#1E293B] mt-2 tabular-nums">
+                    {formatRupiah(
+                      Math.round(school.tahap2.amount * animProgress)
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="w-full h-2 bg-[#FAF8F5] border border-[#C9DFDC] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#66A3BF] rounded-full transition-[width] duration-150"
+                      style={{ width: `${stage2SharePct * animProgress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[#475569] tabular-nums">
+                    <span>Cair: {school.tahap2.disbursedDate}</span>
+                    <span className="font-semibold text-[#66A3BF]">{stage2SharePct}% Pagu</span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Bottom Row: AI Regional Insight */}
-              <div className="px-6 py-3.5 bg-[#C8DFDC]/50 flex items-start sm:items-center gap-2.5 text-xs sm:text-sm text-[#1E293B]">
-                <Cpu className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5 sm:mt-0" />
+            {/* KOMPOSISI PENGGUNAAN DANA CARD */}
+            <div
+              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-8 shadow-xs animate-school-item"
+              style={{ animationDelay: '240ms' }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 mb-6 border-b border-[#C9DFDC]/60">
                 <div>
-                  <strong className="font-semibold text-[#2E6496]">
-                    Estimasi AI Daerah:
-                  </strong>{' '}
-                  <span className="font-mono font-bold tabular-nums">
-                    ~{formatRupiah(school.perStudentEstimate)} / siswa / tahun
-                  </span>{' '}
-                  <span className="text-[#475569]">
-                    (Berdasarkan indeks wilayah {school.kabupaten} untuk ~
-                    <span className="font-mono tabular-nums">
-                      {school.studentCount}
-                    </span>{' '}
-                    siswa)
-                  </span>
+                  <h2 className="font-sturdy-heading text-lg sm:text-xl font-bold text-[#1E293B]">
+                    Komposisi Penggunaan Dana
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
+                    Proporsi alokasi anggaran BOSP berdasarkan 3 komponen utama RKAS
+                  </p>
                 </div>
-              </div>
-            </div>
-
-            {/* CARD 2: KOMPOSISI PENGGUNAAN DANA */}
-            <div className="bg-[#FFFFFF] border border-[#E4E0D8] rounded-lg shadow-sm overflow-hidden divide-y divide-[#E4E0D8]">
-              <div className="px-6 py-3.5 bg-[#FAF8F5] flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider font-bold text-[#1E293B]">
-                  02 / KOMPOSISI PENGGUNAAN DANA
-                </span>
-                <span className="text-xs font-mono text-[#475569] tabular-nums">
-                  3 Komponen Utama RKAS
+                <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-mono font-semibold text-[#2E6496] tabular-nums">
+                  3 Komponen RKAS
                 </span>
               </div>
 
-              <div className="p-6">
-                <InteractiveDonutChart
-                  compositions={school.compositions}
-                  totalAmount={school.totalBosp}
-                />
-
-                {/* Secondary Button: Lihat Aturan Kamus Juknis BOSP */}
-                <div className="mt-5 pt-4 border-t border-[#E4E0D8] flex justify-center">
-                  <button
-                    type="button"
-                    onClick={onOpenKamusModal}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-md bg-[#FAF8F5] hover:bg-[#F4F1EA] border border-[#C8DFDC] text-xs sm:text-sm font-bold text-[#2E6496] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    <span>Lihat Aturan Kamus Juknis BOSP</span>
-                  </button>
-                </div>
-              </div>
+              <InteractiveDonutChart
+                compositions={school.compositions}
+                totalAmount={school.totalBosp}
+              />
             </div>
 
-            {/* BOTTOM TRANSITION BUTTON TO TAB 2 */}
-            <div className="pt-1">
+            {/* NEXT STEP BAR TO TAB 2 */}
+            <div
+              className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-school-item"
+              style={{ animationDelay: '300ms' }}
+            >
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
+                  Ingin memeriksa barang apa saja yang sudah dibeli sekolah?
+                </h3>
+                <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
+                  Lihat daftar realisasi pengadaan lengkap dengan arsip nota SIPLah dan foto geotagging ruang kelas.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => onTabChange('items-ai')}
-                className="w-full py-3.5 px-6 rounded-md bg-[#2E6496] hover:bg-[#24507a] text-[#FFFFFF] font-bold text-sm sm:text-base shadow-sm active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
+                className="w-full sm:w-auto school-btn-primary px-5 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer group"
               >
-                <span>Lanjut Cek Pembelian Barang (AI)</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Cek Bukti Belanja ({school.items.length} Barang)</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
             </div>
           </div>
         )}
 
         {/* ===================================================================
-            TAB 2: CEK BARANG (PENCARIAN PINTAR AI & ACCORDION)
+            TAB 2: CEK BARANG & BUKTI FISIK
            =================================================================== */}
         {activeTab === 'items-ai' && (
-          <div className="mt-6 space-y-6 animate-view-enter">
-            {/* AI SIMILARITY SEARCH BOX */}
-            <div className="bg-[#FFFFFF] border border-[#E4E0D8] rounded-lg shadow-sm overflow-hidden divide-y divide-[#E4E0D8]">
-              <div className="p-5">
-                <label
-                  htmlFor="ai-item-search"
-                  className="block text-xs font-mono uppercase tracking-wider font-bold text-[#2E6496] mb-2"
-                >
-                  CARI BARANG ATAU FASILITAS SEKOLAH (AI SIMILARITY SEARCH)
-                </label>
-
-                <div className="relative">
-                  <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="ai-item-search"
-                    type="text"
-                    value={itemSearchQuery}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setItemSearchQuery(val);
-                      const q = val.trim().toLowerCase();
-                      if (q) {
-                        const found = school.items.find(
-                          (it) =>
-                            it.name.toLowerCase().includes(q) ||
-                            it.keywords.some(
-                              (kw) => kw.includes(q) || q.includes(kw)
-                            )
-                        );
-                        if (found) setExpandedItemId(found.id);
-                      }
-                    }}
-                    placeholder="Ketik bahasa sehari-hari: kipas, gerah, cat kelas, buku cerita, proyektor, toilet..."
-                    className="w-full pl-10 pr-24 py-2.5 text-sm bg-[#FFFFFF] border border-[#E4E0D8] rounded-md text-[#1E293B] font-medium placeholder:text-[#475569]/70 focus:outline-none focus:ring-1 focus:ring-[#1E293B]"
-                  />
-                  {itemSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setItemSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 text-xs font-mono font-semibold text-[#475569] hover:text-[#1E293B] bg-[#FAF8F5] border border-[#E4E0D8] rounded-md"
-                    >
-                      Bersihkan
-                    </button>
-                  )}
+          <div className="mt-6 space-y-6">
+            {/* SEARCH & FILTER BAR */}
+            <div
+              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs animate-school-item"
+              style={{ animationDelay: '60ms' }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div>
+                  <label
+                    htmlFor="ai-item-search"
+                    className="block font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]"
+                  >
+                    Cari Barang atau Fasilitas Sekolah
+                  </label>
+                  <p className="text-xs sm:text-sm text-[#475569]">
+                    Gunakan kata sehari-hari untuk mencocokkan barang dengan anggaran BOSP
+                  </p>
                 </div>
-
-                {/* Quick Keyword Chips */}
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-mono text-[#475569] mr-1">
-                    Kata kunci cepat:
-                  </span>
-                  {QUICK_CHIPS.map((chip) => {
-                    const isActive =
-                      itemSearchQuery.toLowerCase() === chip.toLowerCase();
-                    return (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => handleSelectQuickChip(chip)}
-                        className={`px-2.5 py-1 rounded-md text-xs font-mono transition-colors ${
-                          isActive
-                            ? 'bg-[#2E6496] text-[#FFFFFF] font-semibold'
-                            : 'bg-[#FAF8F5] text-[#1E293B] border border-[#E4E0D8] hover:bg-[#C8DFDC]/40'
-                        }`}
-                      >
-                        "{chip}"
-                      </button>
-                    );
-                  })}
-                </div>
+                <span className="self-start sm:self-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-semibold text-[#2E6496]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#2E6496]" />
+                  <span>Pencarian Pintar</span>
+                </span>
               </div>
 
-              {/* AI Similarity Mapping Insight Banner */}
-              {aiSimilarityMatch ? (
-                <div className="px-5 py-3.5 bg-[#C8DFDC]/45 flex items-start gap-2.5 text-xs sm:text-sm text-[#1E293B]">
-                  <Cpu className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-bold text-[#2E6496]">
-                      Hasil AI:
-                    </strong>{' '}
-                    Kata kunci cocok dengan pengajuan{' '}
-                    <span className="font-semibold underline decoration-[#629BB5]">
-                      "{aiSimilarityMatch.aiCategoryPath}"
-                    </span>{' '}
-                    (Total Anggaran:{' '}
-                    <span className="font-mono font-bold text-[#1E293B] tabular-nums">
-                      {formatRupiah(aiSimilarityMatch.amount)}
-                    </span>
-                    )
-                  </div>
-                </div>
-              ) : (
-                <div className="px-5 py-3.5 bg-[#FFFBEB] flex items-center justify-between gap-2 text-xs text-[#D97706]">
-                  <span>
-                    Kata kunci "{itemSearchQuery}" tidak ditemukan dalam daftar realisasi BOSP tahun berjalan.
-                  </span>
+              <div className="relative">
+                <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  id="ai-item-search"
+                  type="text"
+                  value={itemSearchQuery}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setItemSearchQuery(val);
+                    const q = val.trim().toLowerCase();
+                    if (q) {
+                      const found = school.items.find(
+                        (it) =>
+                          it.name.toLowerCase().includes(q) ||
+                          it.keywords.some(
+                            (kw) => kw.includes(q) || q.includes(kw)
+                          )
+                      );
+                      if (found) setExpandedItemId(found.id);
+                    }
+                  }}
+                  placeholder="Ketik kata kunci: kipas, gerah, cat kelas, buku cerita, proyektor, toilet..."
+                  className="w-full pl-10 pr-10 py-3 text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium placeholder:text-[#64748B] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] transition-all"
+                />
+                {itemSearchQuery && (
                   <button
                     type="button"
                     onClick={() => setItemSearchQuery('')}
-                    className="font-mono font-semibold underline shrink-0"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#64748B] hover:text-[#1E293B] rounded-md cursor-pointer"
+                    aria-label="Bersihkan pencarian barang"
                   >
-                    Tampilkan Semua (6 Barang)
+                    <X className="w-4 h-4" />
                   </button>
+                )}
+              </div>
+
+              {/* Quick Filter Chips */}
+              <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-[#475569] mr-1 font-medium">
+                  Populer:
+                </span>
+                {QUICK_CHIPS.map((chip) => {
+                  const isActive =
+                    itemSearchQuery.toLowerCase() === chip.toLowerCase();
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() =>
+                        isActive
+                          ? setItemSearchQuery('')
+                          : handleSelectQuickChip(chip)
+                      }
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
+                          : 'bg-[#FAF8F5] text-[#1E293B] border border-[#C9DFDC] hover:bg-[#EBF3F8] hover:border-[#66A3BF]'
+                      }`}
+                    >
+                      {chip}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Contextual Match Notice when searching */}
+              {itemSearchQuery.trim() && (
+                <div className="mt-4 pt-3.5 border-t border-[#C9DFDC]/60">
+                  {aiSimilarityMatch ? (
+                    <div className="px-3.5 py-2.5 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-[#1E293B]">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-[#2E6496] shrink-0" />
+                        <span>
+                          Cocok dengan anggaran{' '}
+                          <strong className="text-[#2E6496]">
+                            {aiSimilarityMatch.aiCategoryPath}
+                          </strong>
+                        </span>
+                      </div>
+                      <span className="font-mono font-bold text-[#2E6496] tabular-nums">
+                        {formatRupiah(aiSimilarityMatch.amount)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="px-3.5 py-2.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] flex items-center justify-between gap-2 text-xs text-[#92400E]">
+                      <span>
+                        Kata kunci "{itemSearchQuery}" tidak ditemukan pada realisasi tahun berjalan.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setItemSearchQuery('')}
+                        className="font-semibold underline shrink-0 cursor-pointer"
+                      >
+                        Tampilkan Semua
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* ACCORDION LIST OF REALIZED ITEMS */}
-            <div className="bg-[#FFFFFF] border border-[#E4E0D8] rounded-lg shadow-sm overflow-hidden divide-y divide-[#E4E0D8]">
-              <div className="px-5 py-3.5 bg-[#FAF8F5] flex items-center justify-between">
-                <h2 className="text-xs font-mono uppercase tracking-wider font-bold text-[#1E293B]">
-                  DAFTAR REALISASI BARANG (Klik baris untuk melihat bukti fisik)
+            {/* REALIZED ITEMS LIST */}
+            <div
+              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xs overflow-hidden animate-school-item"
+              style={{ animationDelay: '130ms' }}
+            >
+              <div className="px-6 py-4 bg-[#FAF8F5] border-b border-[#C9DFDC] flex items-center justify-between">
+                <h2 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
+                  Daftar Realisasi Barang &amp; Bukti Fisik
                 </h2>
                 <span className="text-xs font-mono text-[#475569] tabular-nums">
-                  {matchedItems.length} dari {school.items.length} Item
+                  {matchedItems.length} dari {school.items.length} item
                 </span>
               </div>
 
               {matchedItems.length === 0 ? (
-                <div className="p-8 text-center">
+                <div className="p-10 text-center">
                   <p className="text-sm text-[#475569]">
-                    Tidak ada item pembelian BOSP yang cocok dengan pencarian{' '}
+                    Tidak ada item pembelian yang cocok dengan pencarian{' '}
                     <strong className="text-[#1E293B]">"{itemSearchQuery}"</strong>.
                   </p>
                   <button
                     type="button"
                     onClick={() => setItemSearchQuery('')}
-                    className="mt-3 px-4 py-2 rounded-md bg-[#2E6496] text-[#FFFFFF] text-xs font-semibold"
+                    className="mt-4 school-btn-primary px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
                   >
-                    Reset Pencarian Barang
+                    Tampilkan Semua Barang
                   </button>
                 </div>
               ) : (
-                <div className="divide-y divide-[#E4E0D8]">
-                  {matchedItems.map((item) => {
+                <div className="divide-y divide-[#C9DFDC]/50">
+                  {matchedItems.map((item, idx) => {
                     const isExpanded = expandedItemId === item.id;
+                    const barPct = Math.round(
+                      (item.amount / maxItemAmount) * 100
+                    );
                     return (
-                      <div key={item.id} className="bg-[#FFFFFF]">
-                        {/* Accordion Header Row */}
+                      <div
+                        key={item.id}
+                        className="bg-[#FFFFFF] animate-school-item"
+                        style={{
+                          animationDelay: `${Math.min(140 + idx * 45, 340)}ms`,
+                        }}
+                      >
+                        {/* Item Row Header */}
                         <button
                           type="button"
                           onClick={() =>
                             setExpandedItemId(isExpanded ? '' : item.id)
                           }
                           aria-expanded={isExpanded}
-                          className={`w-full text-left px-5 py-4 flex items-center justify-between gap-3 transition-colors ${
+                          className={`w-full text-left px-6 py-4 flex items-center justify-between gap-4 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2E6496] ${
                             isExpanded
                               ? 'bg-[#FAF8F5]'
-                              : 'bg-[#FFFFFF] hover:bg-[#FAF8F5]'
+                              : 'bg-[#FFFFFF] hover:bg-[#FAF8F5]/70'
                           }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {renderItemIcon(item.iconType)}
-                            <div className="min-w-0">
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            <div className="w-10 h-10 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0">
+                              {renderItemIcon(item.iconType)}
+                            </div>
+                            <div className="min-w-0 flex-1">
                               <div className="text-sm sm:text-base font-bold text-[#1E293B] truncate">
                                 {item.name}
                               </div>
-                              <div className="text-xs text-[#475569] font-mono mt-0.5 tabular-nums">
-                                Kode {item.code} • {item.date} ({item.stage})
+                              <div className="text-xs text-[#475569] flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                <span className="font-semibold text-[#1E293B]">
+                                  {item.unitSummary}
+                                </span>
+                                <span className="text-[#94A3B8]">•</span>
+                                <span className="font-mono tabular-nums">
+                                  {item.date} ({item.stage})
+                                </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-mono text-sm sm:text-base font-extrabold text-[#2E6496] tabular-nums">
-                              {formatRupiah(item.amount)}
-                            </span>
-                            {isExpanded ? (
-                              <ChevronUp className="w-5 h-5 text-[#2E6496]" />
-                            ) : (
-                              <ChevronDown className="w-5 h-5 text-[#475569]" />
-                            )}
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="text-right">
+                              <div className="font-mono text-sm sm:text-base font-extrabold text-[#2E6496] tabular-nums">
+                                {formatRupiah(item.amount)}
+                              </div>
+                              <div className="hidden sm:block w-24 h-1.5 bg-[#FAF8F5] border border-[#C9DFDC] rounded-full overflow-hidden mt-1 ml-auto">
+                                <div
+                                  className="h-full bg-[#2E6496] rounded-full transition-[width] duration-200"
+                                  style={{ width: `${barPct * animProgress}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-colors ${
+                                isExpanded
+                                  ? 'bg-[#2E6496] border-[#2E6496] text-[#FFFFFF]'
+                                  : 'bg-[#FAF8F5] border-[#C9DFDC] text-[#475569]'
+                              }`}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </div>
                           </div>
                         </button>
 
-                        {/* Accordion Expanded Details */}
+                        {/* Expanded Details */}
                         {isExpanded && (
-                          <div className="px-5 pb-5 pt-2 bg-[#FAF8F5] border-t border-[#E4E0D8] space-y-4 animate-view-enter">
-                            {/* Metadata Specifications */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm pt-2">
-                              <div>
-                                <span className="text-xs font-mono uppercase text-[#475569] block">
-                                  Kategori Anggaran
+                          <div className="school-expand-panel px-6 pb-5 pt-3 bg-[#FAF8F5] border-t border-[#C9DFDC]/60 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
+                              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
+                                <span className="text-[11px] font-mono uppercase text-[#475569] block">
+                                  Kategori RKAS
                                 </span>
-                                <span className="font-semibold text-[#1E293B]">
+                                <span className="font-semibold text-[#1E293B] mt-0.5 block">
                                   {item.category}
                                 </span>
                               </div>
-                              <div>
-                                <span className="text-xs font-mono uppercase text-[#475569] block">
-                                  Tanggal Realisasi
+                              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
+                                <span className="text-[11px] font-mono uppercase text-[#475569] block">
+                                  Kode &amp; Pencairan
                                 </span>
-                                <span className="font-mono font-semibold text-[#1E293B] tabular-nums">
-                                  {item.date} (Dana BOSP {item.stage})
+                                <span className="font-mono font-semibold text-[#1E293B] mt-0.5 block tabular-nums">
+                                  {item.code} • {item.stage}
                                 </span>
                               </div>
-                              <div className="sm:col-span-2">
-                                <span className="text-xs font-mono uppercase text-[#475569] block">
-                                  Peruntukan Fisik di Sekolah
+                              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
+                                <span className="text-[11px] font-mono uppercase text-[#475569] block">
+                                  Lokasi Peruntukan
                                 </span>
-                                <span className="font-medium text-[#1E293B]">
+                                <span className="font-medium text-[#1E293B] mt-0.5 block">
                                   {item.allocation}
                                 </span>
                               </div>
                             </div>
 
-                            {/* 2 Physical Proof Modal Trigger Buttons */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                              <button
-                                type="button"
-                                onClick={() => onOpenInvoiceModal(item)}
-                                className="py-2.5 px-4 rounded-md bg-[#FFFFFF] hover:bg-[#C8DFDC]/35 border border-[#2E6496] text-xs sm:text-sm font-bold text-[#2E6496] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
-                              >
-                                <FileText className="w-4 h-4" />
-                                <span>Lihat Foto Nota</span>
-                              </button>
+                            {/* Action Buttons */}
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenInvoiceModal(item)}
+                                  className="school-btn-secondary px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#2E6496] flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                  <FileText className="w-4 h-4 text-[#2E6496]" />
+                                  <span>Lihat Bukti Nota</span>
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => onOpenGeotagModal(item)}
-                                className="py-2.5 px-4 rounded-md bg-[#FFFFFF] hover:bg-[#C8DFDC]/35 border border-[#2E6496] text-xs sm:text-sm font-bold text-[#2E6496] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
-                              >
-                                <MapPin className="w-4 h-4" />
-                                <span>Lihat Foto & Geotagging Kelas</span>
-                              </button>
-                            </div>
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenGeotagModal(item)}
+                                  className="school-btn-secondary px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#2E6496] flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                  <MapPin className="w-4 h-4 text-[#2E6496]" />
+                                  <span>Foto &amp; Geotag Kelas</span>
+                                </button>
+                              </div>
 
-                            {/* Quick Report Row at Bottom of Accordion */}
-                            <div className="pt-3 border-t border-[#E4E0D8] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                              <span className="text-xs sm:text-sm font-medium text-[#475569]">
-                                Ada kejanggalan fisik di kelas atau diminta iuran lagi untuk barang ini?
-                              </span>
                               <button
                                 type="button"
                                 onClick={() => onReportFromItem(item)}
-                                className="px-3.5 py-2 rounded-md bg-[#FDF2F2] hover:bg-[#f9e1e1] border border-[#F5C6CB] text-xs font-bold text-[#D9534F] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-1.5 shrink-0"
+                                className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] text-xs font-bold text-[#DC2626] transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                               >
-                                <AlertTriangle className="w-4 h-4" />
-                                <span>Laporkan Barang Ini</span>
+                                <AlertTriangle className="w-4 h-4 text-[#DC2626]" />
+                                <span>Laporkan Kejanggalan</span>
                               </button>
                             </div>
                           </div>
@@ -769,324 +915,41 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               )}
             </div>
 
-            {/* Bottom Navigation to Tab 3 */}
-            <div className="pt-1 flex justify-end">
+            {/* NEXT STEP BAR TO TAB 3 */}
+            <div
+              className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-school-item"
+              style={{ animationDelay: '220ms' }}
+            >
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
+                  Menerima pesan tarikan iuran di grup WhatsApp kelas?
+                </h3>
+                <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
+                  Cocokkan screenshot pengumuman iuran dengan data pencairan BOSP sekolah secara otomatis.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => onTabChange('wa-scanner')}
-                className="w-full py-3.5 px-6 rounded-md bg-[#2E6496] hover:bg-[#24507a] text-[#FFFFFF] font-bold text-sm sm:text-base shadow-sm active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
+                className="w-full sm:w-auto school-btn-primary px-5 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer group"
               >
-                <span>Lanjut Verifikasi Screenshot Chat Grup WA (AI)</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Cek Screenshot Chat WA</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
             </div>
           </div>
         )}
 
         {/* ===================================================================
-            TAB 3: DETEKSI PUNGLI DARI SCREENSHOT WA (ALUR BERTAHAP 1 KOLOM)
+            TAB 3: VERIFIKASI IURAN GRUP WA (ADVANCED 6-STAGE OCR + VISION AI)
            =================================================================== */}
         {activeTab === 'wa-scanner' && (
-          <div className="mt-6 space-y-4 animate-view-enter">
-            {/* STEP 1 CARD: UPLOAD & SIMULATION SELECTOR */}
-            <div className="bg-[#FFFFFF] border border-[#E4E0D8] rounded-lg shadow-sm overflow-hidden divide-y divide-[#E4E0D8]">
-              {/* Card Header */}
-              <div className="p-5 bg-[#FAF8F5]">
-                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider font-bold text-[#2E6496]">
-                  <Cpu className="w-4 h-4" />
-                  <span>TAHAP 01 // OCR & DETEKSI SILANG ANGGARAN BOSP</span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-1">
-                  Verifikasi Iuran Grup WhatsApp (AI)
-                </h2>
-                <p className="text-xs sm:text-sm text-[#475569] mt-0.5 max-w-[65ch]">
-                  Unggah screenshot pengumuman iuran dari grup WhatsApp kelas/paguyuban untuk dicocokkan otomatis dengan data anggaran BOSP sekolah.
-                </p>
-              </div>
-
-              {/* Quick Simulation Scenario Buttons */}
-              <div className="p-5 bg-[#FFFFFF] space-y-3">
-                <div className="text-xs font-mono uppercase text-[#475569] font-semibold">
-                  Pilih Skenario Uji Cepat (1-Klik Simulasi AI) atau Unggah File:
-                </div>
-
-                <div className="grid grid-cols-1 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectScenario('scenario-a')}
-                    className={`w-full text-left p-3.5 rounded-md border transition-all duration-150 flex items-center justify-between gap-3 ${
-                      selectedScenarioKey === 'scenario-a' &&
-                      !customUploadedFileName
-                        ? 'bg-[#FDF2F2] border-[#D9534F] text-[#1E293B]'
-                        : 'bg-[#FAF8F5] border-[#E4E0D8] text-[#475569] hover:text-[#1E293B]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                          selectedScenarioKey === 'scenario-a'
-                            ? 'bg-[#D9534F]'
-                            : 'bg-[#475569]/40'
-                        }`}
-                      />
-                      <span className="text-xs sm:text-sm font-bold">
-                        {WA_SCENARIOS['scenario-a'].buttonLabel}
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#FFFFFF] border border-[#E4E0D8] shrink-0">
-                      Skenario A
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectScenario('scenario-b')}
-                    className={`w-full text-left p-3.5 rounded-md border transition-all duration-150 flex items-center justify-between gap-3 ${
-                      selectedScenarioKey === 'scenario-b' &&
-                      !customUploadedFileName
-                        ? 'bg-[#EBF7EE] border-[#2E7D32] text-[#1E293B]'
-                        : 'bg-[#FAF8F5] border-[#E4E0D8] text-[#475569] hover:text-[#1E293B]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                          selectedScenarioKey === 'scenario-b'
-                            ? 'bg-[#2E7D32]'
-                            : 'bg-[#475569]/40'
-                        }`}
-                      />
-                      <span className="text-xs sm:text-sm font-bold">
-                        {WA_SCENARIOS['scenario-b'].buttonLabel}
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#FFFFFF] border border-[#E4E0D8] shrink-0">
-                      Skenario B
-                    </span>
-                  </button>
-                </div>
-
-                {/* Hidden File Input for Custom Image Upload */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-
-                {/* Upload Status & Automatic Redaction Notice */}
-                <div className="mt-4 p-4 rounded-md bg-[#FAF8F5] border border-[#C8DFDC] space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2E7D32]">
-                      <CheckCircle2 className="w-4 h-4 shrink-0" />
-                      <span className="font-mono">{displayedFileName}</span>
-                      <span>berhasil dibaca</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowUploadPicker((prev) => !prev)}
-                      className="px-3 py-1.5 rounded-md bg-[#FFFFFF] border border-[#E4E0D8] text-xs font-semibold text-[#2E6496] hover:bg-[#F4F1EA] active:translate-y-[1px] transition-all flex items-center gap-1.5 self-start sm:self-auto"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Ganti Gambar Lain</span>
-                    </button>
-                  </div>
-
-                  {showUploadPicker && (
-                    <div className="p-3.5 rounded-md bg-[#FFFFFF] border border-dashed border-[#2E6496] flex flex-col sm:flex-row items-center justify-between gap-3">
-                      <div className="text-xs text-[#475569]">
-                        Pilih file screenshot dari perangkat Anda (JPG/PNG) atau ganti simulasi:
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="px-3 py-1.5 rounded-md bg-[#2E6496] text-[#FFFFFF] text-xs font-semibold"
-                        >
-                          Pilih File Gambar...
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleSelectScenario(
-                              selectedScenarioKey === 'scenario-a'
-                                ? 'scenario-b'
-                                : 'scenario-a'
-                            )
-                          }
-                          className="px-3 py-1.5 rounded-md bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#1E293B]"
-                        >
-                          Tukar Skenario Simulasi
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 text-xs text-[#1E293B] bg-[#C8DFDC]/40 px-3 py-2 rounded-md">
-                    <EyeOff className="w-4 h-4 text-[#2E6496] shrink-0" />
-                    <span>
-                      <strong>Privasi Aman:</strong> Nomor HP & nama pengirim pada gambar disensor otomatis oleh sistem sebelum dianalisis.
-                    </span>
-                  </div>
-
-                  {/* Visual Redacted WhatsApp Screenshot Preview (Solid Redaction Bars, ZERO CSS blur) */}
-                  <div className="border border-[#E4E0D8] rounded-md bg-[#F4F1EA] p-3.5">
-                    <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-[#E4E0D8] text-[11px] font-mono text-[#475569]">
-                      <span>GRUP WA: {activeScenario.groupName}</span>
-                      <span className="text-[#2E7D32] font-semibold">
-                        [IDENTITAS PENGIRIM DISENSOR]
-                      </span>
-                    </div>
-                    <div className="bg-[#FFFFFF] border border-[#E4E0D8] rounded-md p-3">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-block px-2 py-0.5 rounded-sm bg-[#1E293B] text-[#FAF8F5] font-mono text-[10px] tracking-widest select-none">
-                            ████████████
-                          </span>
-                          <span className="inline-block px-2 py-0.5 rounded-sm bg-[#475569] text-[#FAF8F5] font-mono text-[10px] select-none">
-                            +62 812-████-████
-                          </span>
-                        </div>
-                        <span className="font-mono text-[10px] text-[#475569] tabular-nums">
-                          {activeScenario.timestamp}
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed">
-                        "{activeScenario.ocrQuote}"
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* VERTICAL FLOW ARROW (↓) WITH AI ANALYSIS STATUS */}
-            <div className="flex flex-col items-center justify-center py-1">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-[#F4F1EA] border border-[#C8DFDC] text-xs font-mono font-semibold text-[#2E6496]">
-                {isScanningWa ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Mencocokkan teks OCR dengan RKAS BOSP 2026...</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowDown className="w-4 h-4 text-[#2E6496]" />
-                    <span>HASIL PENCOCOKAN SILANG AI DENGAN DATA BOSP SEKOLAH</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* STEP 2 CARD: AI CONCLUSION CARD (DYNAMIC BY SCENARIO) */}
-            {activeScenario.statusType === 'danger' ? (
-              /* SCENARIO A: OVERLAP WITH BOSP DETECTED */
-              <div className="bg-[#FDF2F2] border-2 border-[#F5C6CB] rounded-lg shadow-sm overflow-hidden divide-y divide-[#F5C6CB] animate-view-enter">
-                <div className="px-6 py-4 bg-[#FDF2F2] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 text-[#D9534F]">
-                    <AlertTriangle className="w-5 h-5 shrink-0" />
-                    <h3 className="text-sm sm:text-base font-extrabold uppercase tracking-wide">
-                      {activeScenario.statusHeader}
-                    </h3>
-                  </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#F5C6CB] text-[#D9534F]">
-                    TUMPANG TINDIH ANGGARAN
-                  </span>
-                </div>
-
-                <div className="p-6 bg-[#FFFFFF] space-y-4">
-                  <div>
-                    <span className="text-xs font-mono uppercase text-[#475569] font-semibold block">
-                      Isi Pesan Grup WA (Hasil OCR AI):
-                    </span>
-                    <blockquote className="mt-1 p-3.5 rounded-md bg-[#FAF8F5] border-l-4 border-[#D9534F] text-sm text-[#1E293B] italic">
-                      "{activeScenario.ocrQuote}"
-                    </blockquote>
-                  </div>
-
-                  <div>
-                    <span className="text-xs font-mono uppercase text-[#D9534F] font-bold block">
-                      Fakta Data BOSP Sekolah ({school.name}):
-                    </span>
-                    <div className="mt-1 p-4 rounded-md bg-[#FDF2F2] border border-[#F5C6CB] text-sm text-[#1E293B] leading-relaxed">
-                      Sekolah <strong>SUDAH menganggarkan dan mencairkan</strong>{' '}
-                      <span className="font-mono font-extrabold text-[#D9534F] tabular-nums">
-                        Rp 35.000.000
-                      </span>{' '}
-                      pada BOSP Tahap 2 (12 Oktober 2026) untuk pembelian{' '}
-                      <strong>Kipas Angin Dinding (Pemasangan Kelas 1–3)</strong>.
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => onReportFromWaScenario(activeScenario)}
-                      className="w-full py-3.5 px-6 rounded-md bg-[#D9534F] hover:bg-[#c5423e] text-[#FFFFFF] font-bold text-sm sm:text-base shadow-sm active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                      <span>Kirim Laporan Anonim Sekarang</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* SCENARIO B: ITEM NOT IN BOSP RKAS */
-              <div className="bg-[#EBF7EE] border-2 border-[#C8DFDC] rounded-lg shadow-sm overflow-hidden divide-y divide-[#C8DFDC] animate-view-enter">
-                <div className="px-6 py-4 bg-[#EBF7EE] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 text-[#2E7D32]">
-                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                    <h3 className="text-sm sm:text-base font-extrabold uppercase tracking-wide">
-                      {activeScenario.statusHeader}
-                    </h3>
-                  </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#C8DFDC] text-[#2E7D32]">
-                    NON-RKAS BOSP
-                  </span>
-                </div>
-
-                <div className="p-6 bg-[#FFFFFF] space-y-4">
-                  <div>
-                    <span className="text-xs font-mono uppercase text-[#475569] font-semibold block">
-                      Isi Pesan Grup WA (Hasil OCR AI):
-                    </span>
-                    <blockquote className="mt-1 p-3.5 rounded-md bg-[#FAF8F5] border-l-4 border-[#629BB5] text-sm text-[#1E293B] italic">
-                      "{activeScenario.ocrQuote}"
-                    </blockquote>
-                  </div>
-
-                  <div>
-                    <span className="text-xs font-mono uppercase text-[#2E7D32] font-bold block">
-                      Fakta Data BOSP Sekolah ({school.name}):
-                    </span>
-                    <div className="mt-1 p-3.5 rounded-md bg-[#EBF7EE] border border-[#2E7D32]/25 text-sm text-[#1E293B]">
-                      {activeScenario.bospFact}
-                    </div>
-                  </div>
-
-                  {/* Legal Reminder Note */}
-                  <div className="p-4 rounded-md bg-[#FFFBEB] border border-[#D97706]/35 flex items-start gap-3">
-                    <Scale className="w-5 h-5 text-[#D97706] shrink-0 mt-0.5" />
-                    <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed">
-                      <strong>Pengingat Penting:</strong> Sesuai Permendikbud, Sekolah Negeri dilarang melakukan pungutan wajib yang mengikat siswa. Jika iuran ini bersifat memaksa, Anda tetap berhak melaporkannya.
-                    </p>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => onReportFromWaScenario(activeScenario)}
-                      className="w-full py-3 px-5 rounded-md bg-[#2E6496] hover:bg-[#24507a] text-[#FFFFFF] font-bold text-sm shadow-sm active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2"
-                    >
-                      <span>Tetap Laporkan Pungutan Ini</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="mt-6 animate-school-item" style={{ animationDelay: '60ms' }}>
+            <WaScannerWorkspace
+              school={school}
+              onReportFromWaScenario={onReportFromWaScenario}
+              onShowToast={onShowToast}
+            />
           </div>
         )}
       </div>

@@ -9,11 +9,14 @@ import {
   X,
   BookOpen,
   MapPin,
-  Building2,
+  ReceiptText,
+  ScanLine,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   REGION_HIERARCHY,
   SCHOOLS_DATABASE,
+  SMK_TI_BAZMA,
   SchoolData,
 } from '../data/schoolsData';
 
@@ -183,30 +186,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const filteredSchools = useMemo(() => {
-    const q = searchQuery
-      .replace(/\(NPSN:.*?\)/i, '')
-      .trim()
-      .toLowerCase();
-
-    return SCHOOLS_DATABASE.filter((s) => {
-      const matchesRegion =
-        (!provinsi || s.provinsi === provinsi) &&
-        (!kabupaten || s.kabupaten === kabupaten) &&
-        (!kecamatan || s.kecamatan === kecamatan);
-
-      if (!q) return matchesRegion;
-
-      return (
-        matchesRegion &&
-        (s.name.toLowerCase().includes(q) ||
-          s.npsn.toLowerCase().includes(q) ||
-          s.sampleNisn.toLowerCase().includes(q) ||
-          s.kecamatan.toLowerCase().includes(q) ||
-          s.kabupaten.toLowerCase().includes(q) ||
-          s.provinsi.toLowerCase().includes(q))
-      );
-    });
-  }, [searchQuery, provinsi, kabupaten, kecamatan]);
+    // Sesuai instruksi: Hanya menampilkan SMK TI BAZMA (90 Murid) agar mempermudah juri
+    return [SMK_TI_BAZMA];
+  }, []);
 
   const handleSelectSchool = (school: SchoolData) => {
     setChosenSchool(school);
@@ -225,33 +207,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const handleSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (chosenSchool) {
-      setValidationError(null);
-      onSelectSchoolAndOpenProfile(chosenSchool, 'summary');
-      return;
-    }
-
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      setValidationError(
-        'Silakan ketik atau pilih nama sekolah terlebih dahulu.'
-      );
-      setIsDropdownOpen(true);
-      searchInputRef.current?.focus();
-      return;
-    }
-
-    if (filteredSchools.length > 0) {
-      setValidationError(null);
-      onSelectSchoolAndOpenProfile(filteredSchools[0], 'summary');
-      return;
-    }
-
-    setValidationError(
-      'Nama sekolah tidak ditemukan. Silakan pilih dari daftar rekomendasi di bawah.'
-    );
-    setIsDropdownOpen(true);
+    setValidationError(null);
+    // Langsung buka SMK TI BAZMA agar tidak memblokir atau membingungkan juri
+    const target = chosenSchool || SMK_TI_BAZMA;
+    onSelectSchoolAndOpenProfile(target, 'summary');
   };
 
   // Subtle 3D Parallax Tilt Values (sedikit saja efeknya)
@@ -354,7 +313,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <h1 className="mt-4 sm:mt-6 lg:mt-8 mb-5 sm:mb-6 text-[28px] sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold text-[#FFFFFF] tracking-tight leading-[1.08] sm:leading-[1.10] drop-shadow-sm">
                 <span className="block whitespace-nowrap">
                   Transparansi Dana{' '}
-                  <span className="font-script-sekolah text-[1.42em] text-[#C9DFDC] px-2.5 font-normal tracking-wide inline-block drop-shadow-sm">
+                  <span className="font-script-sekolah text-[1.48em] sm:text-[1.5em] text-[#DCEFEA] px-2 font-normal tracking-wide inline-block drop-shadow-sm select-none">
                     Sekolah
                   </span>
                 </span>
@@ -485,7 +444,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       setIsDropdownOpen(true);
                       setValidationError(null);
                     }}
-                    placeholder="Ketik nama sekolah atau NPSN terlebih dahulu..."
+                    placeholder="Cari SMK TI BAZMA atau NPSN (69994998)..."
                     className="w-full pl-10 pr-10 py-3 text-sm bg-[#F2EFE8]/45 border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium placeholder:text-[#475569]/75 focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/30 focus:border-[#2E6496]"
                   />
                   {searchQuery && (
@@ -500,33 +459,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </div>
 
-                {/* Selected School Confirmation Pill (ONLY Name & Region, NO Budget) */}
-                {chosenSchool && (
-                  <div className="mt-2.5 px-3.5 py-2.5 rounded-lg bg-[#F2EFE8] border border-[#C9DFDC] flex items-center justify-between gap-2 text-xs animate-view-enter">
-                    <div className="flex items-center gap-2 text-[#1E293B]">
-                      <Building2 className="w-4 h-4 text-[#2E6496] shrink-0" />
-                      <span>
-                        Sekolah terpilih: <strong>{chosenSchool.name}</strong> •{' '}
-                        <span className="text-[#475569]">
-                          Kec. {chosenSchool.kecamatan}, {chosenSchool.kabupaten}, {chosenSchool.provinsi}
-                        </span>
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleClearSearch}
-                      className="text-[#475569] hover:text-[#1E293B] text-xs underline font-medium shrink-0"
-                    >
-                      Ganti
-                    </button>
-                  </div>
-                )}
-
-                {/* Autocomplete Dropdown List: Displays ONLY School Name & Region (No budget) */}
+                {/* Autocomplete Dropdown List: Menampilkan SMK TI BAZMA (90 Murid) untuk penilaian juri */}
                 {isDropdownOpen && (
                   <div className="mt-2 border border-[#C9DFDC] rounded-lg bg-[#FFFFFF] divide-y divide-[#C9DFDC]/50 max-h-52 overflow-y-auto shadow-sm animate-view-enter">
                     <div className="px-3.5 py-1.5 bg-[#F2EFE8] flex items-center justify-between text-[11px] text-[#475569]">
-                      <span>Pilih sekolah ({filteredSchools.length})</span>
+                      <span className="font-semibold text-[#2E6496]">Sekolah Terverifikasi (Penilaian Juri)</span>
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(false)}
@@ -535,35 +472,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         Tutup
                       </button>
                     </div>
-                    {filteredSchools.length === 0 ? (
-                      <div className="p-3.5 text-center text-xs text-[#475569]">
-                        Tidak ada sekolah yang cocok dengan "{searchQuery}".
-                      </div>
-                    ) : (
-                      filteredSchools.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => handleSelectSchool(s)}
-                          className="w-full text-left px-3.5 py-2.5 hover:bg-[#C9DFDC]/35 transition-colors flex items-center justify-between gap-2"
-                        >
-                          <div>
-                            <div className="text-xs sm:text-sm font-bold text-[#1E293B]">
-                              {s.name}
-                            </div>
-                            <div className="text-[11px] text-[#475569] flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3 h-3 text-[#66A3BF] shrink-0" />
-                              <span>
-                                Kec. {s.kecamatan}, {s.kabupaten}, {s.provinsi} • NPSN: {s.npsn}
-                              </span>
-                            </div>
+                    {filteredSchools.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handleSelectSchool(s)}
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-[#C9DFDC]/35 transition-colors flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-1.5">
+                            <span>{s.name}</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#EBF3F8] text-[#2E6496] rounded border border-[#C9DFDC]">
+                              {s.studentCount} Murid
+                            </span>
                           </div>
-                          <span className="text-xs text-[#2E6496] font-semibold shrink-0">
-                            Pilih →
-                          </span>
-                        </button>
-                      ))
-                    )}
+                          <div className="text-[11px] text-[#475569] flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-[#66A3BF] shrink-0" />
+                            <span>
+                              Kec. {s.kecamatan}, {s.kabupaten}, {s.provinsi} • NPSN: {s.npsn}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-[#2E6496] font-semibold shrink-0">
+                          Pilih →
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 )}
 
@@ -578,14 +512,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="mt-4">
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-6 rounded-lg daradik-cta-subtle btn-glass-sheen text-[#FFFFFF] font-bold text-sm sm:text-base active:translate-y-[1px] flex items-center justify-center gap-2.5"
+                    className="w-full py-3.5 px-6 rounded-lg daradik-cta-subtle btn-glass-sheen text-[#FFFFFF] font-bold text-sm sm:text-base active:translate-y-[1px] flex items-center justify-center gap-2.5 group cursor-pointer"
                   >
-                    <span>
+                    <span className="relative z-10">
                       {chosenSchool
                         ? `Cek Transparansi ${chosenSchool.name}`
                         : 'Cek Transparansi Sekolah'}
                     </span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover:translate-x-1" />
                   </button>
                 </div>
               </form>
@@ -617,180 +551,225 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* =====================================================================
-          CONCISE, HUMAN-WRITTEN SECTION BELOW HERO
-          (Zero AI-Slop, Slower Smooth Entrance, No Red/Green Distractions)
+      {/* =====================================================================
+          VERTICAL 3-POINT FLOW (No Boxes, No Table, Animated 1-by-1)
          ===================================================================== */}
-      <section className="w-full bg-[#FAF8F5] pt-4 pb-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          {/* Short, Punchy Editorial Heading */}
-          <ScrollRevealOnce className="max-w-xl mb-10">
+      <section className="w-full bg-[#FAF8F5] pt-10 pb-28 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          {/* Section Heading */}
+          <ScrollRevealOnce className="mb-14 text-left">
             <h2 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
               Satu tempat untuk tahu ke mana dana sekolah mengalir.
             </h2>
-            <p className="mt-2 text-sm text-[#475569] leading-relaxed">
-              Tanpa istilah akuntansi yang rumit. Pilih sekolah, cek bukti belanjanya, atau laporkan pungutan dengan tenang.
+            <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed max-w-2xl">
+              Tanpa istilah akuntansi yang rumit. Tiga langkah mudah untuk memantau dana sekolah, memvalidasi bukti belanja fisik, dan menjaga hak siswa secara terbuka.
             </p>
           </ScrollRevealOnce>
 
-          {/* 3 Clean Minimalist Cards (Short Copy, Direct Action Links) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ScrollRevealOnce
-              delayMs={0}
-              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl p-6 shadow-sm hover:border-[#66A3BF] transition-colors flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#1E293B]">
-                  Cek Dana &amp; Nota Belanja
-                </h3>
-                <p className="mt-2 text-sm text-[#475569] leading-relaxed">
-                  Lihat berapa dana BOSP yang cair tahun ini beserta foto kwitansi dan barang yang terpasang di kelas.
-                </p>
+          {/* Vertical Timeline Track with 3 Sequential Points (Self-Centering Flex Track, No Drift) */}
+          <div className="space-y-0">
+            {/* POINT 1 */}
+            <ScrollRevealOnce delayMs={0} className="relative">
+              <div className="flex items-start gap-4 sm:gap-6">
+                {/* Node & Connecting Line Column */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none">
+                    01
+                  </div>
+                  <div className="w-[2px] bg-[#C9DFDC] flex-1 my-2 min-h-[72px] sm:min-h-[80px]" />
+                </div>
+
+                {/* Content Column */}
+                <div className="pt-1 pb-10 sm:pb-12 max-w-2xl flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#66A3BF] block">
+                        Langkah Pertama
+                      </span>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-0.5">
+                        Cek Dana &amp; Nota Belanja
+                      </h3>
+                    </div>
+                    <ReceiptText className="w-8 h-8 sm:w-9 sm:h-9 text-[#2E6496] shrink-0 stroke-[1.75]" />
+                  </div>
+                  <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
+                    Lihat berapa dana BOSP yang dicairkan tahun ini beserta foto kwitansi, rincian nota barang, dan bukti fisik yang terpasang di ruang kelas sekolah.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectSchoolAndOpenProfile(
+                        chosenSchool || selectedSchool,
+                        'items-ai'
+                      )
+                    }
+                    className="mt-3.5 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
+                  >
+                    <span>Lihat bukti belanja sekolah</span>
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  onSelectSchoolAndOpenProfile(
-                    chosenSchool || selectedSchool,
-                    'items-ai'
-                  )
-                }
-                className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:text-[#1E293B] transition-colors self-start group"
-              >
-                <span>Lihat bukti belanja sekolah</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </button>
             </ScrollRevealOnce>
 
-            <ScrollRevealOnce
-              delayMs={120}
-              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl p-6 shadow-sm hover:border-[#66A3BF] transition-colors flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#1E293B]">
-                  Pindai Iuran Grup WA
-                </h3>
-                <p className="mt-2 text-sm text-[#475569] leading-relaxed">
-                  Unggah screenshot pengumuman iuran kelas untuk mengecek apakah barangnya sebenarnya sudah dibiayai negara.
-                </p>
+            {/* POINT 2 */}
+            <ScrollRevealOnce delayMs={150} className="relative">
+              <div className="flex items-start gap-4 sm:gap-6">
+                {/* Node & Connecting Line Column */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none">
+                    02
+                  </div>
+                  <div className="w-[2px] bg-[#C9DFDC] flex-1 my-2 min-h-[72px] sm:min-h-[80px]" />
+                </div>
+
+                {/* Content Column */}
+                <div className="pt-1 pb-10 sm:pb-12 max-w-2xl flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#66A3BF] block">
+                        Langkah Kedua
+                      </span>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-0.5">
+                        Pindai Iuran Grup WA
+                      </h3>
+                    </div>
+                    <ScanLine className="w-8 h-8 sm:w-9 sm:h-9 text-[#2E6496] shrink-0 stroke-[1.75]" />
+                  </div>
+                  <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
+                    Unggah screenshot pengumuman iuran atau paguyuban kelas untuk mencocokkan otomatis dengan data anggaran BOSP. Ketahui apakah barang tersebut sebenarnya sudah dibiayai negara.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectSchoolAndOpenProfile(
+                        chosenSchool || selectedSchool,
+                        'wa-scanner'
+                      )
+                    }
+                    className="mt-3.5 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
+                  >
+                    <span>Coba pemindai screenshot</span>
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  onSelectSchoolAndOpenProfile(
-                    chosenSchool || selectedSchool,
-                    'wa-scanner'
-                  )
-                }
-                className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:text-[#1E293B] transition-colors self-start group"
-              >
-                <span>Coba pemindai screenshot</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </button>
             </ScrollRevealOnce>
 
-            <ScrollRevealOnce
-              delayMs={240}
-              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl p-6 shadow-sm hover:border-[#66A3BF] transition-colors flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#1E293B]">
-                  Lapor Tanpa Identitas
-                </h3>
-                <p className="mt-2 text-sm text-[#475569] leading-relaxed">
-                  Sampaikan temuan ke Dinas Pendidikan tanpa perlu mencantumkan nama maupun nomor telepon Anda.
-                </p>
-              </div>
-              <div className="mt-6 flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={onOpenAnonymousReport}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:text-[#1E293B] transition-colors group"
-                >
-                  <span>Buat laporan</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-                <span className="text-[#C9DFDC]">•</span>
-                <button
-                  type="button"
-                  onClick={onOpenLiveTracking}
-                  className="text-xs font-semibold text-[#475569] hover:text-[#2E6496] transition-colors"
-                >
-                  Lacak kode tiket
-                </button>
+            {/* POINT 3 */}
+            <ScrollRevealOnce delayMs={300} className="relative">
+              <div className="flex items-start gap-4 sm:gap-6">
+                {/* Node Column (No trailing line on final step) */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none">
+                    03
+                  </div>
+                </div>
+
+                {/* Content Column */}
+                <div className="pt-1 max-w-2xl flex-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#66A3BF] block">
+                        Langkah Ketiga
+                      </span>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-0.5">
+                        Lapor Tanpa Identitas
+                      </h3>
+                    </div>
+                    <ShieldCheck className="w-8 h-8 sm:w-9 sm:h-9 text-[#2E6496] shrink-0 stroke-[1.75]" />
+                  </div>
+                  <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
+                    Sampaikan temuan indikasi pungutan liar ke Dinas Pendidikan tanpa perlu menyertakan nama, alamat, maupun nomor telepon. Pelaporan dienkripsi dan 100% anonim.
+                  </p>
+                  <div className="mt-3.5 flex flex-wrap items-center gap-4 text-xs sm:text-sm">
+                    <button
+                      type="button"
+                      onClick={onOpenAnonymousReport}
+                      className="inline-flex items-center gap-2 font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
+                    >
+                      <span>Buat laporan</span>
+                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    <span className="text-[#C9DFDC]">•</span>
+                    <button
+                      type="button"
+                      onClick={onOpenLiveTracking}
+                      className="font-semibold text-[#475569] hover:text-[#2E6496] transition-colors cursor-pointer"
+                    >
+                      Lacak status tiket aduan
+                    </button>
+                  </div>
+                </div>
               </div>
             </ScrollRevealOnce>
           </div>
 
-          {/* Single Progressive-Disclosure Strip ("Lihat Selengkapnya") with Neutral / Civic Colors (No AI-slop Green/Red) */}
-          <ScrollRevealOnce delayMs={320} className="mt-8">
-            <div className="bg-[#F2EFE8] border border-[#C9DFDC] rounded-xl p-5 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
-                    Ingin tahu biaya apa saja yang sudah gratis ditanggung BOSP?
-                  </h3>
-                  <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
-                    Kenali batas antara kebutuhan sekolah yang wajib dibiayai negara dan pungutan yang dilarang.
+          {/* INFORMASI DI BAWAH (NO TABLE, NO BOXES — Pure Clean Editorial Format) */}
+          <ScrollRevealOnce delayMs={450} className="mt-16 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="max-w-xl">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#2E6496]">
+                  Panduan Hak Belajar &amp; Regulasi
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-[#1E293B] mt-1">
+                  Ketahui Hak Siswa &amp; Batas Larangan Pungutan Sekolah
+                </h3>
+                <p className="text-xs sm:text-sm text-[#475569] mt-1 leading-relaxed">
+                  Sesuai Permendikbudristek No. 63/2023 &amp; Permendikbud No. 75/2016, seluruh operasional dasar dan perlengkapan sarana prasarana sekolah negeri telah dialokasikan melalui BOSP.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMoreInfo((prev) => !prev)}
+                className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:text-[#1E293B] transition-colors cursor-pointer"
+              >
+                <span>{showMoreInfo ? 'Tutup Rincian' : 'Lihat Rincian Regulasi'}</span>
+                {showMoreInfo ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+
+            {/* Seamless, Non-Tabular Expandable Editorial Notes */}
+            {showMoreInfo && (
+              <div className="mt-6 space-y-5 animate-view-enter text-xs sm:text-sm text-[#475569] leading-relaxed">
+                <div className="border-l-2 border-[#2E6496] pl-4 py-1">
+                  <div className="font-bold text-[#1E293B] mb-1">
+                    Wajib Ditanggung Negara Melalui Dana BOSP:
+                  </div>
+                  <p>
+                    Buku teks kurikulum &amp; perpustakaan, perbaikan sarana ruang kelas (kipas angin dinding, bangku kursi, cat dinding, kebersihan sanitasi), tagihan daya listrik/air/internet, dan biaya asesmen pembelajaran.
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowMoreInfo((prev) => !prev)}
-                  className="self-start sm:self-center shrink-0 px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] text-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold transition-colors flex items-center gap-1.5"
-                >
-                  <span>
-                    {showMoreInfo ? 'Tutup Ringkasan' : 'Lihat Selengkapnya'}
-                  </span>
-                  {showMoreInfo ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-
-              {/* Expanded Concise Summary (Neutral, Authentic Civic Design without AI-slop green/red) */}
-              {showMoreInfo && (
-                <div className="mt-5 pt-5 border-t border-[#C9DFDC] space-y-4 animate-view-enter">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs sm:text-sm">
-                    <div className="p-4 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC]">
-                      <div className="font-bold text-[#1E293B] mb-1.5 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#2E6496]" />
-                        <span>Kewajiban Ditanggung Negara (BOSP):</span>
-                      </div>
-                      <p className="text-[#475569] leading-relaxed">
-                        Buku paket kurikulum &amp; perpustakaan, perawatan ruang kelas (kipas angin dinding, cat kelas, meja kursi siswa, sanitasi), tagihan listrik/air/internet, serta kegiatan ujian sekolah.
-                      </p>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC]">
-                      <div className="font-bold text-[#1E293B] mb-1.5 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#66A3BF]" />
-                        <span>Dilarang Dibebankan Wajib ke Wali Murid:</span>
-                      </div>
-                      <p className="text-[#475569] leading-relaxed">
-                        Meminta uang patungan untuk barang yang sudah tercantum di RKAS BOSP, menentukan nominal iuran wajib dengan batas waktu di sekolah negeri, atau mewajibkan pembelian LKS/atribut.
-                      </p>
-                    </div>
+                <div className="border-l-2 border-[#66A3BF] pl-4 py-1">
+                  <div className="font-bold text-[#1E293B] mb-1">
+                    Dilarang Dibebankan Wajib ke Wali Murid di Sekolah Negeri:
                   </div>
-
-                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs text-[#475569]">
-                      Dasar Hukum: Permendikbudristek No. 63/2023 &amp; Permendikbud No. 75/2016
-                    </span>
-                    <button
-                      type="button"
-                      onClick={onOpenKamusModal}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:underline"
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>Buka Kamus Juknis BOSP Lengkap →</span>
-                    </button>
-                  </div>
+                  <p>
+                    Menetapkan iuran wajib bertarget nominal dan tenggat waktu, menarik kas untuk fasilitas yang sudah tercantum di RKAS BOSP, atau mewajibkan pembelian lembar kerja siswa (LKS) dan seragam tertentu.
+                  </p>
                 </div>
-              )}
-            </div>
+
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <span className="text-[#64748B]">
+                    Dasar Regulasi: Permendikbudristek No. 63/2023 &amp; Permendikbud No. 75/2016
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onOpenKamusModal}
+                    className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:underline cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Buka Kamus Juknis BOSP Lengkap →</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </ScrollRevealOnce>
         </div>
       </section>

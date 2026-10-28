@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   BookOpen,
   Search,
@@ -16,6 +16,7 @@ import {
   WaScenarioData,
   formatRupiah,
 } from './data/schoolsData';
+import { fetchSchoolFromSupabase } from './lib/supabase';
 import { LandingPage } from './components/LandingPage';
 import {
   ProfileTab,
@@ -43,6 +44,21 @@ export function App() {
     SCHOOLS_DATABASE[0]
   );
   const [profileTab, setProfileTab] = useState<ProfileTab>('summary');
+
+  // Supabase Sync: Mengambil data sekolah dari Supabase jika database aktif
+  useEffect(() => {
+    async function loadSchoolFromSupabase() {
+      try {
+        const remote = await fetchSchoolFromSupabase('69994998');
+        if (remote) {
+          setSelectedSchool(remote);
+        }
+      } catch (err) {
+        console.info('[Supabase] Menggunakan data lokal terverifikasi:', err);
+      }
+    }
+    loadSchoolFromSupabase();
+  }, []);
 
   // Modals State
   const [isKamusOpen, setIsKamusOpen] = useState<boolean>(false);

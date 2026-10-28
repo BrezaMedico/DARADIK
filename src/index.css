@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Opt-in to intrinsic keyword interpolation for smooth accordion/panel sizing */
+  interpolate-size: allow-keywords;
+
+  /* School Page Palette Tokens (Aligned with Agreed 4-Color Civic Palette) */
+  --school-bg: #FAF8F5;
+  --school-surface: #FFFFFF;
+  --school-sand: #F2EFE8;
+  --school-subtle: #EBF3F8;
+  --school-border: #C9DFDC;
+  --school-border-strong: #A8C8C4;
+  --school-ink: #1E293B;
+  --school-charcoal: #0F172A;
+  --school-muted: #475569;
+  --school-accent: #2E6496;
+  --school-accent-hover: #245385;
+  --school-accent-mid: #66A3BF;
+  --school-accent-soft: #C9DFDC;
+  --school-accent-tint: #EBF3F8;
+  --school-amber: #C87A28;
+  --school-amber-soft: #FBF3E6;
+  --school-bronze: #7C6A56;
+  --school-danger: #C24136;
+  --school-danger-soft: #FDF3F2;
+}
+
 @layer base {
   html {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -26,14 +52,15 @@
   letter-spacing: -0.035em;
 }
 
-/* Cursive / Tulis Sambung yang Bersih, Terhubung & Sangat Mudah Dibaca */
+/* Cursive / Tulis Sambung yang Bersih, Alami, Terhubung & Sangat Mudah Dibaca */
 .font-script-sekolah {
-  font-family: 'Alex Brush', 'Great Vibes', cursive;
+  font-family: 'Satisfy', 'Dancing Script', 'Caveat', cursive;
   font-weight: 400;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   display: inline-block;
-  line-height: 0.9;
+  line-height: 1;
   vertical-align: baseline;
+  text-shadow: 0 1px 2px rgba(10, 30, 55, 0.35);
 }
 
 /* White Stroke-Only Architectural Rectangle Shapes */
@@ -118,23 +145,130 @@
   background-size: 42px 42px;
 }
 
-/* Subtle, Thin Tonal Button Gradient */
+/* Clean, Minimalist Solid Brand CTA Button (Minimalkan Gradasi) */
 .daradik-cta-subtle {
-  background: linear-gradient(180deg, #3a72ad 0%, #2e6496 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 4px 12px -2px rgba(22, 54, 92, 0.28);
-  transition: transform 150ms ease, box-shadow 220ms ease, background 200ms ease;
+  background-color: #245385;
+  border: 1px solid #1e4570;
+  box-shadow: 0 4px 12px -2px rgba(22, 54, 92, 0.22);
+  transition: background-color 180ms ease,
+              border-color 180ms ease,
+              box-shadow 200ms ease,
+              transform 150ms ease;
 }
 
 .daradik-cta-subtle:hover {
-  background: linear-gradient(180deg, #32659c 0%, #24507a 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    0 6px 18px -2px rgba(22, 54, 92, 0.38);
+  background-color: #1c436d;
+  border-color: #17385c;
+  box-shadow: 0 6px 18px -2px rgba(22, 54, 92, 0.30);
+  transform: translateY(-1px);
 }
 
-/* Glass Sheen Shimmer Reflection on Button Hover ("effect kaca mengkilat") */
+.daradik-cta-subtle:active {
+  background-color: #17385c;
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(22, 54, 92, 0.25);
+}
+
+/* =====================================================================
+   SCHOOL PAGE BUTTON & INTERACTIVE COMPONENT SYSTEM (Agreed Civic Palette)
+   ===================================================================== */
+.school-btn-primary {
+  background-color: var(--school-accent);
+  color: #FFFFFF;
+  border: 1px solid #245385;
+  box-shadow: 0 4px 12px -2px rgba(46, 100, 150, 0.25);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.school-btn-primary:hover:not(:disabled) {
+  background-color: var(--school-accent-hover);
+  border-color: #1a426e;
+  box-shadow: 0 6px 16px -3px rgba(46, 100, 150, 0.35);
+  transform: translateY(-1px);
+}
+
+.school-btn-primary:active:not(:disabled) {
+  background-color: #1a426e;
+  transform: translateY(0.5px);
+  box-shadow: 0 2px 6px rgba(46, 100, 150, 0.22);
+}
+
+.school-btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(46, 100, 150, 0.30);
+}
+
+.school-btn-secondary {
+  background-color: var(--school-surface);
+  color: var(--school-ink);
+  border: 1px solid var(--school-border);
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.school-btn-secondary:hover:not(:disabled) {
+  background-color: var(--school-sand);
+  border-color: var(--school-border-strong);
+  box-shadow: 0 3px 8px -2px rgba(24, 24, 27, 0.07);
+}
+
+.school-btn-secondary:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.school-btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 94, 75, 0.22);
+}
+
+.school-btn-danger {
+  background-color: var(--school-danger);
+  color: #FFFFFF;
+  border: 1px solid #A63329;
+  box-shadow: 0 4px 12px -2px rgba(194, 65, 54, 0.20);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.school-btn-danger:hover:not(:disabled) {
+  background-color: #A63329;
+  box-shadow: 0 6px 16px -3px rgba(194, 65, 54, 0.28);
+  transform: translateY(-1px);
+}
+
+.school-btn-danger:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+/* Crisp, Clean & Subtle Light Sheen on Hover (Simple & Non-Distracting) */
+@keyframes cleanLightSweep {
+  0% {
+    transform: translate3d(-120%, 0, 0) skewX(-20deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(240%, 0, 0) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
 .btn-glass-sheen {
   position: relative;
   overflow: hidden;
@@ -143,50 +277,90 @@
 .btn-glass-sheen::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -75%;
-  width: 50%;
-  height: 200%;
+  top: 0;
+  left: -20%;
+  width: 40%;
+  height: 100%;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.38) 50%,
+    rgba(255, 255, 255, 0.22) 50%,
     transparent 100%
   );
-  transform: rotate(25deg);
-  transition: transform 750ms cubic-bezier(0.19, 1, 0.22, 1);
+  transform: translate3d(-120%, 0, 0) skewX(-20deg);
   pointer-events: none;
 }
 
 .btn-glass-sheen:hover::after {
-  transform: translate3d(380%, 0, 0) rotate(25deg);
+  animation: cleanLightSweep 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* =====================================================================
-   Cembung (Convex Lens Bulge) + Rise + Blur Entrance Animation
-   - Muncul dari bawah ke atas
-   - Dimulai dalam kondisi blur
-   - Melebar cembung (convex lens bulge) lalu kembali normal
+   DIRECTED ENTRANCE ANIMATIONS FOR SCHOOL PAGE (220ms–450ms, smooth easing)
    ===================================================================== */
-@keyframes cembungReveal {
+@keyframes schoolEnterUp {
   0% {
     opacity: 0;
-    transform: perspective(1000px) translate3d(0, 56px, -40px) rotateX(14deg) scaleX(0.86) scaleY(0.92);
-    filter: blur(14px);
-  }
-  50% {
-    opacity: 0.90;
-    transform: perspective(1000px) translate3d(0, -6px, 16px) rotateX(-2deg) scaleX(1.04) scaleY(1.025);
-    filter: blur(2px);
-  }
-  75% {
-    opacity: 0.98;
-    transform: perspective(1000px) translate3d(0, 1.5px, 0) rotateX(0.5deg) scaleX(0.995) scaleY(0.995);
-    filter: blur(0px);
+    transform: translate3d(0, 14px, 0);
   }
   100% {
     opacity: 1;
-    transform: perspective(1000px) translate3d(0, 0, 0) rotateX(0deg) scale(1);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes schoolHeaderEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-school-header {
+  animation: schoolHeaderEnter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-school-item {
+  animation: schoolEnterUp 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Modern @starting-style entry & intrinsic accordion panel transition */
+.school-expand-panel {
+  block-size: auto;
+  block-size: calc-size(auto, size);
+  opacity: 1;
+  translate: 0 0;
+  overflow: hidden;
+  transition:
+    block-size 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 260ms ease-out,
+    translate 260ms ease-out;
+  transition-behavior: allow-discrete;
+}
+
+@starting-style {
+  .school-expand-panel {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+
+/* =====================================================================
+   Smooth, Natural Scroll Reveal Entrance Animation (Landing Page)
+   ===================================================================== */
+@keyframes smoothRiseReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
     filter: blur(0px);
   }
 }
@@ -197,13 +371,13 @@
 
 .scroll-reveal-hidden {
   opacity: 0;
-  transform: perspective(1000px) translate3d(0, 56px, -40px) rotateX(14deg) scaleX(0.86) scaleY(0.92);
-  filter: blur(14px);
+  transform: translateY(24px);
+  filter: blur(4px);
   pointer-events: none;
 }
 
 .scroll-reveal-visible {
-  animation: cembungReveal 1250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: smoothRiseReveal 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: auto;
 }
 
@@ -240,8 +414,63 @@
   animation: cembungPageEnter 950ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Accessibility: Respect prefers-reduced-motion across all animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-school-header,
+  .animate-school-item,
+  .animate-view-enter,
+  .scroll-reveal-visible,
+  .btn-glass-sheen:hover::after {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+
+  .school-expand-panel,
+  .school-btn-primary,
+  .school-btn-secondary,
+  .school-btn-danger {
+    transition: none !important;
+    translate: none !important;
+  }
+
+  @starting-style {
+    .school-expand-panel {
+      translate: none;
+    }
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;
   }
+}
+
+/* 3-Dots Wave Bouncing Animation ("loading 3 titik yang naik turun") */
+@keyframes ai-dot-wave {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-12px);
+    opacity: 1;
+  }
+}
+
+.animate-ai-dot-1 {
+  animation: ai-dot-wave 1.2s infinite ease-in-out;
+  animation-delay: 0s;
+}
+
+.animate-ai-dot-2 {
+  animation: ai-dot-wave 1.2s infinite ease-in-out;
+  animation-delay: 0.22s;
+}
+
+.animate-ai-dot-3 {
+  animation: ai-dot-wave 1.2s infinite ease-in-out;
+  animation-delay: 0.44s;
 }
