@@ -436,10 +436,10 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
       )}
 
       {/* =====================================================================
-          STATE 2: LOADING (3 LINGKARAN BERSIH)
+          STATE 2: LOADING (HANYA 3 TITIK LOADING BERSIH)
          ===================================================================== */}
       {isScanningWa && (
-        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-12 text-center shadow-xs flex flex-col items-center justify-center min-h-[300px] max-w-md mx-auto space-y-5">
+        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-10 sm:p-12 text-center shadow-xs flex flex-col items-center justify-center min-h-[260px] max-w-md mx-auto space-y-4 animate-view-enter">
           <div className="flex items-center justify-center gap-3">
             <span className="w-3.5 h-3.5 rounded-full bg-[#2E6496] animate-ai-dot-1" />
             <span className="w-3.5 h-3.5 rounded-full bg-[#66A3BF] animate-ai-dot-2" />
@@ -448,10 +448,10 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
           <div className="space-y-1">
             <h3 className="font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]">
-              Memeriksa Pesan...
+              Memeriksa Pesan WhatsApp...
             </h3>
             <p className="text-xs text-[#64748B]">
-              Mencocokkan dengan data realisasi BOSP {school.name}.
+              Mencocokkan kata kunci iuran dengan data pembelanjaan sekolah.
             </p>
           </div>
         </div>

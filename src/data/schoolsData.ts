@@ -49,6 +49,26 @@ export interface BudgetComposition {
   description: string;
 }
 
+export interface SchoolYearHistory {
+  year: string;
+  isCurrentYear: boolean;
+  totalBosp: number;
+  tahap1: {
+    amount: number;
+    period: string;
+    status: string;
+    disbursedDate: string;
+  };
+  tahap2: {
+    amount: number;
+    period: string;
+    status: string;
+    disbursedDate: string;
+  };
+  compositions: BudgetComposition[];
+  items: BospRealizationItem[];
+}
+
 export interface SchoolData {
   id: string;
   name: string;
@@ -76,6 +96,7 @@ export interface SchoolData {
   };
   compositions: BudgetComposition[];
   items: BospRealizationItem[];
+  history?: Record<string, SchoolYearHistory>;
 }
 
 /**
@@ -461,7 +482,7 @@ export const SMK_TI_BAZMA: SchoolData = {
   kabupaten: 'Kab. Bogor',
   kecamatan: 'Ciampea',
   address: 'Jl. Cikampak Cicadas RT 01/RW 01, Kp. Cirangkong, Cibatok II, Kec. Ciampea / Cibungbulang, Kab. Bogor, Jawa Barat 16630',
-  status: 'Terverifikasi Dapodik & BOSP 2026',
+  status: 'Terdaftar Aktif di Kemdikbudristek',
   studentCount: 90,
   perStudentEstimate: 1680000,
   totalBosp: 151200000,
@@ -474,8 +495,8 @@ export const SMK_TI_BAZMA: SchoolData = {
   tahap2: {
     amount: 75600000,
     period: 'Jul–Des',
-    status: 'Sudah Cair',
-    disbursedDate: '04 Agustus 2026',
+    status: 'Belum Cair',
+    disbursedDate: 'Menunggu Penyaluran',
   },
   compositions: [
     {
@@ -505,6 +526,339 @@ export const SMK_TI_BAZMA: SchoolData = {
   ],
   items: BAZMA_BOSP_ITEMS,
 };
+
+/**
+ * Arsip Realisasi Pengadaan BOSP Resmi SMK TI BAZMA Tahun Lalu (TA 2025)
+ */
+export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
+  {
+    id: 'item-2025-komputer-01',
+    code: 'RKAS-2025-02.04',
+    name: 'Workstation Komputer Praktikum Lab SIJA (10 Unit)',
+    unitSummary: '10 Unit Terpasang',
+    amount: 42000000,
+    category: 'Peralatan Sekolah & Fasilitas Lab Komputer',
+    aiCategoryPath: 'Infrastruktur TI > Komputer Workstation Lab',
+    date: '15 Agustus 2025',
+    stage: 'Tahap 2',
+    allocation: 'Pengadaan workstation koding dan sistem operasi Linux untuk praktikum 90 siswa kejuruan',
+    iconType: 'projector',
+    keywords: ['komputer', 'pc', 'workstation', 'lab komputer', 'praktikum', 'sija'],
+    invoice: {
+      number: 'INV/TECH-BGR/2025/08/0411',
+      vendorName: 'PT Multi Informatika Nusantara Bogor',
+      vendorAddress: 'Jl. Pajajaran No. 44, Kota Bogor',
+      npwp: '01.882.333.1-403.000',
+      date: '15 Agustus 2025',
+      treasurerName: 'Rina Marlina, S.E.',
+      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      lineItems: [
+        {
+          name: 'PC Desktop Core i5 SSD 512GB RAM 16GB Lab Workstation',
+          qty: '10 Unit',
+          unitPrice: 4200000,
+          subtotal: 42000000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5684',
+      lng: '106.6975',
+      roomLabel: 'Lab Komputer SIJA 1 — SMK TI BAZMA',
+      uploadedAt: '18 Agu 2025 11:00 WIB',
+      inspectorNote: '10 unit PC telah diinstalasi OS Debian dan siap untuk praktikum siswa.',
+      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
+    },
+  },
+  {
+    id: 'item-2025-modul-02',
+    code: 'RKAS-2025-03.01',
+    name: 'Buku Teks & Modul Kurikulum Nasional Siswa',
+    unitSummary: '90 Paket Modul',
+    amount: 20000000,
+    category: 'Pengembangan Bahan Ajar & Modul Siswa',
+    aiCategoryPath: 'Kurikulum & Buku > Modul Praktikum Siswa',
+    date: '10 Maret 2025',
+    stage: 'Tahap 1',
+    allocation: 'Penyediaan modul materi ajar kejuruan gratis bagi seluruh 90 siswa SMK TI BAZMA',
+    iconType: 'book',
+    keywords: ['buku', 'modul', 'materi', 'buku teks', 'perpustakaan', 'kurikulum'],
+    invoice: {
+      number: 'INV/EDUKASI-BGR/2025/03/0091',
+      vendorName: 'Penerbit Mitra Edukasi Bogor',
+      vendorAddress: 'Jl. Raya Tajur No. 12, Kota Bogor',
+      npwp: '02.441.222.9-404.000',
+      date: '10 Maret 2025',
+      treasurerName: 'Rina Marlina, S.E.',
+      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      lineItems: [
+        {
+          name: 'Paket Modul Kurikulum SMK Kejuruan SIJA Lengkap',
+          qty: '90 Paket',
+          unitPrice: 222222,
+          subtotal: 20000000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5683',
+      lng: '106.6974',
+      roomLabel: 'Perpustakaan & Ruang Baca — SMK TI BAZMA',
+      uploadedAt: '12 Mar 2025 10:15 WIB',
+      inspectorNote: 'Buku teks telah didistribusikan ke seluruh siswa tanpa dipungut biaya.',
+      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
+    },
+  },
+  {
+    id: 'item-2025-router-03',
+    code: 'RKAS-2025-02.05',
+    name: 'Router Gateway Core Mikrotik & Rack Server Asrama',
+    unitSummary: '2 Unit Router Core',
+    amount: 14800000,
+    category: 'Perangkat Jaringan & Komunikasi Data',
+    aiCategoryPath: 'Infrastruktur TI > Router Core Jaringan',
+    date: '22 September 2025',
+    stage: 'Tahap 2',
+    allocation: 'Pembaruan router gateway bandwidth management untuk akses internet asrama siswa',
+    iconType: 'projector',
+    keywords: ['router', 'mikrotik', 'gateway', 'wifi', 'jaringan', 'internet'],
+    invoice: {
+      number: 'INV/NET-2025/09/0112',
+      vendorName: 'CV Jaringan Mandiri Bogor',
+      vendorAddress: 'Jl. Padjadjaran No. 56, Kota Bogor',
+      npwp: '03.111.444.2-403.000',
+      date: '22 September 2025',
+      treasurerName: 'Rina Marlina, S.E.',
+      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      lineItems: [
+        {
+          name: 'MikroTik Cloud Core Router CCR2004-16G-2S+',
+          qty: '2 Unit',
+          unitPrice: 7400000,
+          subtotal: 14800000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5682',
+      lng: '106.6978',
+      roomLabel: 'Ruang Server NOC — SMK TI BAZMA',
+      uploadedAt: '25 Sep 2025 14:00 WIB',
+      inspectorNote: 'Router core aktif dan manajemen bandwidth internet berjalan optimal.',
+      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
+    },
+  },
+  {
+    id: 'item-2025-internet-04',
+    code: 'RKAS-2025-06.01',
+    name: 'Langganan Internet Dedicated Fiber Optik 100 Mbps (TA 2025)',
+    unitSummary: '12 Bulan Penuh',
+    amount: 21600000,
+    category: 'Langganan Daya & Jasa Internet',
+    aiCategoryPath: 'Langganan Daya & Jasa > Internet Dedicated',
+    date: '05 Januari 2025',
+    stage: 'Tahap 1',
+    allocation: 'Akses broadband fiber optik 1:1 untuk pembelajaran digital dan praktikum siswa selama 12 bulan',
+    iconType: 'projector',
+    keywords: ['internet', 'wifi', 'fiber optik', 'langganan internet', 'bandwidth'],
+    invoice: {
+      number: 'INV/TELCO-2025/01/008',
+      vendorName: 'PT Telekomunikasi Data Nusantara Bogor',
+      vendorAddress: 'Jl. Pajajaran Raya No. 12, Kota Bogor',
+      npwp: '01.233.444.5-403.000',
+      date: '05 Januari 2025',
+      treasurerName: 'Rina Marlina, S.E.',
+      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      lineItems: [
+        {
+          name: 'Akses Internet Dedicated 100 Mbps (12 Bulan TA 2025)',
+          qty: '12 Bulan',
+          unitPrice: 1800000,
+          subtotal: 21600000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5682',
+      lng: '106.6978',
+      roomLabel: 'NOC / Ruang Jaringan — SMK TI BAZMA',
+      uploadedAt: '10 Jan 2025 09:30 WIB',
+      inspectorNote: 'Layanan internet dedicated 100 Mbps aktif sepanjang tahun 2025.',
+      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
+    },
+  },
+  {
+    id: 'item-2025-sanitasi-05',
+    code: 'RKAS-2025-05.08',
+    name: 'Perbaikan Saluran Air Bersih & Pompa Asrama Siswa',
+    unitSummary: '6 Titik Sanitasi',
+    amount: 11200000,
+    category: 'Pemeliharaan Sarana Sanitasi & Higienitas',
+    aiCategoryPath: 'Pemeliharaan Sanitasi > Pompa & Kamar Mandi',
+    date: '20 Mei 2025',
+    stage: 'Tahap 1',
+    allocation: 'Perbaikan instalasi pipa air bersih dan penggantian pompa air otomatis gedung asrama santri',
+    iconType: 'sanitation',
+    keywords: ['toilet', 'wc', 'kamar mandi', 'air bersih', 'sanitasi', 'pompa'],
+    invoice: {
+      number: 'INV/SAN-2025/05/0074',
+      vendorName: 'CV Berkah Sanitasi Mandiri',
+      vendorAddress: 'Jl. Raya Leuwiliang No. 70, Kab. Bogor',
+      npwp: '04.119.502.1-403.000',
+      date: '20 Mei 2025',
+      treasurerName: 'Rina Marlina, S.E.',
+      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      lineItems: [
+        {
+          name: 'Pompa Air Booster Otomatis & Pemipaan PVC SNI',
+          qty: '2 Paket',
+          unitPrice: 5600000,
+          subtotal: 11200000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5681',
+      lng: '106.6976',
+      roomLabel: 'Gedung Asrama Siswa — SMK TI BAZMA',
+      uploadedAt: '22 Mei 2025 15:00 WIB',
+      inspectorNote: 'Debit air bersih lancar mengalir ke seluruh kamar mandi asrama.',
+      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
+    },
+  },
+  {
+    id: 'item-2025-cat-06',
+    code: 'RKAS-2025-05.02',
+    name: 'Pengecatan & Pemeliharaan Ruang Kelas Belajar',
+    unitSummary: '3 Ruang Kelas',
+    amount: 9800000,
+    category: 'Pemeliharaan Gedung & Ruang Belajar',
+    aiCategoryPath: 'Pemeliharaan Gedung > Pengecatan Ruang Kelas',
+    date: '14 Juli 2025',
+    stage: 'Tahap 2',
+    allocation: 'Pengecatan ulang dinding ruang kelas teori dan lab komputer agar bersih dan nyaman untuk kegiatan belajar',
+    iconType: 'paint',
+    keywords: ['cat', 'cat kelas', 'pengecatan', 'cat tembok', 'ruang kelas', 'pemeliharaan'],
+    invoice: {
+      number: 'INV/CAT-2025/07/0033',
+      vendorName: 'Toko Cat & Bangunan Ciampea Indah',
+      vendorAddress: 'Jl. Raya Ciampea No. 28, Kab. Bogor',
+      npwp: '05.212.890.1-403.000',
+      date: '14 Juli 2025',
+      treasurerName: 'Rina Marlina, S.E.',
+      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      lineItems: [
+        {
+          name: 'Cat Tembok Interior Anti-Jamur & Alat Kuas/Roll',
+          qty: '12 Pail',
+          unitPrice: 816666,
+          subtotal: 9800000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5683',
+      lng: '106.6975',
+      roomLabel: 'Ruang Kelas Teori & Lab — SMK TI BAZMA',
+      uploadedAt: '17 Jul 2025 13:20 WIB',
+      inspectorNote: 'Dinding kelas telah dicat rapi dan bersih.',
+      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
+    },
+  },
+];
+
+export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
+  '2026': {
+    year: '2026',
+    isCurrentYear: true,
+    totalBosp: 151200000,
+    tahap1: {
+      amount: 75600000,
+      period: 'Jan–Jun',
+      status: 'Sudah Cair',
+      disbursedDate: '14 Februari 2026',
+    },
+    tahap2: {
+      amount: 75600000,
+      period: 'Jul–Des',
+      status: 'Belum Cair',
+      disbursedDate: 'Menunggu Penyaluran',
+    },
+    compositions: [
+      {
+        id: 'comp-1',
+        label: 'Peralatan Lab TI & Fasilitas Kelas',
+        percentage: 40,
+        amount: 60480000,
+        color: '#2E6496',
+        description: 'Pendingin lab komputer, switch gigabit, proyektor interaktif, dan perbaikan sarana sanitasi asrama 90 siswa.',
+      },
+      {
+        id: 'comp-2',
+        label: 'Modul Kejuruan & Praktikum SIJA/RPL',
+        percentage: 35,
+        amount: 52920000,
+        color: '#66A3BF',
+        description: 'Pengadaan modul praktikum cloud computing, linux sysadmin, buku kurikulum nasional, dan sertifikasi keahlian siswa.',
+      },
+      {
+        id: 'comp-3',
+        label: 'Langganan Internet & Operasional Sekolah',
+        percentage: 25,
+        amount: 37800000,
+        color: '#8CBCCF',
+        description: 'Langganan internet dedicated fiber optik 100 Mbps, bahan praktik habis pakai (kabel UTP/konektor), dan administrasi ARKAS.',
+      },
+    ],
+    items: BAZMA_BOSP_ITEMS,
+  },
+  '2025': {
+    year: '2025',
+    isCurrentYear: false,
+    totalBosp: 144000000,
+    tahap1: {
+      amount: 72000000,
+      period: 'Jan–Jun',
+      status: 'Sudah Cair',
+      disbursedDate: '18 Februari 2025',
+    },
+    tahap2: {
+      amount: 72000000,
+      period: 'Jul–Des',
+      status: 'Sudah Cair',
+      disbursedDate: '11 Agustus 2025',
+    },
+    compositions: [
+      {
+        id: 'comp-2025-1',
+        label: 'Pengadaan Komputer & Infrastruktur Lab',
+        percentage: 45,
+        amount: 64800000,
+        color: '#2E6496',
+        description: '10 unit workstation PC praktikum, router gateway core mikrotik, dan UPS backup daya lab.',
+      },
+      {
+        id: 'comp-2025-2',
+        label: 'Bahan Ajar & Modul Siswa',
+        percentage: 30,
+        amount: 43200000,
+        color: '#66A3BF',
+        description: 'Modul kurikulum merdeka kejuruan, buku perpustakaan, dan bahan praktik siswa.',
+      },
+      {
+        id: 'comp-2025-3',
+        label: 'Langganan Internet & Pemeliharaan Sarana',
+        percentage: 25,
+        amount: 36000000,
+        color: '#8CBCCF',
+        description: 'Internet dedicated 100 Mbps selama 12 bulan, perbaikan pompa sanitasi, dan pengecatan ruang kelas.',
+      },
+    ],
+    items: BAZMA_BOSP_ITEMS_2025,
+  },
+};
+
+SMK_TI_BAZMA.history = BAZMA_YEARLY_HISTORY;
 
 /**
  * Basis Data Sekolah: Hanya memuat SMK TI BAZMA sesuai instruksi

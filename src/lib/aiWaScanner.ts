@@ -3046,7 +3046,7 @@ export function analyzeChatWithBospItems(
       statusTitle: isMandatoryTone
         ? 'Terindikasi Pemaksaan Iuran Non-BOSP'
         : 'Tidak Tercantum di RKAS BOSP (Kegiatan Non-Operasional)',
-      bospFact: `Kegiatan "${foundNonRkas}" tidak terdaftar dalam pagu RKAS BOSP ${schoolName} TA 2026. Ini merupakan kegiatan inisiatif siswa/paguyuban di luar belanja wajib BOSP.`,
+      bospFact: `Kegiatan "${foundNonRkas}" tidak terdaftar dalam pagu RKAS BOSP ${schoolName} tahun berjalan. Ini merupakan kegiatan inisiatif siswa/paguyuban di luar belanja wajib BOSP.`,
       matchedItem: null,
       legalNote: isMandatoryTone
         ? 'Perhatian: Berdasarkan Permendikbud No. 75/2016, iuran non-RKAS TIDAK BOLEH dipaksakan, mengikat, atau diberi tenggat sanksi. Jika ada paksaan, Anda berhak melapor.'

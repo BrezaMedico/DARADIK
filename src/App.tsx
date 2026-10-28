@@ -254,6 +254,7 @@ export function App() {
               onOpenGeotagModal={(item) => setActiveGeotagItem(item)}
               onReportFromItem={handleReportFromItem}
               onReportFromWaScenario={handleReportFromWaScenario}
+              onOpenAnonymousReport={handleOpenReportFromHeader}
               onShowToast={showToast}
             />
           </div>

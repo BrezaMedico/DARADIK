@@ -474,3 +474,95 @@
   animation: ai-dot-wave 1.2s infinite ease-in-out;
   animation-delay: 0.44s;
 }
+
+/* 3D Blue Magnifying Glass Animations */
+@keyframes magnifier-float {
+  0%, 100% {
+    transform: translate3d(-5px, -2px, 0) rotate(-2deg);
+  }
+  50% {
+    transform: translate3d(5px, 2px, 0) rotate(2deg);
+  }
+}
+
+.animate-magnifier-float {
+  animation: magnifier-float 3.4s ease-in-out infinite;
+  transform-origin: 75% 75%;
+}
+
+@keyframes shadow-pulse {
+  0%, 100% {
+    transform: scaleX(0.92);
+    opacity: 0.12;
+  }
+  50% {
+    transform: scaleX(1.08);
+    opacity: 0.22;
+  }
+}
+
+.animate-shadow-pulse {
+  animation: shadow-pulse 3.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes lens-scan {
+  0% {
+    transform: translateY(-24px);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(38px);
+    opacity: 0.2;
+  }
+}
+
+.animate-lens-scan {
+  animation: lens-scan 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes line-pulse-1 {
+  0%, 100% { opacity: 0.45; }
+  33% { opacity: 1; }
+}
+
+@keyframes line-pulse-2 {
+  0%, 100% { opacity: 0.45; }
+  66% { opacity: 1; }
+}
+
+@keyframes line-pulse-3 {
+  0%, 100% { opacity: 0.45; }
+  90% { opacity: 1; }
+}
+
+.animate-line-pulse-1 {
+  animation: line-pulse-1 1.8s ease-in-out infinite;
+}
+
+.animate-line-pulse-2 {
+  animation: line-pulse-2 1.8s ease-in-out infinite 0.25s;
+}
+
+.animate-line-pulse-3 {
+  animation: line-pulse-3 1.8s ease-in-out infinite 0.5s;
+}
+
+@keyframes glare-shift {
+  0%, 100% {
+    opacity: 0.7;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(1px, -1px);
+  }
+}
+
+.animate-glare-shift {
+  animation: glare-shift 2.8s ease-in-out infinite;
+}
+

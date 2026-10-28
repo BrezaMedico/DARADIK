@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft,
   Share2,
   Download,
   CheckCircle2,
-  BookOpen,
   ArrowRight,
   Search,
   Wind,
@@ -19,26 +18,29 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
-  Upload,
-  EyeOff,
-  RefreshCw,
-  Scale,
-  Wallet,
   ReceiptText,
   ScanLine,
   X,
   Building2,
   Camera,
+  Scale,
+  Loader2,
+  Info,
+  Calendar,
+  Clock,
+  History,
 } from 'lucide-react';
 import {
+  BAZMA_YEARLY_HISTORY,
   BospRealizationItem,
   SchoolData,
-  WA_SCENARIOS,
   WaScenarioData,
   formatRupiah,
 } from '../data/schoolsData';
 import { InteractiveDonutChart } from './DonutChart';
 import { WaScannerWorkspace } from './WaScannerWorkspace';
+import { searchBospItems, SemanticSearchResultItem } from '../lib/semanticItemSearch';
+import { generateBospTransparencyPdf } from '../lib/pdfReportGenerator';
 
 export type ProfileTab = 'summary' | 'items-ai' | 'wa-scanner';
 
@@ -52,20 +54,22 @@ interface SchoolProfilePageProps {
   onOpenGeotagModal: (item: BospRealizationItem) => void;
   onReportFromItem: (item: BospRealizationItem) => void;
   onReportFromWaScenario: (scenario: WaScenarioData) => void;
+  onOpenAnonymousReport?: () => void;
   onShowToast: (message: string) => void;
 }
 
 const QUICK_CHIPS = [
   'kipas angin',
-  'cat kelas',
-  'buku cerita',
   'proyektor',
+  'modul buku',
   'kamar mandi',
+  'meja kursi',
+  'switch internet',
 ];
 
 /**
  * Smooth animation progress hook (0 -> 1) for count-up numbers and progress bars.
- * Respects `prefers-reduced-motion: reduce` and always finishes at exact 1.
+ * Respects `prefers-reduced-motion: reduce`.
  */
 function useAnimatedProgress(triggerKey: string, duration = 550): number {
   const [progress, setProgress] = useState<number>(1);
@@ -106,31 +110,121 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
   activeTab,
   onTabChange,
   onBackToLanding,
-  onOpenKamusModal,
   onOpenInvoiceModal,
   onOpenGeotagModal,
   onReportFromItem,
   onReportFromWaScenario,
+  onOpenAnonymousReport,
   onShowToast,
 }) => {
-  // Tab 2 State: AI Similarity Search & Accordion
-  const [itemSearchQuery, setItemSearchQuery] = useState<string>('');
+  // Year History State: '2026' (default: tahun ini) or '2025' (tahun kemarin)
+  const [selectedYear, setSelectedYear] = useState<'2026' | '2025'>('2026');
+
+  // Active Year Data: Derived from school.history or BAZMA_YEARLY_HISTORY
+  const activeYearData = useMemo(() => {
+    if (school.history && school.history[selectedYear]) {
+      return school.history[selectedYear];
+    }
+    if (BAZMA_YEARLY_HISTORY[selectedYear]) {
+      return BAZMA_YEARLY_HISTORY[selectedYear];
+    }
+    return BAZMA_YEARLY_HISTORY['2026'];
+  }, [school.history, selectedYear]);
+
+  const currentItems = activeYearData.items;
+  const currentTotalBosp = activeYearData.totalBosp;
+  const currentTahap1 = activeYearData.tahap1;
+  const currentTahap2 = activeYearData.tahap2;
+  const currentCompositions = activeYearData.compositions;
+
+  // Tab 2 State: AI Semantic Search
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [committedQuery, setCommittedQuery] = useState<string>('');
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const [expandedItemId, setExpandedItemId] = useState<string>(
-    school.items[0]?.id || 'item-kipas-01'
+    currentItems[0]?.id || ''
   );
 
-  // PDF Download simulation state
+  // PDF Export State
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
-  // Animation progress for numbers & bars on school/tab change
-  const animProgress = useAnimatedProgress(`${school.id}-${activeTab}`, 560);
+  // Animation progress
+  const animProgress = useAnimatedProgress(`${school.id}-${activeTab}-${selectedYear}`, 560);
 
-  const maxItemAmount = useMemo(
-    () => Math.max(...school.items.map((i) => i.amount), 1),
-    [school.items]
-  );
+  // Semantic Search Execution using the AI Semantic Search Engine on the active year's items
+  const searchResult = useMemo(() => {
+    return searchBospItems(committedQuery, currentItems);
+  }, [committedQuery, currentItems]);
 
-  // Render clean item icon with palette primary Navy accent
+  // When selected year changes, update expandedItemId to the first item of that year
+  useEffect(() => {
+    if (currentItems.length > 0) {
+      setExpandedItemId(currentItems[0].id);
+    }
+  }, [selectedYear, currentItems]);
+
+  // Execute committed search with loading state
+  const handleExecuteSearch = (queryToSearch?: string) => {
+    const q = queryToSearch !== undefined ? queryToSearch : searchInput;
+    setIsSearching(true);
+
+    setTimeout(() => {
+      setCommittedQuery(q.trim());
+      setIsSearching(false);
+      const result = searchBospItems(q.trim(), currentItems);
+      if (result.results.length > 0) {
+        setExpandedItemId(result.results[0].item.id);
+      }
+    }, 180);
+  };
+
+  const handleSelectQuickChip = (chip: string) => {
+    setSearchInput(chip);
+    handleExecuteSearch(chip);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setCommittedQuery('');
+    if (currentItems.length > 0) {
+      setExpandedItemId(currentItems[0].id);
+    }
+  };
+
+  const handleShareSchool = async () => {
+    const shareUrl = `${window.location.origin}/?npsn=${school.npsn}`;
+    const shareText = `Ringkasan Transparansi BOSP ${school.name} (NPSN: ${school.npsn}) — Pagu BOSP 1 Tahun TA ${selectedYear}: ${formatRupiah(
+      currentTotalBosp
+    )}. Cek rincian penggunaan di: ${shareUrl}`;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareText);
+      }
+    } catch {
+      // Fallback
+    }
+    onShowToast(
+      'Tautan ringkasan transparansi berhasil disalin untuk dibagikan ke grup WA!'
+    );
+  };
+
+  // Real, Professional PDF Download
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      await generateBospTransparencyPdf(school, selectedYear);
+      onShowToast(
+        `Laporan PDF resmi ${school.name} (TA ${selectedYear}) berhasil diunduh.`
+      );
+    } catch (err) {
+      console.error('[DARADIK PDF]', err);
+      onShowToast('Gagal memproses berkas PDF. Silakan coba kembali.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const renderItemIcon = (type: BospRealizationItem['iconType']) => {
     const iconProps = { className: 'w-5 h-5 text-[#2E6496] shrink-0' };
     switch (type) {
@@ -149,113 +243,50 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     }
   };
 
-  // AI Similarity Matching Logic for Tab 2
-  const { matchedItems, aiSimilarityMatch } = useMemo(() => {
-    const q = itemSearchQuery.trim().toLowerCase();
-    if (!q) {
-      return {
-        matchedItems: school.items,
-        aiSimilarityMatch: school.items[0] || null,
-      };
+  const renderMatchBadge = (res: SemanticSearchResultItem) => {
+    switch (res.matchCategory) {
+      case 'exact':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-[11px] font-semibold text-[#2E6496]">
+            <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
+            <span>Kecocokan Persis</span>
+          </span>
+        );
+      case 'synonym':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] border border-[#66A3BF]/40 text-[11px] font-semibold text-[#2E6496]">
+            <Sparkles className="w-3 h-3 text-[#2E6496]" />
+            <span>Sinonim &amp; Istilah Serupa</span>
+          </span>
+        );
+      case 'fuzzy':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFFBEB] border border-[#FDE68A] text-[11px] font-semibold text-[#B45309]">
+            <Sparkles className="w-3 h-3 text-[#B45309]" />
+            <span>Koreksi Penulisan (Typo)</span>
+          </span>
+        );
+      case 'semantic':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#F3E8FF] border border-[#D8B4FE] text-[11px] font-semibold text-[#6B21A8]">
+            <Sparkles className="w-3 h-3 text-[#6B21A8]" />
+            <span>Makna Serupa</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-[#C9DFDC] text-[11px] font-medium text-[#475569]">
+            <span>Katalog Resmi</span>
+          </span>
+        );
     }
-
-    const matches = school.items.filter((item) => {
-      const inName = item.name.toLowerCase().includes(q);
-      const inCategory = item.category.toLowerCase().includes(q);
-      const inAllocation = item.allocation.toLowerCase().includes(q);
-      const inKeywords = item.keywords.some(
-        (kw) => kw.includes(q) || q.includes(kw)
-      );
-      return inName || inCategory || inAllocation || inKeywords;
-    });
-
-    return {
-      matchedItems: matches,
-      aiSimilarityMatch: matches[0] || null,
-    };
-  }, [itemSearchQuery, school.items]);
-
-  const handleSelectQuickChip = (chip: string) => {
-    setItemSearchQuery(chip);
-    const q = chip.toLowerCase();
-    const firstMatch = school.items.find(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.keywords.some((kw) => kw.includes(q) || q.includes(kw))
-    );
-    if (firstMatch) {
-      setExpandedItemId(firstMatch.id);
-    }
-  };
-
-  const handleShareSchool = async () => {
-    const shareUrl = `${window.location.origin}/?npsn=${school.npsn}`;
-    const shareText = `Ringkasan Transparansi BOSP ${school.name} (NPSN: ${school.npsn}) — Total Dana Cair: ${formatRupiah(
-      school.totalBosp
-    )}. Cek bukti nota & penggunaan di: ${shareUrl}`;
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareText);
-      }
-    } catch {
-      // Fallback handled silently
-    }
-    onShowToast(
-      'Tautan ringkasan transparansi berhasil disalin untuk dibagikan ke grup WA!'
-    );
-  };
-
-  const handleDownloadPdf = () => {
-    setIsDownloadingPdf(true);
-    setTimeout(() => {
-      const reportContent = [
-        '====================================================================',
-        'LAPORAN RINGKAS TRANSPARANSI DANA BOSP TAHUN ANGGARAN 2026 (DARADIK)',
-        '====================================================================',
-        `Nama Sekolah   : ${school.name}`,
-        `NPSN           : ${school.npsn}`,
-        `Lokasi         : Kec. ${school.kecamatan}, ${school.kabupaten}, ${school.provinsi}`,
-        `Status         : ${school.status}`,
-        '--------------------------------------------------------------------',
-        `Total BOSP Cair: ${formatRupiah(school.totalBosp)}`,
-        `- Tahap 1      : ${formatRupiah(school.tahap1.amount)} (${school.tahap1.period} • ${school.tahap1.status})`,
-        `- Tahap 2      : ${formatRupiah(school.tahap2.amount)} (${school.tahap2.period} • ${school.tahap2.status})`,
-        `Estimasi Daerah: ~${formatRupiah(school.perStudentEstimate)} / siswa / tahun (${school.studentCount} siswa)`,
-        '--------------------------------------------------------------------',
-        'DAFTAR REALISASI BARANG & BUKTI FISIK TERVERIFIKASI:',
-        ...school.items.map(
-          (it, idx) =>
-            `${idx + 1}. ${it.name} — ${formatRupiah(it.amount)} (${it.date}) | Nota: ${it.invoice.number} | GPS: ${it.geotag.lat}, ${it.geotag.lng}`
-        ),
-        '====================================================================',
-        'Dicetak melalui Portal Publik DARADIK Transparansi BOSP & Anti-Pungli',
-      ].join('\n');
-
-      const blob = new Blob([reportContent], {
-        type: 'text/plain;charset=utf-8',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Ringkasan_BOSP_2026_${school.npsn}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      setIsDownloadingPdf(false);
-      onShowToast(
-        `Laporan ringkas BOSP ${school.name} (NPSN ${school.npsn}) berhasil diunduh.`
-      );
-    }, 500);
   };
 
   const stage1SharePct = Math.round(
-    (school.tahap1.amount / Math.max(school.totalBosp, 1)) * 100
+    (currentTahap1.amount / Math.max(currentTotalBosp, 1)) * 100
   );
   const stage2SharePct = Math.round(
-    (school.tahap2.amount / Math.max(school.totalBosp, 1)) * 100
+    (currentTahap2.amount / Math.max(currentTotalBosp, 1)) * 100
   );
 
   return (
@@ -288,19 +319,23 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               disabled={isDownloadingPdf}
               className="school-btn-secondary px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
             >
-              <Download className="w-4 h-4 text-[#2E6496]" />
-              <span>{isDownloadingPdf ? 'Menyiapkan...' : 'Unduh Ringkasan'}</span>
+              {isDownloadingPdf ? (
+                <Loader2 className="w-4 h-4 text-[#2E6496] animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-[#2E6496]" />
+              )}
+              <span>{isDownloadingPdf ? 'Membuat PDF...' : 'Unduh Ringkasan'}</span>
             </button>
           </div>
         </div>
 
-        {/* SCHOOL PROFILE CARD — PHOTO FRAME ON LEFT, STRUCTURED SPECS TABLE ON RIGHT */}
+        {/* SCHOOL PROFILE CARD — CLEANED & BALANCED LAYOUT */}
         <section
           className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-7 shadow-xs animate-school-header"
           style={{ animationDelay: '40ms' }}
         >
           <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-6">
-            {/* FOTO FRAME SEKOLAH DI KIRI */}
+            {/* Foto Frame Sekolah di Kiri */}
             <div className="w-full sm:w-48 md:w-56 h-48 sm:h-52 rounded-xl border border-[#C9DFDC] bg-gradient-to-b from-[#F2EFE8] via-[#EAF2F1] to-[#DDECEB] flex flex-col items-center justify-center p-3 text-center shrink-0 relative overflow-hidden shadow-xs select-none">
               <div className="w-14 h-14 rounded-2xl bg-[#FFFFFF] border border-[#C9DFDC] flex items-center justify-center text-[#2E6496] shadow-xs mb-2">
                 <Building2 className="w-7 h-7" />
@@ -317,75 +352,62 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               </div>
             </div>
 
-            {/* TABEL INFORMASI DETAIL SEKOLAH DI KANAN */}
-            <div className="flex-1 min-w-0 flex flex-col justify-between">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#C9DFDC]/60">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-semibold text-[#2E6496]">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496]" />
-                    <span>{school.status}</span>
-                  </span>
-                  <span className="text-xs font-mono text-[#475569] px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#C9DFDC] tabular-nums">
-                    TA 2026
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onOpenKamusModal}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2E6496] hover:text-[#1E293B] hover:underline cursor-pointer"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>Panduan Juknis BOSP</span>
-                </button>
+            {/* Detail Informasi Sekolah di Kanan (Clean Structure, No Old Tags) */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#C9DFDC]/60">
+                <span className="text-xs font-mono uppercase tracking-wider text-[#475569] font-bold">
+                  Data Pokok Sekolah
+                </span>
+                <span className="text-xs font-mono text-[#2E6496]">
+                  NPSN {school.npsn}
+                </span>
               </div>
 
-              {/* Tabel Bersih & Rapi dengan format Nama Sekolah : , dll */}
               <table className="w-full text-xs sm:text-sm text-[#1E293B] border-collapse">
                 <tbody className="divide-y divide-[#C9DFDC]/40">
                   <tr>
-                    <td className="py-2 pr-2 font-semibold text-[#475569] w-[130px] sm:w-[150px] whitespace-nowrap">
+                    <td className="py-2.5 pr-2 font-semibold text-[#475569] w-[130px] sm:w-[150px] whitespace-nowrap">
                       Nama Sekolah
                     </td>
-                    <td className="py-2 px-1 font-bold text-[#64748B] w-[12px]">:</td>
-                    <td className="py-2 pl-2 font-bold text-[#1E293B] text-sm sm:text-base">
+                    <td className="py-2.5 px-1 font-bold text-[#64748B] w-[12px]">:</td>
+                    <td className="py-2.5 pl-2 font-bold text-[#1E293B] text-sm sm:text-base">
                       {school.name}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                    <td className="py-2.5 pr-2 font-semibold text-[#475569] whitespace-nowrap">
                       NPSN
                     </td>
-                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
-                    <td className="py-2 pl-2 font-mono font-semibold text-[#1E293B]">
+                    <td className="py-2.5 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2.5 pl-2 font-mono font-semibold text-[#1E293B]">
                       {school.npsn}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                    <td className="py-2.5 pr-2 font-semibold text-[#475569] whitespace-nowrap">
                       Alamat / Wilayah
                     </td>
-                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
-                    <td className="py-2 pl-2 text-[#1E293B]">
+                    <td className="py-2.5 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2.5 pl-2 text-[#1E293B] leading-relaxed">
                       {school.address || `Kec. ${school.kecamatan}, ${school.kabupaten}, ${school.provinsi}`}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                    <td className="py-2.5 pr-2 font-semibold text-[#475569] whitespace-nowrap">
                       Kepala Sekolah
                     </td>
-                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
-                    <td className="py-2 pl-2 text-[#1E293B]">
-                      {school.items[0]?.invoice?.principalName || 'Drs. H. Bambang Sutrisno, M.Pd.'}
+                    <td className="py-2.5 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2.5 pl-2 text-[#1E293B]">
+                      {school.items[0]?.invoice?.principalName || 'Ahmad Dahlan, S.Kom., M.Pd.'}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-2 font-semibold text-[#475569] whitespace-nowrap">
+                    <td className="py-2.5 pr-2 font-semibold text-[#475569] whitespace-nowrap">
                       Jumlah Siswa
                     </td>
-                    <td className="py-2 px-1 font-bold text-[#64748B]">:</td>
-                    <td className="py-2 pl-2 font-mono text-[#1E293B] tabular-nums">
-                      {school.studentCount} Siswa (Penerima Manfaat BOSP)
+                    <td className="py-2.5 px-1 font-bold text-[#64748B]">:</td>
+                    <td className="py-2.5 pl-2 font-mono text-[#1E293B] tabular-nums font-semibold">
+                      {school.studentCount} Siswa
                     </td>
                   </tr>
                 </tbody>
@@ -394,11 +416,10 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
           </div>
         </section>
 
-        {/* 3 STANDALONE NAVIGATION TABS (DITARUH DI BAWAH KARTU PROFIL) */}
+        {/* 3 STANDALONE NAVIGATION TABS */}
         <div
           className="mt-6 p-1.5 bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-1.5 shadow-xs"
           role="tablist"
-          aria-label="Navigasi informasi dana sekolah"
         >
           <button
             type="button"
@@ -411,7 +432,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                 : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
             }`}
           >
-            <Wallet className="w-4 h-4 shrink-0" />
+            <Scale className="w-4 h-4 shrink-0" />
             <span>Ringkasan Dana</span>
           </button>
 
@@ -427,7 +448,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             }`}
           >
             <ReceiptText className="w-4 h-4 shrink-0" />
-            <span>Bukti Belanja</span>
+            <span>Hasil Pembelanjaan</span>
             <span
               className={`px-2 py-0.5 rounded-full font-mono text-[11px] tabular-nums ${
                 activeTab === 'items-ai'
@@ -435,7 +456,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                   : 'bg-[#C9DFDC]/60 text-[#2E6496]'
               }`}
             >
-              {school.items.length}
+              {currentItems.length}
             </span>
           </button>
 
@@ -455,122 +476,282 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
           </button>
         </div>
 
-        {/* ===================================================================
-            TAB 1: RINGKASAN DANA
-           =================================================================== */}
-        {activeTab === 'summary' && (
-          <div className="mt-6 space-y-6">
-            {/* 3 STAT CARDS WITH STAGGERED ENTRANCE & COUNT-UP */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Stat Card 1: Total Dana BOSP */}
-              <div
-                className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between animate-school-item"
-                style={{ animationDelay: '60ms' }}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-[#475569]">
-                      Total Pagu BOSP 2026
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC] font-mono text-[11px] font-semibold">
-                      1 Tahun Penuh
-                    </span>
-                  </div>
-                  <div className="font-mono text-2xl sm:text-3xl font-extrabold text-[#2E6496] mt-2 tabular-nums tracking-tight">
-                    {formatRupiah(Math.round(school.totalBosp * animProgress))}
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3.5 border-t border-[#C9DFDC]/60 flex items-center justify-between gap-2 text-xs text-[#475569]">
-                  <span>Indeks wilayah ({school.kabupaten})</span>
-                  <span className="font-mono font-bold text-[#1E293B] tabular-nums">
-                    ~{formatRupiah(school.perStudentEstimate)}/siswa
+        {/* YEAR HISTORY SELECTOR BAR (TAMPIL PADA TAB RINGKASAN & HASIL PEMBELANJAAN) */}
+        {(activeTab === 'summary' || activeTab === 'items-ai') && (
+          <div className="mt-5 p-3.5 sm:p-4 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-school-header">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center text-[#2E6496] shrink-0">
+                <History className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-bold text-[#1E293B]">
+                    Histori Tahun Anggaran BOSP
+                  </span>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#C9DFDC] text-[#2E6496]">
+                    TA {selectedYear}
                   </span>
                 </div>
+                <p className="text-[11px] text-[#64748B]">
+                  {selectedYear === '2026'
+                    ? 'Menampilkan data BOSP tahun berjalan (2026 — Default)'
+                    : 'Menampilkan arsip riwayat pembelanjaan tahun kemarin (2025)'}
+                </p>
               </div>
+            </div>
 
-              {/* Stat Card 2: Pencairan Tahap 1 */}
-              <div
-                className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between animate-school-item"
-                style={{ animationDelay: '120ms' }}
+            <div className="inline-flex p-1 bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl self-stretch sm:self-auto justify-center">
+              <button
+                type="button"
+                onClick={() => setSelectedYear('2026')}
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+                  selectedYear === '2026'
+                    ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1E293B]'
+                }`}
               >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-[#475569]">
-                      Tahap 1 ({school.tahap1.period})
+                <span>2026</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
+                    selectedYear === '2026'
+                      ? 'bg-[#FFFFFF]/25 text-[#FFFFFF]'
+                      : 'bg-[#C9DFDC]/60 text-[#2E6496]'
+                  }`}
+                >
+                  Tahun Ini
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedYear('2025')}
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+                  selectedYear === '2025'
+                    ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1E293B]'
+                }`}
+              >
+                <span>2025</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
+                    selectedYear === '2025'
+                      ? 'bg-[#FFFFFF]/25 text-[#FFFFFF]'
+                      : 'bg-[#C9DFDC]/60 text-[#475569]'
+                  }`}
+                >
+                  Tahun Lalu
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
+            TAB 1: REDESIGN HALAMAN RINGKASAN DANA (FOKUS 1 TAHUN PENUH)
+           =================================================================== */}
+        {activeTab === 'summary' && (
+          <div className="mt-5 space-y-5">
+            {/* EXECUTIVE 1-YEAR PAGU BOSP CARD */}
+            <div
+              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-7 shadow-xs animate-school-item"
+              style={{ animationDelay: '60ms' }}
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-bold text-[#2E6496]">
+                      Alokasi Pagu 1 Tahun Penuh
                     </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] font-mono font-semibold text-[#2E6496] border border-[#C9DFDC]">
-                      <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
-                      {school.tahap1.status}
+                    <span className="text-xs font-mono font-semibold text-[#64748B]">
+                      Tahun Anggaran {selectedYear}
                     </span>
-                  </div>
-                  <div className="font-mono text-xl sm:text-2xl font-bold text-[#1E293B] mt-2 tabular-nums">
-                    {formatRupiah(
-                      Math.round(school.tahap1.amount * animProgress)
+                    {selectedYear === '2026' ? (
+                      <span className="px-2 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] font-semibold text-[#2E6496] border border-[#66A3BF]/40">
+                        Tahun Berjalan (Default)
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[11px] font-semibold text-[#475569] border border-[#C9DFDC]">
+                        Arsip Tahun Kemarin
+                      </span>
                     )}
                   </div>
+
+                  <h3 className="text-xs sm:text-sm font-semibold text-[#475569]">
+                    Total Alokasi Pagu Dana BOSP ({selectedYear})
+                  </h3>
+
+                  <div className="font-mono text-3xl sm:text-4xl font-extrabold text-[#2E6496] tabular-nums tracking-tight">
+                    {formatRupiah(Math.round(currentTotalBosp * animProgress))}
+                  </div>
+
+                  <p className="text-xs text-[#64748B] max-w-xl leading-relaxed">
+                    Alokasi dana BOSP resmi dari Kemdikbudristek untuk operasional pendidikan 1 tahun penuh (12 bulan kalender) di {school.name}.
+                  </p>
                 </div>
 
-                <div className="mt-4 space-y-2">
-                  <div className="w-full h-2 bg-[#FAF8F5] border border-[#C9DFDC] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#2E6496] rounded-full transition-[width] duration-150"
-                      style={{ width: `${stage1SharePct * animProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-[#475569] tabular-nums">
-                    <span>Cair: {school.tahap1.disbursedDate}</span>
-                    <span className="font-semibold text-[#2E6496]">{stage1SharePct}% Pagu</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stat Card 3: Pencairan Tahap 2 */}
-              <div
-                className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between animate-school-item"
-                style={{ animationDelay: '180ms' }}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-[#475569]">
-                      Tahap 2 ({school.tahap2.period})
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] font-mono font-semibold text-[#2E6496] border border-[#C9DFDC]">
-                      <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
-                      {school.tahap2.status}
-                    </span>
-                  </div>
-                  <div className="font-mono text-xl sm:text-2xl font-bold text-[#1E293B] mt-2 tabular-nums">
-                    {formatRupiah(
-                      Math.round(school.tahap2.amount * animProgress)
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <div className="w-full h-2 bg-[#FAF8F5] border border-[#C9DFDC] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#66A3BF] rounded-full transition-[width] duration-150"
-                      style={{ width: `${stage2SharePct * animProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-[#475569] tabular-nums">
-                    <span>Cair: {school.tahap2.disbursedDate}</span>
-                    <span className="font-semibold text-[#66A3BF]">{stage2SharePct}% Pagu</span>
+                {/* Status Ringkas Penyaluran Tahapan */}
+                <div className="p-4 sm:p-5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex flex-col justify-center min-w-[260px] space-y-3">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-[#64748B] font-bold">
+                    Status Penyaluran Tahapan ({selectedYear})
+                  </span>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#475569]">Tahap 1 (Semester Ganjil):</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-[#2E6496]">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496]" />
+                        {currentTahap1.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#475569]">Tahap 2 (Semester Genap):</span>
+                      {currentTahap2.status === 'Belum Cair' ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-[#B45309]">
+                          <Clock className="w-3.5 h-3.5 text-[#B45309]" />
+                          Belum Cair
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 font-bold text-[#2E6496]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496]" />
+                          {currentTahap2.status}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* KOMPOSISI PENGGUNAAN DANA CARD */}
+            {/* JADWAL & STATUS PENCAIRAN TAHAPAN BOSP */}
+            <div
+              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-7 shadow-xs animate-school-item"
+              style={{ animationDelay: '120ms' }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-[#C9DFDC]/60">
+                <div>
+                  <h3 className="font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]">
+                    Jadwal &amp; Status Pencairan Tahapan BOSP {selectedYear}
+                  </h3>
+                  <p className="text-xs text-[#475569] mt-0.5">
+                    Penyaluran resmi dari kas negara langsung ke rekening satuan pendidikan
+                  </p>
+                </div>
+                <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-mono font-semibold text-[#2E6496]">
+                  2 Tahap Reguler
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Tahap 1 */}
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-[#1E293B]">Tahap 1 ({currentTahap1.period})</span>
+                      <span className="text-[11px] text-[#475569] block">Pencairan: {currentTahap1.disbursedDate}</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFFFFF] text-[11px] font-mono font-semibold text-[#2E6496] border border-[#C9DFDC]">
+                      <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
+                      {currentTahap1.status}
+                    </span>
+                  </div>
+                  <div className="font-mono text-xl font-bold text-[#2E6496] tabular-nums">
+                    {formatRupiah(currentTahap1.amount)}
+                  </div>
+                  <div className="w-full h-2 bg-[#FFFFFF] border border-[#C9DFDC] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#2E6496] rounded-full"
+                      style={{ width: `${stage1SharePct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] font-mono text-[#64748B]">
+                    <span>Alokasi Semester Ganjil</span>
+                    <span className="font-bold text-[#2E6496]">{stage1SharePct}% Pagu (Sudah Cair)</span>
+                  </div>
+                </div>
+
+                {/* Tahap 2 */}
+                <div
+                  className={`p-4 rounded-xl border space-y-3 ${
+                    currentTahap2.status === 'Belum Cair'
+                      ? 'bg-[#FFFBEB]/40 border-[#FDE68A]'
+                      : 'bg-[#FAF8F5] border-[#C9DFDC]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-[#1E293B]">Tahap 2 ({currentTahap2.period})</span>
+                      <span
+                        className={`text-[11px] block ${
+                          currentTahap2.status === 'Belum Cair'
+                            ? 'text-[#B45309] font-medium'
+                            : 'text-[#475569]'
+                        }`}
+                      >
+                        {currentTahap2.status === 'Belum Cair'
+                          ? 'Menunggu Penyaluran Kemenkeu'
+                          : `Pencairan: ${currentTahap2.disbursedDate}`}
+                      </span>
+                    </div>
+                    {currentTahap2.status === 'Belum Cair' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFFBEB] text-[11px] font-mono font-bold text-[#B45309] border border-[#FDE68A]">
+                        <Clock className="w-3 h-3 text-[#B45309]" />
+                        Belum Cair
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFFFFF] text-[11px] font-mono font-semibold text-[#2E6496] border border-[#C9DFDC]">
+                        <CheckCircle2 className="w-3 h-3 text-[#2E6496]" />
+                        {currentTahap2.status}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className={`font-mono text-xl font-bold tabular-nums ${
+                      currentTahap2.status === 'Belum Cair'
+                        ? 'text-[#B45309]'
+                        : 'text-[#2E6496]'
+                    }`}
+                  >
+                    {formatRupiah(currentTahap2.amount)}
+                  </div>
+                  <div className="w-full h-2 bg-[#FFFFFF] border border-[#C9DFDC] rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        currentTahap2.status === 'Belum Cair'
+                          ? 'bg-[#F59E0B]/30'
+                          : 'bg-[#66A3BF]'
+                      }`}
+                      style={{
+                        width:
+                          currentTahap2.status === 'Belum Cair'
+                            ? '0%'
+                            : `${stage2SharePct}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] font-mono text-[#64748B]">
+                    <span>Alokasi Semester Genap</span>
+                    {currentTahap2.status === 'Belum Cair' ? (
+                      <span className="font-bold text-[#B45309]">
+                        Menunggu Penyaluran (0% Tersalurkan)
+                      </span>
+                    ) : (
+                      <span className="font-bold text-[#66A3BF]">
+                        {stage2SharePct}% Pagu (Sudah Cair)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* KOMPOSISI PENGGUNAAN DANA (DONUT CHART) */}
             <div
               className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-8 shadow-xs animate-school-item"
-              style={{ animationDelay: '240ms' }}
+              style={{ animationDelay: '180ms' }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 mb-6 border-b border-[#C9DFDC]/60">
                 <div>
                   <h2 className="font-sturdy-heading text-lg sm:text-xl font-bold text-[#1E293B]">
-                    Komposisi Penggunaan Dana
+                    Komposisi Penggunaan Dana ({selectedYear})
                   </h2>
                   <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
                     Proporsi alokasi anggaran BOSP berdasarkan 3 komponen utama RKAS
@@ -582,117 +763,93 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               </div>
 
               <InteractiveDonutChart
-                compositions={school.compositions}
-                totalAmount={school.totalBosp}
+                compositions={currentCompositions}
+                totalAmount={currentTotalBosp}
               />
-            </div>
-
-            {/* NEXT STEP BAR TO TAB 2 */}
-            <div
-              className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-school-item"
-              style={{ animationDelay: '300ms' }}
-            >
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
-                  Ingin memeriksa barang apa saja yang sudah dibeli sekolah?
-                </h3>
-                <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
-                  Lihat daftar realisasi pengadaan lengkap dengan arsip nota SIPLah dan foto geotagging ruang kelas.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onTabChange('items-ai')}
-                className="w-full sm:w-auto school-btn-primary px-5 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer group"
-              >
-                <span>Cek Bukti Belanja ({school.items.length} Barang)</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
             </div>
           </div>
         )}
 
         {/* ===================================================================
-            TAB 2: CEK BARANG & BUKTI FISIK
+            TAB 2: REDESIGN HASIL PEMBELANJAAN (SEDERHANA, HUMAN-FRIENDLY, BEBAS TABEL RUMIT)
            =================================================================== */}
         {activeTab === 'items-ai' && (
           <div className="mt-6 space-y-6">
-            {/* SEARCH & FILTER BAR */}
+            {/* PENCARIAN SEDERHANA */}
             <div
-              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs animate-school-item"
+              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 shadow-xs animate-school-item"
               style={{ animationDelay: '60ms' }}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                <div>
-                  <label
-                    htmlFor="ai-item-search"
-                    className="block font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]"
-                  >
-                    Cari Barang atau Fasilitas Sekolah
-                  </label>
-                  <p className="text-xs sm:text-sm text-[#475569]">
-                    Gunakan kata sehari-hari untuk mencocokkan barang dengan anggaran BOSP
-                  </p>
+              <div className="mb-4">
+                <h2 className="font-sturdy-heading text-lg sm:text-xl font-bold text-[#1E293B]">
+                  Barang yang Disediakan Sekolah
+                </h2>
+                <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
+                  Cari tahu barang apa saja yang sudah dibeli dengan dana BOSP, berapa biayanya, dan di mana barang tersebut digunakan.
+                </p>
+              </div>
+
+              {/* Kolom Pencarian + Tombol Cari */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleExecuteSearch();
+                }}
+                className="flex flex-col sm:flex-row items-stretch gap-2.5"
+              >
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Ketik barang yang dicari: kipas angin, buku modul, proyektor, meja kursi, wifi..."
+                    className="w-full pl-10 pr-9 py-3 text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium placeholder:text-[#94A3B8] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] transition-all"
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={handleClearSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#64748B] hover:text-[#1E293B] rounded-md cursor-pointer"
+                      aria-label="Bersihkan pencarian"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                <span className="self-start sm:self-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-semibold text-[#2E6496]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#2E6496]" />
-                  <span>Pencarian Pintar</span>
-                </span>
-              </div>
 
-              <div className="relative">
-                <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  id="ai-item-search"
-                  type="text"
-                  value={itemSearchQuery}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setItemSearchQuery(val);
-                    const q = val.trim().toLowerCase();
-                    if (q) {
-                      const found = school.items.find(
-                        (it) =>
-                          it.name.toLowerCase().includes(q) ||
-                          it.keywords.some(
-                            (kw) => kw.includes(q) || q.includes(kw)
-                          )
-                      );
-                      if (found) setExpandedItemId(found.id);
-                    }
-                  }}
-                  placeholder="Ketik kata kunci: kipas, gerah, cat kelas, buku cerita, proyektor, toilet..."
-                  className="w-full pl-10 pr-10 py-3 text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium placeholder:text-[#64748B] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] transition-all"
-                />
-                {itemSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setItemSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#64748B] hover:text-[#1E293B] rounded-md cursor-pointer"
-                    aria-label="Bersihkan pencarian barang"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+                <button
+                  type="submit"
+                  disabled={isSearching}
+                  className="px-6 py-3 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-sm font-bold shadow-xs active:translate-y-[1px] disabled:opacity-60 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#FFFFFF]" />
+                      <span>Mencari...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 text-[#FFFFFF]" />
+                      <span>Cari</span>
+                    </>
+                  )}
+                </button>
+              </form>
 
-              {/* Quick Filter Chips */}
+              {/* Pilihan Kata Kunci Cepat */}
               <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
                 <span className="text-xs text-[#475569] mr-1 font-medium">
-                  Populer:
+                  Coba cari:
                 </span>
                 {QUICK_CHIPS.map((chip) => {
                   const isActive =
-                    itemSearchQuery.toLowerCase() === chip.toLowerCase();
+                    committedQuery.toLowerCase() === chip.toLowerCase();
                   return (
                     <button
                       key={chip}
                       type="button"
-                      onClick={() =>
-                        isActive
-                          ? setItemSearchQuery('')
-                          : handleSelectQuickChip(chip)
-                      }
+                      onClick={() => handleSelectQuickChip(chip)}
                       className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                         isActive
                           ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
@@ -705,132 +862,125 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                 })}
               </div>
 
-              {/* Contextual Match Notice when searching */}
-              {itemSearchQuery.trim() && (
-                <div className="mt-4 pt-3.5 border-t border-[#C9DFDC]/60">
-                  {aiSimilarityMatch ? (
-                    <div className="px-3.5 py-2.5 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-[#1E293B]">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-[#2E6496] shrink-0" />
-                        <span>
-                          Cocok dengan anggaran{' '}
-                          <strong className="text-[#2E6496]">
-                            {aiSimilarityMatch.aiCategoryPath}
-                          </strong>
-                        </span>
-                      </div>
-                      <span className="font-mono font-bold text-[#2E6496] tabular-nums">
-                        {formatRupiah(aiSimilarityMatch.amount)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="px-3.5 py-2.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] flex items-center justify-between gap-2 text-xs text-[#92400E]">
-                      <span>
-                        Kata kunci "{itemSearchQuery}" tidak ditemukan pada realisasi tahun berjalan.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setItemSearchQuery('')}
-                        className="font-semibold underline shrink-0 cursor-pointer"
-                      >
-                        Tampilkan Semua
-                      </button>
-                    </div>
-                  )}
+              {/* Status Filter */}
+              {committedQuery && (
+                <div className="mt-4 pt-3 border-t border-[#C9DFDC]/60 flex items-center justify-between text-xs text-[#475569]">
+                  <div className="flex items-center gap-2">
+                    <Info className="w-3.5 h-3.5 text-[#2E6496]" />
+                    <span>
+                      Menampilkan hasil pencarian: <strong className="text-[#1E293B]">"{committedQuery}"</strong> ({searchResult.totalFound} barang cocok)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="font-bold text-[#2E6496] hover:underline cursor-pointer"
+                  >
+                    Tampilkan Semua
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* REALIZED ITEMS LIST */}
-            <div
-              className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xs overflow-hidden animate-school-item"
-              style={{ animationDelay: '130ms' }}
-            >
-              <div className="px-6 py-4 bg-[#FAF8F5] border-b border-[#C9DFDC] flex items-center justify-between">
-                <h2 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
-                  Daftar Realisasi Barang &amp; Bukti Fisik
-                </h2>
-                <span className="text-xs font-mono text-[#475569] tabular-nums">
-                  {matchedItems.length} dari {school.items.length} item
+            {/* DAFTAR BARANG YANG SUDAH DIBELI (BERSIH & MUDAH DIBACA) */}
+            <div className="space-y-3.5 animate-school-item" style={{ animationDelay: '130ms' }}>
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-mono uppercase tracking-wider text-[#475569] font-bold">
+                  Daftar Barang ({searchResult.results.length} Item)
+                </span>
+                <span className="text-xs text-[#64748B]">
+                  Klik salah satu barang untuk melihat rincian &amp; fotonya
                 </span>
               </div>
 
-              {matchedItems.length === 0 ? (
-                <div className="p-10 text-center">
-                  <p className="text-sm text-[#475569]">
-                    Tidak ada item pembelian yang cocok dengan pencarian{' '}
-                    <strong className="text-[#1E293B]">"{itemSearchQuery}"</strong>.
-                  </p>
+              {/* Kondisi Jika Tidak Ada Hasil */}
+              {searchResult.results.length === 0 ? (
+                <div className="p-8 sm:p-10 rounded-2xl bg-[#FFFFFF] border border-[#C9DFDC] text-center space-y-3 shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] text-[#B45309] flex items-center justify-center mx-auto">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-[#1E293B]">
+                      Barang Tidak Ditemukan
+                    </h4>
+                    <p className="text-xs sm:text-sm text-[#475569] max-w-md mx-auto mt-1 leading-relaxed">
+                      Barang dengan kata kunci <strong className="text-[#1E293B]">"{committedQuery}"</strong> tidak tercatat dalam pembelanjaan BOSP tahun {selectedYear}.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setItemSearchQuery('')}
-                    className="mt-4 school-btn-primary px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
+                    onClick={handleClearSearch}
+                    className="school-btn-secondary px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer"
                   >
-                    Tampilkan Semua Barang
+                    Tampilkan Semua Barang ({currentItems.length})
                   </button>
                 </div>
               ) : (
-                <div className="divide-y divide-[#C9DFDC]/50">
-                  {matchedItems.map((item, idx) => {
+                <div className="space-y-3">
+                  {searchResult.results.map((res) => {
+                    const item = res.item;
                     const isExpanded = expandedItemId === item.id;
-                    const barPct = Math.round(
-                      (item.amount / maxItemAmount) * 100
-                    );
+
                     return (
                       <div
                         key={item.id}
-                        className="bg-[#FFFFFF] animate-school-item"
-                        style={{
-                          animationDelay: `${Math.min(140 + idx * 45, 340)}ms`,
-                        }}
+                        className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                          isExpanded
+                            ? 'bg-[#FFFFFF] border-[#2E6496] shadow-sm ring-1 ring-[#2E6496]/20'
+                            : 'bg-[#FFFFFF] border-[#C9DFDC] hover:border-[#66A3BF] hover:shadow-xs'
+                        }`}
                       >
-                        {/* Item Row Header */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedItemId(isExpanded ? '' : item.id)
-                          }
-                          aria-expanded={isExpanded}
-                          className={`w-full text-left px-6 py-4 flex items-center justify-between gap-4 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2E6496] ${
-                            isExpanded
-                              ? 'bg-[#FAF8F5]'
-                              : 'bg-[#FFFFFF] hover:bg-[#FAF8F5]/70'
-                          }`}
+                        {/* Baris Utama Kartu Barang */}
+                        <div
+                          onClick={() => setExpandedItemId(isExpanded ? '' : item.id)}
+                          className="p-4 sm:p-5 cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 select-none"
                         >
-                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                            <div className="w-10 h-10 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0">
+                          <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                            <div className="w-11 h-11 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 text-[#2E6496]">
                               {renderItemIcon(item.iconType)}
                             </div>
+
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm sm:text-base font-bold text-[#1E293B] truncate">
-                                {item.name}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base sm:text-lg font-bold text-[#1E293B] leading-snug">
+                                  {item.name}
+                                </h3>
+                                {committedQuery && renderMatchBadge(res)}
                               </div>
-                              <div className="text-xs text-[#475569] flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                <span className="font-semibold text-[#1E293B]">
-                                  {item.unitSummary}
+
+                              {/* Informasi Singkat & Bahasa Sehari-hari */}
+                              <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-[#475569]">
+                                <span className="inline-flex items-center gap-1 font-semibold text-[#1E293B]">
+                                  <span>📦</span>
+                                  <span>{item.unitSummary}</span>
                                 </span>
-                                <span className="text-[#94A3B8]">•</span>
-                                <span className="font-mono tabular-nums">
-                                  {item.date} ({item.stage})
+                                <span className="text-[#CBD5E1]">•</span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span>📅</span>
+                                  <span>Dibeli {item.date}</span>
+                                </span>
+                                <span className="text-[#CBD5E1]">•</span>
+                                <span className="inline-flex items-center gap-1 text-[#2E6496] font-medium">
+                                  <span>📍</span>
+                                  <span>{item.geotag.roomLabel.split('—')[0].trim()}</span>
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4 shrink-0">
-                            <div className="text-right">
-                              <div className="font-mono text-sm sm:text-base font-extrabold text-[#2E6496] tabular-nums">
+                          {/* Harga & Tombol Buka */}
+                          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#C9DFDC]/50 shrink-0">
+                            <div className="text-left sm:text-right">
+                              <span className="text-[10px] font-mono uppercase text-[#64748B] block font-semibold">
+                                Total Biaya
+                              </span>
+                              <div className="font-mono text-base sm:text-lg font-extrabold text-[#2E6496] tabular-nums">
                                 {formatRupiah(item.amount)}
                               </div>
-                              <div className="hidden sm:block w-24 h-1.5 bg-[#FAF8F5] border border-[#C9DFDC] rounded-full overflow-hidden mt-1 ml-auto">
-                                <div
-                                  className="h-full bg-[#2E6496] rounded-full transition-[width] duration-200"
-                                  style={{ width: `${barPct * animProgress}%` }}
-                                />
-                              </div>
                             </div>
+
                             <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-colors ${
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${
                                 isExpanded
                                   ? 'bg-[#2E6496] border-[#2E6496] text-[#FFFFFF]'
                                   : 'bg-[#FAF8F5] border-[#C9DFDC] text-[#475569]'
@@ -843,67 +993,91 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                               )}
                             </div>
                           </div>
-                        </button>
+                        </div>
 
-                        {/* Expanded Details */}
+                        {/* Rincian Tambahan (Hanya jika dibuka, bahasa santai, tanpa tabel rumit) */}
                         {isExpanded && (
-                          <div className="school-expand-panel px-6 pb-5 pt-3 bg-[#FAF8F5] border-t border-[#C9DFDC]/60 space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
-                              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
-                                <span className="text-[11px] font-mono uppercase text-[#475569] block">
-                                  Kategori RKAS
+                          <div className="px-5 pb-5 pt-3 bg-[#FAF8F5] border-t border-[#C9DFDC]/60 space-y-4 text-xs sm:text-sm">
+                            {/* 1. Untuk Apa Barang Ini Dibeli? */}
+                            <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#2E6496] block mb-1">
+                                Tujuan Penggunaan:
+                              </span>
+                              <p className="text-[#1E293B] leading-relaxed">
+                                {item.allocation}
+                              </p>
+                            </div>
+
+                            {/* 2. Rincian Barang yang Diterima (List Bersih Sederhana) */}
+                            {item.invoice.lineItems.length > 0 && (
+                              <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] space-y-2">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#475569] block">
+                                  Rincian Barang yang Dibeli:
                                 </span>
-                                <span className="font-semibold text-[#1E293B] mt-0.5 block">
-                                  {item.category}
-                                </span>
+                                <div className="space-y-1.5">
+                                  {item.invoice.lineItems.map((li, lIdx) => (
+                                    <div
+                                      key={lIdx}
+                                      className="flex items-center justify-between py-1 border-b border-[#C9DFDC]/40 last:border-none gap-2"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#2E6496] shrink-0" />
+                                        <span className="font-medium text-[#1E293B]">{li.name}</span>
+                                        <span className="px-1.5 py-0.5 rounded bg-[#FAF8F5] border border-[#C9DFDC] text-[11px] text-[#475569] font-mono">
+                                          {li.qty}
+                                        </span>
+                                      </div>
+                                      <span className="font-mono font-bold text-[#2E6496] tabular-nums shrink-0">
+                                        {formatRupiah(li.subtotal)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
-                                <span className="text-[11px] font-mono uppercase text-[#475569] block">
-                                  Kode &amp; Pencairan
+                            )}
+
+                            {/* 3. Lokasi & Bukti Pemeriksaan Fisik */}
+                            <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] flex items-start gap-2.5">
+                              <MapPin className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
+                              <div className="text-xs">
+                                <span className="font-bold text-[#1E293B] block">
+                                  Lokasi Ruangan: {item.geotag.roomLabel}
                                 </span>
-                                <span className="font-mono font-semibold text-[#1E293B] mt-0.5 block tabular-nums">
-                                  {item.code} • {item.stage}
-                                </span>
-                              </div>
-                              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]">
-                                <span className="text-[11px] font-mono uppercase text-[#475569] block">
-                                  Lokasi Peruntukan
-                                </span>
-                                <span className="font-medium text-[#1E293B] mt-0.5 block">
-                                  {item.allocation}
-                                </span>
+                                <p className="text-[#475569] mt-0.5 italic">
+                                  "{item.geotag.inspectorNote}"
+                                </p>
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Tombol Aksi Simpel */}
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => onOpenInvoiceModal(item)}
-                                  className="school-btn-secondary px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#2E6496] flex items-center justify-center gap-2 cursor-pointer"
+                                  className="school-btn-secondary px-3.5 py-2 rounded-xl text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
-                                  <FileText className="w-4 h-4 text-[#2E6496]" />
-                                  <span>Lihat Bukti Nota</span>
+                                  <FileText className="w-3.5 h-3.5 text-[#2E6496]" />
+                                  <span>Lihat Foto Kwitansi</span>
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => onOpenGeotagModal(item)}
-                                  className="school-btn-secondary px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-[#2E6496] flex items-center justify-center gap-2 cursor-pointer"
+                                  className="school-btn-secondary px-3.5 py-2 rounded-xl text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
-                                  <MapPin className="w-4 h-4 text-[#2E6496]" />
-                                  <span>Foto &amp; Geotag Kelas</span>
+                                  <MapPin className="w-3.5 h-3.5 text-[#2E6496]" />
+                                  <span>Foto Ruang Kelas</span>
                                 </button>
                               </div>
 
                               <button
                                 type="button"
                                 onClick={() => onReportFromItem(item)}
-                                className="px-4 py-2.5 rounded-xl bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] text-xs font-bold text-[#DC2626] transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                                className="px-3.5 py-2 rounded-xl bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] text-xs font-bold text-[#DC2626] transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                               >
-                                <AlertTriangle className="w-4 h-4 text-[#DC2626]" />
-                                <span>Laporkan Kejanggalan</span>
+                                <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626]" />
+                                <span>Laporkan Jika Tidak Ada</span>
                               </button>
                             </div>
                           </div>
@@ -914,34 +1088,11 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                 </div>
               )}
             </div>
-
-            {/* NEXT STEP BAR TO TAB 3 */}
-            <div
-              className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-school-item"
-              style={{ animationDelay: '220ms' }}
-            >
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
-                  Menerima pesan tarikan iuran di grup WhatsApp kelas?
-                </h3>
-                <p className="text-xs sm:text-sm text-[#475569] mt-0.5">
-                  Cocokkan screenshot pengumuman iuran dengan data pencairan BOSP sekolah secara otomatis.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onTabChange('wa-scanner')}
-                className="w-full sm:w-auto school-btn-primary px-5 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer group"
-              >
-                <span>Cek Screenshot Chat WA</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            </div>
           </div>
         )}
 
         {/* ===================================================================
-            TAB 3: VERIFIKASI IURAN GRUP WA (ADVANCED 6-STAGE OCR + VISION AI)
+            TAB 3: VERIFIKASI IURAN GRUP WA
            =================================================================== */}
         {activeTab === 'wa-scanner' && (
           <div className="mt-6 animate-school-item" style={{ animationDelay: '60ms' }}>
@@ -952,6 +1103,39 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             />
           </div>
         )}
+
+        {/* ===================================================================
+            SECTION 8: AJAKAN PEMERIKSAAN DATA & LAPOR DI BAGIAN BAWAH
+           =================================================================== */}
+        <div
+          className="mt-10 p-5 sm:p-6 rounded-2xl bg-[#FFFFFF] border border-[#C9DFDC] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-school-item"
+        >
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center text-[#2E6496] shrink-0">
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
+                Menemukan data yang tidak sesuai? Laporkan kepada kami agar dapat diperiksa dan diperbaiki.
+              </h3>
+              <p className="text-xs text-[#475569] mt-0.5">
+                Pengawasan publik BOSP melindungi hak pendidikan siswa. Pengaduan dijamin 100% anonim dan dienkripsi aman.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              onOpenAnonymousReport ||
+              (() => onReportFromItem(school.items[0]))
+            }
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-xs active:translate-y-[1px] transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+          >
+            <AlertTriangle className="w-4 h-4 text-[#C9DFDC]" />
+            <span>Lapor</span>
+          </button>
+        </div>
       </div>
     </div>
   );
