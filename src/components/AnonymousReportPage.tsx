@@ -157,11 +157,16 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                   if (found) onChangeSchool(found);
                   setIsEditingSchool(false);
                 }}
-                className="w-full mt-1 px-3 py-2 text-sm bg-[#FAF8F5] border border-[#E4E0D8] rounded-md text-[#1E293B] font-semibold focus:outline-none focus:ring-1 focus:ring-[#1E293B]"
+                className="w-full mt-1 px-3 py-2 text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-semibold focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
               >
-                {SCHOOLS_DATABASE.map((s) => (
+                {[
+                  selectedSchool,
+                  ...SCHOOLS_DATABASE.filter(
+                    (s) => s.id !== selectedSchool.id
+                  ).slice(0, 80),
+                ].map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} (NPSN: {s.npsn}) — {s.kabupaten}
+                    {s.name} (NPSN: {s.npsn}) - {s.kecamatan}, {s.kabupaten}
                   </option>
                 ))}
               </select>

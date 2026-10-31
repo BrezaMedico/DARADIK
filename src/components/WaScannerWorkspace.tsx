@@ -241,7 +241,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
       fileName: displayedFileName || 'screenshot_wa.png',
       groupName: 'Grup WhatsApp Wali Murid',
       timestamp: 'Terkini',
-      statusType: ocrScanResult.statusType,
+      statusType: isDanger ? 'danger' : 'safe',
       statusHeader: isDanger
         ? 'STATUS AI: TERDETEKSI INDIKASI TUMPANG TINDIH'
         : 'STATUS AI: TIDAK ADA DI PENGAJUAN BOSP',
@@ -296,7 +296,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
         <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-10 shadow-xs space-y-6 max-w-2xl mx-auto">
           {/* Header Ringkas */}
           <div className="text-center space-y-1.5">
-            <h2 className="font-sturdy-heading text-xl sm:text-2xl font-bold text-[#1E293B]">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] tracking-tight">
               Cek Iuran Grup WhatsApp
             </h2>
             <p className="text-xs sm:text-sm text-[#64748B]">
@@ -310,7 +310,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               <button
                 type="button"
                 onClick={() => setInputMode('upload')}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
                   inputMode === 'upload'
                     ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1E293B]'
@@ -323,7 +323,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               <button
                 type="button"
                 onClick={() => setInputMode('text')}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
                   inputMode === 'text'
                     ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1E293B]'
@@ -341,9 +341,9 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              className="border-2 border-dashed border-[#2E6496]/35 hover:border-[#2E6496] bg-[#FAF8F5] hover:bg-[#EBF3F8]/30 rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all group space-y-3"
+              className="border-2 border-dashed border-[#2E6496]/35 hover:border-[#2E6496] bg-[#FAF8F5] hover:bg-[#EBF3F8]/30 rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 group space-y-3"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#EBF3F8] group-hover:bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] flex items-center justify-center mx-auto shadow-xs">
+              <div className="w-12 h-12 rounded-xl bg-[#EBF3F8] group-hover:bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] flex items-center justify-center mx-auto shadow-xs transition-colors">
                 <Upload className="w-6 h-6" />
               </div>
 
@@ -352,7 +352,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                   Pilih Screenshot WhatsApp
                 </div>
                 <p className="text-xs text-[#64748B] mt-0.5">
-                  Klik untuk memilih gambar atau tekan <kbd className="font-mono font-bold bg-[#EBF3F8] px-1 py-0.5 rounded text-[#2E6496]">Ctrl+V</kbd>
+                  Klik untuk memilih gambar atau tekan <kbd className="font-bold bg-[#EBF3F8] px-1.5 py-0.5 rounded text-[#2E6496]">Ctrl+V</kbd>
                 </p>
               </div>
 
@@ -376,7 +376,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           {inputMode === 'text' && (
             <div className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#1E293B]">Teks Pesan Chat:</span>
+                <span className="text-xs font-bold text-[#1E293B]">Teks Pesan Chat</span>
                 <button
                   type="button"
                   onClick={handlePasteFromClipboard}
@@ -401,14 +401,14 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                   <button
                     type="button"
                     onClick={() => handleLoadSample('kipas')}
-                    className="px-2 py-0.5 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] hover:bg-[#EBF3F8] font-medium cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] hover:bg-[#EBF3F8] font-medium cursor-pointer transition-colors"
                   >
                     Kipas Angin (Rp 50rb)
                   </button>
                   <button
                     type="button"
                     onClick={() => handleLoadSample('kaos')}
-                    className="px-2 py-0.5 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-[#475569] hover:bg-[#FAF8F5] font-medium cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-[#475569] hover:bg-[#FAF8F5] font-medium cursor-pointer transition-colors"
                   >
                     Kaos Kelas (Rp 150rb)
                   </button>
@@ -429,7 +429,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
           {/* Privacy badge */}
           <div className="flex items-center justify-center gap-2 text-xs text-[#64748B] pt-1">
-            <ShieldCheck className="w-4 h-4 text-[#2E7D32] shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-[#2E6496] shrink-0" />
             <span>Privasi terjaga: Gambar &amp; teks dianalisis langsung di perangkat Anda.</span>
           </div>
         </div>
@@ -447,7 +447,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           </div>
 
           <div className="space-y-1">
-            <h3 className="font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]">
+            <h3 className="text-base sm:text-lg font-bold text-[#1E293B] tracking-tight">
               Memeriksa Pesan WhatsApp...
             </h3>
             <p className="text-xs text-[#64748B]">
@@ -461,7 +461,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           STATE 3: HASIL VERIFIKASI BERSIH, MODERN & TIDAK DESAK-DESAKAN
          ===================================================================== */}
       {ocrScanResult && !isScanningWa && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-school-item">
           {/* Bar Aksi Atas */}
           <div className="flex items-center justify-between gap-3 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-3.5 shadow-xs">
             <button
@@ -473,7 +473,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               <span>Periksa Screenshot / Teks Lain</span>
             </button>
 
-            <span className="text-xs font-mono text-[#64748B] bg-[#FAF8F5] border border-[#C9DFDC] px-3 py-1 rounded-lg truncate max-w-[240px]">
+            <span className="text-xs font-medium text-[#64748B] truncate max-w-[240px]">
               {displayedFileName || 'Pesan WhatsApp'}
             </span>
           </div>
@@ -504,7 +504,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                     <button
                       type="button"
                       onClick={() => setPreviewZoom((z) => (z >= 1.25 ? 1 : 1.25))}
-                      className="school-btn-secondary px-2 py-0.5 rounded-md text-xs font-mono cursor-pointer"
+                      className="school-btn-secondary px-2 py-0.5 rounded-md text-xs cursor-pointer"
                     >
                       {previewZoom > 1 ? (
                         <ZoomOut className="w-3.5 h-3.5 text-[#2E6496]" />
@@ -524,7 +524,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                       <span>Pesan Guru / Wali Kelas</span>
                     </div>
                     <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed whitespace-pre-wrap">
-                      "{ocrScanResult.rawOcrText}"
+                      &ldquo;{ocrScanResult.rawOcrText}&rdquo;
                     </p>
                   </div>
                 </div>
@@ -546,37 +546,35 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
             <div className="lg:col-span-7 space-y-5">
               {/* KARTU 1: VONIS UTAMA */}
               <div
-                className={`rounded-2xl p-5 sm:p-6 shadow-xs border-2 space-y-2 ${
+                className={`rounded-2xl p-5 sm:p-6 shadow-xs border space-y-2 ${
                   isDanger
-                    ? 'border-[#EF4444] bg-[#FEF2F2]/60'
-                    : 'border-[#2E6496]/35 bg-[#EBF3F8]/40'
+                    ? 'border-[#FECACA] bg-[#FEF2F2]/60'
+                    : 'border-[#C9DFDC] bg-[#EBF3F8]/40'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {isDanger ? (
-                      <AlertTriangle className="w-5 h-5 text-[#DC2626] shrink-0" />
+                      <AlertTriangle className="w-4 h-4 text-[#DC2626] shrink-0" />
                     ) : (
-                      <CheckCircle2 className="w-5 h-5 text-[#2E6496] shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-[#2E6496] shrink-0" />
                     )}
                     <span
-                      className={`text-xs font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full border ${
-                        isDanger
-                          ? 'bg-[#FFFFFF] text-[#DC2626] border-[#FECACA]'
-                          : 'bg-[#FFFFFF] text-[#2E6496] border-[#C9DFDC]'
+                      className={`text-xs font-bold ${
+                        isDanger ? 'text-[#DC2626]' : 'text-[#2E6496]'
                       }`}
                     >
                       {isDanger ? 'Terindikasi Pungli' : 'Bukan Dana BOSP'}
                     </span>
                   </div>
 
-                  <span className="text-xs font-mono font-bold text-[#64748B]">
-                    Akurasi {ocrScanResult.confidenceScore}%
+                  <span className="text-xs font-semibold text-[#64748B] tabular-nums">
+                    Kecocokan {ocrScanResult.confidenceScore}%
                   </span>
                 </div>
 
                 <h3
-                  className={`font-sturdy-heading text-lg sm:text-xl font-extrabold ${
+                  className={`text-lg sm:text-xl font-bold tracking-tight ${
                     isDanger ? 'text-[#991B1B]' : 'text-[#1E293B]'
                   }`}
                 >
@@ -596,32 +594,34 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                 </p>
               </div>
 
-              {/* KARTU 2: KOMPARASI 3 PILAR BERSIH & TIDAK BERTELE-TELE */}
-              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-5 shadow-xs space-y-4">
-                <span className="text-xs font-bold text-[#475569] uppercase tracking-wider block">
-                  Perbandingan 3 Sisi:
-                </span>
+              {/* KARTU 2: KOMPARASI 3 PILAR BERSIH (SATU PERMUKAAN TANPA KOTAK BERTUMPUK) */}
+              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl overflow-hidden shadow-xs">
+                <div className="px-5 py-3.5 bg-[#FAF8F5] border-b border-[#C9DFDC]/60">
+                  <span className="text-xs font-bold text-[#475569]">
+                    Perbandingan 3 Sisi
+                  </span>
+                </div>
 
-                <div className="space-y-3 text-xs">
+                <div className="divide-y divide-[#C9DFDC]/60 text-xs">
                   {/* Baris 1: Teks Guru */}
-                  <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
                       <MessageSquare className="w-4 h-4 text-[#2E6496] shrink-0" />
                       <div>
-                        <span className="text-[10px] text-[#64748B] block">1. Pesan Guru:</span>
+                        <span className="text-[11px] text-[#64748B] block">1. Pesan Guru</span>
                         <span className="font-bold text-[#1E293B] text-xs sm:text-sm capitalize">
                           {comp?.teacherText.detectedItem || 'Iuran Kelas'}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 sm:text-right">
-                      <span className="font-mono font-bold text-[#1E293B]">
+                      <span className="font-bold text-[#1E293B] tabular-nums">
                         {comp?.teacherText.detectedAmount
                           ? formatRupiah(comp.teacherText.detectedAmount)
                           : 'Nominal tidak tertera'}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                           comp?.teacherText.isMandatory
                             ? 'bg-[#FEF2F2] text-[#DC2626]'
                             : 'bg-[#EBF3F8] text-[#2E6496]'
@@ -633,11 +633,11 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                   </div>
 
                   {/* Baris 2: Data Anggaran Sekolah */}
-                  <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
                       <Building2 className="w-4 h-4 text-[#2E6496] shrink-0" />
                       <div>
-                        <span className="text-[10px] text-[#64748B] block">2. Anggaran Sekolah ({school.name}):</span>
+                        <span className="text-[11px] text-[#64748B] block">2. Anggaran Sekolah ({school.name})</span>
                         <span className="font-bold text-[#1E293B] text-xs sm:text-sm">
                           {comp?.schoolBudget.isFundedByBosp
                             ? 'Sudah Dibiayai BOSP Negara'
@@ -645,14 +645,14 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                         </span>
                       </div>
                     </div>
-                    <div className="sm:text-right font-mono">
+                    <div className="sm:text-right tabular-nums">
                       <span className="font-bold text-[#1E293B] block">
                         {comp?.schoolBudget.allocatedAmount
                           ? formatRupiah(comp.schoolBudget.allocatedAmount)
                           : '-'}
                       </span>
                       {comp?.schoolBudget.itemCode && (
-                        <span className="text-[10px] text-[#64748B]">
+                        <span className="text-[11px] text-[#64748B]">
                           Kode: {comp.schoolBudget.itemCode}
                         </span>
                       )}
@@ -660,11 +660,11 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                   </div>
 
                   {/* Baris 3: Aturan Resmi BOSP */}
-                  <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
                       <Scale className="w-4 h-4 text-[#2E6496] shrink-0" />
                       <div>
-                        <span className="text-[10px] text-[#64748B] block">3. Aturan Kemendikbudristek:</span>
+                        <span className="text-[11px] text-[#64748B] block">3. Aturan Kemendikbudristek</span>
                         <span className="font-semibold text-[#1E293B] text-xs">
                           {isDanger
                             ? 'Permendikbudristek 63/2023 Pasal 61'
@@ -675,8 +675,8 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                     <span
                       className={`px-2.5 py-1 rounded-md text-[11px] font-bold shrink-0 ${
                         isDanger
-                          ? 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]'
-                          : 'bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC]'
+                          ? 'bg-[#FEF2F2] text-[#DC2626]'
+                          : 'bg-[#EBF3F8] text-[#2E6496]'
                       }`}
                     >
                       {isDanger ? 'Melanggar Regulasi' : 'Sesuai Ketentuan'}

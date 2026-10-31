@@ -4,7 +4,7 @@
 ==============================================================================
 DARADIK AI ENGINE: ADVANCED 6-STAGE OCR + VISION AI & BOSP CROSS-CHECKER
 Model: DARADIK-BOSP-Vision-Guard-v2 (Full-Image Multi-Pass OCR & Reconciliation)
-Target Sekolah: SMK TI BAZMA (NPSN 69994998, 90 Murid, Pagu Rp 151.200.000)
+Target Sekolah: SMK TI BAZMA (NPSN 70029710, 92 Murid, Pagu Rp 151.200.000)
 ==============================================================================
 
 Pipeline 6 Tahap:
@@ -20,11 +20,11 @@ import json
 import re
 from typing import List, Dict, Any, Optional, Tuple
 
-# Data Realisasi BOSP 2026 SMK TI BAZMA (90 Siswa)
+# Data Realisasi BOSP 2026 SMK TI BAZMA (92 Siswa)
 SMK_TI_BAZMA_BOSP = {
     "sekolah": "SMK TI BAZMA",
-    "npsn": "69994998",
-    "jumlah_siswa": 90,
+    "npsn": "70029710",
+    "jumlah_siswa": 92,
     "pagu_bosp_tahunan": 151200000,
     "realisasi_items": [
         {

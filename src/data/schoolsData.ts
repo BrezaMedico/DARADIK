@@ -1,4 +1,5 @@
-export { REGION_HIERARCHY } from './indonesiaRegions';
+import { REGION_HIERARCHY } from './indonesiaRegions';
+export { REGION_HIERARCHY };
 
 export interface InvoiceLineItem {
   name: string;
@@ -74,6 +75,8 @@ export interface SchoolData {
   name: string;
   npsn: string;
   sampleNisn: string;
+  principalName?: string;
+  treasurerName?: string;
   provinsi: string;
   kabupaten: string;
   kecamatan: string;
@@ -97,6 +100,7 @@ export interface SchoolData {
   compositions: BudgetComposition[];
   items: BospRealizationItem[];
   history?: Record<string, SchoolYearHistory>;
+  imageUrl?: string;
 }
 
 /**
@@ -105,116 +109,97 @@ export interface SchoolData {
  */
 export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
   {
-    id: 'item-bazma-kipas-01',
-    code: 'RKAS-02.04.11',
-    name: 'Kipas Angin Dinding & Exhaust Fan Lab Komputer (12 Unit)',
-    unitSummary: '12 Unit Terpasang',
-    amount: 14500000,
-    category: 'Peralatan Sekolah (Sarana Prasarana Ruang Lab)',
-    aiCategoryPath: 'Peralatan Sekolah > Pendingin & Ventilasi Lab Komputer',
-    date: '12 Oktober 2026',
-    stage: 'Tahap 2',
-    allocation: 'Pemasangan sirkulasi pendingin di Lab Jaringan SIJA 1, Lab SIJA 2, dan Ruang Server Siswa SMK TI BAZMA',
-    iconType: 'fan',
-    keywords: [
-      'kipas',
-      'angin',
-      'kipas angin',
-      'exhaust',
-      'gerah',
-      'panas',
-      'pendingin',
-      'sirkulasi',
-      'ventilasi',
-      'ac lab',
-      'dinding',
-      'lab komputer',
-    ],
-    invoice: {
-      number: 'INV/BM-BAZMA/2026/10/0192',
-      vendorName: 'CV Bintang Mandiri Teknik Bogor (Mitra SIPLah)',
-      vendorAddress: 'Jl. Raya Dramaga No. 45, Kab. Bogor, Jawa Barat',
-      npwp: '02.948.112.4-403.000',
-      date: '12 Oktober 2026',
-      treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
-      lineItems: [
-        {
-          name: 'Kipas Angin Dinding Industrial 18 Inch Heavy Duty SNI',
-          qty: '8 Unit',
-          unitPrice: 1100000,
-          subtotal: 8800000,
-        },
-        {
-          name: 'Exhaust Fan Dinding Louver Otomatis Ruang Server Lab',
-          qty: '4 Unit',
-          unitPrice: 1425000,
-          subtotal: 5700000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5684',
-      lng: '106.6975',
-      roomLabel: 'Lab Komputer & Jaringan SIJA — SMK TI BAZMA',
-      uploadedAt: '14 Okt 2026 10:15 WIB',
-      inspectorNote: '12 unit kipas & exhaust terpasang rapi di Lab SIJA 1 & 2. Berfungsi normal menjaga suhu ruangan server.',
-      conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
-    },
-  },
-  {
-    id: 'item-bazma-switch-02',
-    code: 'RKAS-02.04.15',
-    name: 'Switch Gigabit 24-Port & Access Point WiFi Lab SIJA',
-    unitSummary: '3 Unit Switch & 4 AP',
-    amount: 18500000,
-    category: 'Peralatan Jaringan & Infrastruktur Praktikum TI',
-    aiCategoryPath: 'Infrastruktur TI > Perangkat Jaringan Komputer Lab',
-    date: '20 September 2026',
-    stage: 'Tahap 2',
-    allocation: 'Peremajaan perangkat switch gigabit rackmount dan access point dual-band untuk praktikum 90 siswa kejuruan SIJA',
+    id: 'item-bazma-internet-07',
+    code: 'RKAS-06.01.01',
+    name: 'Langganan Internet Dedicated Fiber Optik 100 Mbps',
+    unitSummary: '12 Bulan Penuh',
+    amount: 21600000,
+    category: 'Langganan Daya & Jasa (Internet Kejuruan TI)',
+    aiCategoryPath: 'Langganan Daya & Jasa > Internet Dedicated 100 Mbps',
+    date: '05 Januari 2026',
+    stage: 'Tahap 1',
+    allocation: 'Akses internet dedicated fiber optik 1:1 untuk mendukung praktikum Cloud, Linux server, dan pembelajaran jarak jauh 90 murid',
     iconType: 'projector',
     keywords: [
-      'switch',
+      'internet',
       'wifi',
-      'router',
-      'mikrotik',
-      'jaringan',
-      'internet lab',
-      'kabel lan',
-      'hub',
-      'koneksi',
-      'access point',
+      'kuota',
+      'pulsa',
+      'langganan internet',
+      'indihome',
+      'biznet',
+      'fiber optik',
+      'bandwidth',
     ],
     invoice: {
-      number: 'INV/NET-ID/2026/09/0841',
-      vendorName: 'PT Nusantara Edu Network (SIPLah Kemdikbud)',
-      vendorAddress: 'Komp. Ruko Yasmin Sektor 6 No. 12, Kota Bogor',
-      npwp: '01.554.891.2-404.000',
-      date: '20 September 2026',
+      number: 'INV/TELCO-BGR/2026/01/0012',
+      vendorName: 'PT Telekomunikasi Data Nusantara Bogor',
+      vendorAddress: 'Jl. Pajajaran Raya No. 12, Kota Bogor',
+      npwp: '01.233.444.5-403.000',
+      date: '05 Januari 2026',
       treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
       lineItems: [
         {
-          name: 'Managed Switch Gigabit 24-Port 10/100/1000 Rackmount',
-          qty: '3 Unit',
-          unitPrice: 3800000,
-          subtotal: 11400000,
-        },
-        {
-          name: 'Enterprise Access Point WiFi-6 Dual Band Praktikum',
-          qty: '4 Unit',
-          unitPrice: 1775000,
-          subtotal: 7100000,
+          name: 'Langganan Akses Internet Dedicated Fiber Optik 100 Mbps (12 Bulan)',
+          qty: '12 Bulan',
+          unitPrice: 1800000,
+          subtotal: 21600000,
         },
       ],
     },
     geotag: {
       lat: '-6.5682',
       lng: '106.6978',
-      roomLabel: 'Server Rack & Lab Cloud Computing — SMK TI BAZMA',
-      uploadedAt: '22 Sep 2026 14:30 WIB',
-      inspectorNote: 'Switch dan AP aktif menyuplai bandwidth gigabit untuk seluruh 30 workstation di lab.',
+      roomLabel: 'NOC / Ruang Jaringan Utama — SMK TI BAZMA',
+      uploadedAt: '10 Jan 2026 10:00 WIB',
+      inspectorNote: 'Kabel fiber optik aktif dan latensi stabil <5ms untuk praktikum cloud siswa.',
+      conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
+    },
+  },
+  {
+    id: 'item-bazma-proyektor-04',
+    code: 'RKAS-02.04.09',
+    name: 'Proyektor Interaktif Lab Komputer & Presentasi',
+    unitSummary: '2 Unit Proyektor EPSON',
+    amount: 13500000,
+    category: 'Peralatan Multimedia Pembelajaran Interaktif',
+    aiCategoryPath: 'Peralatan Sekolah > Multimedia & Proyektor Lab',
+    date: '25 Februari 2026',
+    stage: 'Tahap 1',
+    allocation: 'Pemasangan proyektor gantung bracket di Lab SIJA 1 dan Lab SIJA 2 untuk visualisasi koding dan topologi jaringan',
+    iconType: 'projector',
+    keywords: [
+      'proyektor',
+      'infocus',
+      'layar proyektor',
+      'kabel hdmi',
+      'lcd',
+      'presentasi',
+    ],
+    invoice: {
+      number: 'INV/MULTI-BGR/2026/02/0048',
+      vendorName: 'CV Graha Audio Visual Bogor',
+      vendorAddress: 'Jl. Raya Tajur No. 102, Kota Bogor',
+      npwp: '02.441.890.3-404.000',
+      date: '25 Februari 2026',
+      treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
+      lineItems: [
+        {
+          name: 'Proyektor EPSON 3LCD 3600 ANSI Lumens + Bracket Gantung Plafon',
+          qty: '2 Unit',
+          unitPrice: 6750000,
+          subtotal: 13500000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5684',
+      lng: '106.6975',
+      roomLabel: 'Lab Komputer SIJA 1 — SMK TI BAZMA',
+      uploadedAt: '27 Feb 2026 11:20 WIB',
+      inspectorNote: 'Proyektor terpasang kokoh di langit-langit Lab 1 & 2 dengan kabel HDMI tanam.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
     },
   },
@@ -248,7 +233,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       npwp: '03.212.784.9-403.000',
       date: '10 Maret 2026',
       treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
       lineItems: [
         {
           name: 'Paket Modul Kurikulum Merdeka Kejuruan SIJA Tingkat X, XI, XII',
@@ -264,52 +249,6 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       roomLabel: 'Perpustakaan & Ruang Baca — SMK TI BAZMA',
       uploadedAt: '12 Mar 2026 09:10 WIB',
       inspectorNote: '90 paket modul telah didistribusikan langsung ke siswa tanpa pungutan biaya apa pun.',
-      conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
-    },
-  },
-  {
-    id: 'item-bazma-proyektor-04',
-    code: 'RKAS-02.04.09',
-    name: 'Proyektor Interaktif Lab Komputer & Presentasi',
-    unitSummary: '2 Unit Proyektor EPSON',
-    amount: 13500000,
-    category: 'Peralatan Multimedia Pembelajaran Interaktif',
-    aiCategoryPath: 'Peralatan Sekolah > Multimedia & Proyektor Lab',
-    date: '25 Februari 2026',
-    stage: 'Tahap 1',
-    allocation: 'Pemasangan proyektor gantung bracket di Lab SIJA 1 dan Lab SIJA 2 untuk visualisasi koding dan topologi jaringan',
-    iconType: 'projector',
-    keywords: [
-      'proyektor',
-      'infocus',
-      'layar proyektor',
-      'kabel hdmi',
-      'lcd',
-      'presentasi',
-    ],
-    invoice: {
-      number: 'INV/MULTI-BGR/2026/02/0048',
-      vendorName: 'CV Graha Audio Visual Bogor',
-      vendorAddress: 'Jl. Raya Tajur No. 102, Kota Bogor',
-      npwp: '02.441.890.3-404.000',
-      date: '25 Februari 2026',
-      treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
-      lineItems: [
-        {
-          name: 'Proyektor EPSON 3LCD 3600 ANSI Lumens + Bracket Gantung Plafon',
-          qty: '2 Unit',
-          unitPrice: 6750000,
-          subtotal: 13500000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5684',
-      lng: '106.6975',
-      roomLabel: 'Lab Komputer SIJA 1 — SMK TI BAZMA',
-      uploadedAt: '27 Feb 2026 11:20 WIB',
-      inspectorNote: 'Proyektor terpasang kokoh di langit-langit Lab 1 & 2 dengan kabel HDMI tanam.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
     },
   },
@@ -345,7 +284,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       npwp: '04.119.502.1-403.000',
       date: '15 Mei 2026',
       treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
       lineItems: [
         {
           name: 'Perbaikan Pipa PVC AW, Pompa Air Booster, & Kloset Duduk/Jongkok',
@@ -399,7 +338,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       npwp: '05.332.901.4-403.000',
       date: '18 Agustus 2026',
       treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
       lineItems: [
         {
           name: 'Meja Komputer Rangka Besi Powder Coating + Kursi Ergonomis',
@@ -419,84 +358,152 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
     },
   },
   {
-    id: 'item-bazma-internet-07',
-    code: 'RKAS-06.01.01',
-    name: 'Langganan Internet Dedicated Fiber Optik 100 Mbps',
-    unitSummary: '12 Bulan Penuh',
-    amount: 21600000,
-    category: 'Langganan Daya & Jasa (Internet Kejuruan TI)',
-    aiCategoryPath: 'Langganan Daya & Jasa > Internet Dedicated 100 Mbps',
-    date: '05 Januari 2026',
-    stage: 'Tahap 1',
-    allocation: 'Akses internet dedicated fiber optik 1:1 untuk mendukung praktikum Cloud, Linux server, dan pembelajaran jarak jauh 90 murid',
+    id: 'item-bazma-switch-02',
+    code: 'RKAS-02.04.15',
+    name: 'Switch Gigabit 24-Port & Access Point WiFi Lab SIJA',
+    unitSummary: '3 Unit Switch & 4 AP',
+    amount: 18500000,
+    category: 'Peralatan Jaringan & Infrastruktur Praktikum TI',
+    aiCategoryPath: 'Infrastruktur TI > Perangkat Jaringan Komputer Lab',
+    date: '20 September 2026',
+    stage: 'Tahap 2',
+    allocation: 'Peremajaan perangkat switch gigabit rackmount dan access point dual-band untuk praktikum 90 siswa kejuruan SIJA',
     iconType: 'projector',
     keywords: [
-      'internet',
+      'switch',
       'wifi',
-      'kuota',
-      'pulsa',
-      'langganan internet',
-      'indihome',
-      'biznet',
-      'fiber optik',
-      'bandwidth',
+      'router',
+      'mikrotik',
+      'jaringan',
+      'internet lab',
+      'kabel lan',
+      'hub',
+      'koneksi',
+      'access point',
     ],
     invoice: {
-      number: 'INV/TELCO-BGR/2026/01/0012',
-      vendorName: 'PT Telekomunikasi Data Nusantara Bogor',
-      vendorAddress: 'Jl. Pajajaran Raya No. 12, Kota Bogor',
-      npwp: '01.233.444.5-403.000',
-      date: '05 Januari 2026',
+      number: 'INV/NET-ID/2026/09/0841',
+      vendorName: 'PT Nusantara Edu Network (SIPLah Kemdikbud)',
+      vendorAddress: 'Komp. Ruko Yasmin Sektor 6 No. 12, Kota Bogor',
+      npwp: '01.554.891.2-404.000',
+      date: '20 September 2026',
       treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd. (Kepala Sekolah)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
       lineItems: [
         {
-          name: 'Langganan Akses Internet Dedicated Fiber Optik 100 Mbps (12 Bulan)',
-          qty: '12 Bulan',
-          unitPrice: 1800000,
-          subtotal: 21600000,
+          name: 'Managed Switch Gigabit 24-Port 10/100/1000 Rackmount',
+          qty: '3 Unit',
+          unitPrice: 3800000,
+          subtotal: 11400000,
+        },
+        {
+          name: 'Enterprise Access Point WiFi-6 Dual Band Praktikum',
+          qty: '4 Unit',
+          unitPrice: 1775000,
+          subtotal: 7100000,
         },
       ],
     },
     geotag: {
       lat: '-6.5682',
       lng: '106.6978',
-      roomLabel: 'NOC / Ruang Jaringan Utama — SMK TI BAZMA',
-      uploadedAt: '10 Jan 2026 10:00 WIB',
-      inspectorNote: 'Kabel fiber optik aktif dan latensi stabil <5ms untuk praktikum cloud siswa.',
+      roomLabel: 'Server Rack & Lab Cloud Computing — SMK TI BAZMA',
+      uploadedAt: '22 Sep 2026 14:30 WIB',
+      inspectorNote: 'Switch dan AP aktif menyuplai bandwidth gigabit untuk seluruh 30 workstation di lab.',
+      conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
+    },
+  },
+  {
+    id: 'item-bazma-kipas-01',
+    code: 'RKAS-02.04.11',
+    name: 'Kipas Angin Dinding & Exhaust Fan Lab Komputer (12 Unit)',
+    unitSummary: '12 Unit Terpasang',
+    amount: 14500000,
+    category: 'Peralatan Sekolah (Sarana Prasarana Ruang Lab)',
+    aiCategoryPath: 'Peralatan Sekolah > Pendingin & Ventilasi Lab Komputer',
+    date: '12 Oktober 2026',
+    stage: 'Tahap 2',
+    allocation: 'Pemasangan sirkulasi pendingin di Lab Jaringan SIJA 1, Lab SIJA 2, dan Ruang Server Siswa SMK TI BAZMA',
+    iconType: 'fan',
+    keywords: [
+      'kipas',
+      'angin',
+      'kipas angin',
+      'exhaust',
+      'gerah',
+      'panas',
+      'pendingin',
+      'sirkulasi',
+      'ventilasi',
+      'ac lab',
+      'dinding',
+      'lab komputer',
+    ],
+    invoice: {
+      number: 'INV/BM-BAZMA/2026/10/0192',
+      vendorName: 'CV Bintang Mandiri Teknik Bogor (Mitra SIPLah)',
+      vendorAddress: 'Jl. Raya Dramaga No. 45, Kab. Bogor, Jawa Barat',
+      npwp: '02.948.112.4-403.000',
+      date: '12 Oktober 2026',
+      treasurerName: 'Rina Marlina, S.E. (Bendahara BOSP)',
+      principalName: 'Ahmad Dahlan, S.Ag (Kepala Sekolah)',
+      lineItems: [
+        {
+          name: 'Kipas Angin Dinding Industrial 18 Inch Heavy Duty SNI',
+          qty: '8 Unit',
+          unitPrice: 1100000,
+          subtotal: 8800000,
+        },
+        {
+          name: 'Exhaust Fan Dinding Louver Otomatis Ruang Server Lab',
+          qty: '4 Unit',
+          unitPrice: 1425000,
+          subtotal: 5700000,
+        },
+      ],
+    },
+    geotag: {
+      lat: '-6.5684',
+      lng: '106.6975',
+      roomLabel: 'Lab Komputer & Jaringan SIJA — SMK TI BAZMA',
+      uploadedAt: '14 Okt 2026 10:15 WIB',
+      inspectorNote: '12 unit kipas & exhaust terpasang rapi di Lab SIJA 1 & 2. Berfungsi normal menjaga suhu ruangan server.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik SMK TI BAZMA',
     },
   },
 ];
 
 /**
- * Data Utama SMK TI BAZMA (90 Murid)
+ * Data Utama SMK TI BAZMA (92 Murid)
  * Didesain tunggal untuk mempermudah penilaian juri.
  */
 export const SMK_TI_BAZMA: SchoolData = {
   id: 'smk-ti-bazma',
   name: 'SMK TI BAZMA',
-  npsn: '69994998',
+  npsn: '70029710',
   sampleNisn: '0081928491',
+  principalName: 'Ahmad Dahlan, S.Ag',
+  treasurerName: 'Rina Marlina, S.E.',
   provinsi: 'Jawa Barat',
   kabupaten: 'Kab. Bogor',
   kecamatan: 'Ciampea',
-  address: 'Jl. Cikampak Cicadas RT 01/RW 01, Kp. Cirangkong, Cibatok II, Kec. Ciampea / Cibungbulang, Kab. Bogor, Jawa Barat 16630',
+  address: 'Kp. Cicadas RT. 001/001, Desa Cicadas, Kec. Ciampea, Kab. Bogor, Jawa Barat',
   status: 'Terdaftar Aktif di Kemdikbudristek',
-  studentCount: 90,
+  studentCount: 92,
   perStudentEstimate: 1680000,
   totalBosp: 151200000,
+  imageUrl: '/smk-ti-bazma.jpg',
   tahap1: {
     amount: 75600000,
     period: 'Jan–Jun',
     status: 'Sudah Cair',
-    disbursedDate: '14 Februari 2026',
+    disbursedDate: '16 Februari 2026',
   },
   tahap2: {
     amount: 75600000,
     period: 'Jul–Des',
-    status: 'Belum Cair',
-    disbursedDate: 'Menunggu Penyaluran',
+    status: 'Sudah Cair',
+    disbursedDate: '14 Agustus 2026',
   },
   compositions: [
     {
@@ -505,7 +512,7 @@ export const SMK_TI_BAZMA: SchoolData = {
       percentage: 40,
       amount: 60480000,
       color: '#2E6496',
-      description: 'Pendingin lab komputer, switch gigabit, proyektor interaktif, dan perbaikan sarana sanitasi asrama 90 siswa.',
+      description: 'Pendingin lab komputer, switch gigabit, proyektor interaktif, dan perbaikan sarana sanitasi asrama 92 siswa.',
     },
     {
       id: 'comp-2',
@@ -551,7 +558,7 @@ export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
       npwp: '01.882.333.1-403.000',
       date: '15 Agustus 2025',
       treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      principalName: 'Ahmad Dahlan, S.Ag',
       lineItems: [
         {
           name: 'PC Desktop Core i5 SSD 512GB RAM 16GB Lab Workstation',
@@ -590,7 +597,7 @@ export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
       npwp: '02.441.222.9-404.000',
       date: '10 Maret 2025',
       treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      principalName: 'Ahmad Dahlan, S.Ag',
       lineItems: [
         {
           name: 'Paket Modul Kurikulum SMK Kejuruan SIJA Lengkap',
@@ -629,7 +636,7 @@ export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
       npwp: '03.111.444.2-403.000',
       date: '22 September 2025',
       treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      principalName: 'Ahmad Dahlan, S.Ag',
       lineItems: [
         {
           name: 'MikroTik Cloud Core Router CCR2004-16G-2S+',
@@ -668,7 +675,7 @@ export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
       npwp: '01.233.444.5-403.000',
       date: '05 Januari 2025',
       treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      principalName: 'Ahmad Dahlan, S.Ag',
       lineItems: [
         {
           name: 'Akses Internet Dedicated 100 Mbps (12 Bulan TA 2025)',
@@ -707,7 +714,7 @@ export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
       npwp: '04.119.502.1-403.000',
       date: '20 Mei 2025',
       treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      principalName: 'Ahmad Dahlan, S.Ag',
       lineItems: [
         {
           name: 'Pompa Air Booster Otomatis & Pemipaan PVC SNI',
@@ -746,7 +753,7 @@ export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
       npwp: '05.212.890.1-403.000',
       date: '14 Juli 2025',
       treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Kom., M.Pd.',
+      principalName: 'Ahmad Dahlan, S.Ag',
       lineItems: [
         {
           name: 'Cat Tembok Interior Anti-Jamur & Alat Kuas/Roll',
@@ -776,13 +783,13 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
       amount: 75600000,
       period: 'Jan–Jun',
       status: 'Sudah Cair',
-      disbursedDate: '14 Februari 2026',
+      disbursedDate: '16 Februari 2026',
     },
     tahap2: {
       amount: 75600000,
       period: 'Jul–Des',
-      status: 'Belum Cair',
-      disbursedDate: 'Menunggu Penyaluran',
+      status: 'Sudah Cair',
+      disbursedDate: '14 Agustus 2026',
     },
     compositions: [
       {
@@ -860,11 +867,217 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
 
 SMK_TI_BAZMA.history = BAZMA_YEARLY_HISTORY;
 
+const PRINCIPAL_FIRST_NAMES = [
+  'Drs. H. Bambang',
+  'Hj. Siti',
+  'Dr. Hendra',
+  'Ir. Agus',
+  'Dra. Ratna',
+  'H. Dedi',
+  'Hj. Nurhayati',
+  'Dr. Wahyu',
+  'Drs. Mulyadi',
+  'Hj. Sri',
+  'H. Ridwan',
+  'Dr. Eko',
+  'Dra. Yuniarti',
+  'Ir. Lukman',
+  'Drs. Supriyanto',
+  'Hj. Dewi',
+  'Dr. Asep',
+  'H. Taufik',
+  'Dra. Rina',
+  'Drs. Kurniawan',
+  'Hj. Rahmawati',
+  'Dr. Fajar',
+  'Ir. Syamsul',
+  'Dra. Endang',
+];
+
+const PRINCIPAL_LAST_NAMES = [
+  'Sutrisno, M.Pd.',
+  'Aminah, S.Pd., M.M.',
+  'Wijaya, M.Pd.',
+  'Salim, S.Kom., M.T.',
+  'Sari Dewi, M.Pd.',
+  'Kusnadi, S.Pd., M.Si.',
+  'Pratama, M.Pd.',
+  'Santoso, S.Pd., M.M.',
+  'Hidayat, M.Pd.',
+  'Wahyuni, S.Pd., M.Pd.',
+  'Hakim, S.T., M.Pd.',
+  'Nugroho, M.Pd.',
+  'Lestari, S.Pd., M.M.',
+  'Firmansyah, M.Pd.',
+  'Setiawan, S.Pd., M.Si.',
+  'Handayani, M.Pd.',
+  'Maulana, S.Kom., M.Pd.',
+  'Ramadhan, M.Pd.',
+  'Kartika, S.Pd., M.M.',
+];
+
+const TREASURER_NAMES = [
+  'Nadia Putri, S.E.',
+  'Hendra Gunawan, S.Ak.',
+  'Fitriani Rahayu, S.E.',
+  'Budi Hartono, S.E.',
+  'Maya Sari, S.Ak.',
+  'Rizky Pratama, S.E.',
+  'Desi Ratnasari, S.E.',
+  'Andi Saputra, S.Ak.',
+  'Lina Herlina, S.E.',
+  'Yudi Kurnia, S.E.',
+  'Sari Puspita, S.Ak.',
+  'Dian Permata, S.E.',
+];
+
+export function customizeBospItemsForSchool(
+  baseItems: BospRealizationItem[],
+  schoolName: string,
+  principalName: string,
+  treasurerName: string
+): BospRealizationItem[] {
+  if (schoolName === 'SMK TI BAZMA') return baseItems;
+  return baseItems.map((item) => ({
+    ...item,
+    allocation: item.allocation.replace(/SMK TI BAZMA/g, schoolName),
+    invoice: {
+      ...item.invoice,
+      principalName,
+      treasurerName,
+    },
+    geotag: {
+      ...item.geotag,
+      roomLabel: item.geotag.roomLabel.replace(/SMK TI BAZMA/g, schoolName),
+      conditionStatus: item.geotag.conditionStatus.replace(
+        /SMK TI BAZMA/g,
+        schoolName
+      ),
+    },
+  }));
+}
+
+export function buildSchoolYearlyHistory(
+  schoolName: string,
+  principalName: string,
+  treasurerName: string
+): Record<string, SchoolYearHistory> {
+  if (schoolName === 'SMK TI BAZMA') return BAZMA_YEARLY_HISTORY;
+  return {
+    '2026': {
+      ...BAZMA_YEARLY_HISTORY['2026'],
+      tahap1: { ...BAZMA_YEARLY_HISTORY['2026'].tahap1 },
+      tahap2: { ...BAZMA_YEARLY_HISTORY['2026'].tahap2 },
+      compositions: BAZMA_YEARLY_HISTORY['2026'].compositions.map((c) => ({
+        ...c,
+      })),
+      items: customizeBospItemsForSchool(
+        BAZMA_BOSP_ITEMS,
+        schoolName,
+        principalName,
+        treasurerName
+      ),
+    },
+    '2025': {
+      ...BAZMA_YEARLY_HISTORY['2025'],
+      tahap1: { ...BAZMA_YEARLY_HISTORY['2025'].tahap1 },
+      tahap2: { ...BAZMA_YEARLY_HISTORY['2025'].tahap2 },
+      compositions: BAZMA_YEARLY_HISTORY['2025'].compositions.map((c) => ({
+        ...c,
+      })),
+      items: customizeBospItemsForSchool(
+        BAZMA_BOSP_ITEMS_2025,
+        schoolName,
+        principalName,
+        treasurerName
+      ),
+    },
+  };
+}
+
 /**
- * Basis Data Sekolah: Hanya memuat SMK TI BAZMA sesuai instruksi
- * untuk mempermudah juri dalam melihat dan memverifikasi data.
+ * Membangun daftar sekolah terstruktur untuk seluruh Provinsi, Kabupaten/Kota, dan Kecamatan.
+ * - Setiap kecamatan memiliki minimal 2 sekolah (SMKN 1 & SMAN 1 di kecamatan tersebut).
+ * - Profil tiap sekolah berbeda (Kepala Sekolah, Bendahara, NPSN, NISN, Alamat berbeda).
+ * - Isi data anggaran BOSP, tahapan, komposisi RKAS, dan barang disamakan dengan SMK TI BAZMA.
+ * - SMK TI BAZMA selalu berada di urutan pertama (index 0) sebagai sekolah utama.
  */
-export const SCHOOLS_DATABASE: SchoolData[] = [SMK_TI_BAZMA];
+function buildStructuredSchoolsDatabase(): SchoolData[] {
+  const schools: SchoolData[] = [SMK_TI_BAZMA];
+  let seq = 1;
+
+  for (const [provinsi, kabMap] of Object.entries(REGION_HIERARCHY)) {
+    for (const [kabupaten, kecamatanList] of Object.entries(kabMap)) {
+      for (const kecamatan of kecamatanList) {
+        const schoolTemplates = [
+          {
+            prefix: 'SMKN 1',
+            street: `Jl. Pendidikan Kejuruan No. ${(seq % 88) + 10}`,
+          },
+          {
+            prefix: 'SMAN 1',
+            street: `Jl. Raya Utama Pendidikan No. ${((seq * 3) % 120) + 15}`,
+          },
+        ];
+
+        for (const tpl of schoolTemplates) {
+          const npsnNum = 20210000 + seq;
+          const nisnNum = 82000000 + seq;
+          const schoolName = `${tpl.prefix} ${kecamatan}`;
+          const slug = `${tpl.prefix.toLowerCase().replace(/\s+/g, '-')}-${kecamatan
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')}-${seq}`;
+
+          const firstIdx = (seq * 7) % PRINCIPAL_FIRST_NAMES.length;
+          const lastIdx = (seq * 13 + 3) % PRINCIPAL_LAST_NAMES.length;
+          const principalName = `${PRINCIPAL_FIRST_NAMES[firstIdx]} ${PRINCIPAL_LAST_NAMES[lastIdx]}`;
+          const treasurerName =
+            TREASURER_NAMES[(seq * 5) % TREASURER_NAMES.length];
+
+          const schoolItems = customizeBospItemsForSchool(
+            BAZMA_BOSP_ITEMS,
+            schoolName,
+            principalName,
+            treasurerName
+          );
+          const schoolHistory = buildSchoolYearlyHistory(
+            schoolName,
+            principalName,
+            treasurerName
+          );
+
+          schools.push({
+            id: slug,
+            name: schoolName,
+            npsn: String(npsnNum),
+            sampleNisn: `00${nisnNum}`,
+            principalName,
+            treasurerName,
+            provinsi,
+            kabupaten,
+            kecamatan,
+            address: `${tpl.street}, Kec. ${kecamatan}, ${kabupaten}, ${provinsi}`,
+            status: 'Terdaftar Aktif di Kemdikbudristek',
+            studentCount: SMK_TI_BAZMA.studentCount,
+            perStudentEstimate: SMK_TI_BAZMA.perStudentEstimate,
+            totalBosp: SMK_TI_BAZMA.totalBosp,
+            tahap1: { ...SMK_TI_BAZMA.tahap1 },
+            tahap2: { ...SMK_TI_BAZMA.tahap2 },
+            compositions: SMK_TI_BAZMA.compositions.map((c) => ({ ...c })),
+            items: schoolItems,
+            history: schoolHistory,
+          });
+
+          seq++;
+        }
+      }
+    }
+  }
+
+  return schools;
+}
+
+export const SCHOOLS_DATABASE: SchoolData[] = buildStructuredSchoolsDatabase();
 
 export interface WaScenarioData {
   id: 'scenario-a' | 'scenario-b';
@@ -924,54 +1137,130 @@ export const WA_SCENARIOS: Record<'scenario-a' | 'scenario-b', WaScenarioData> =
   },
 };
 
-export const KAMUS_BOSP_DATA = {
+export interface KamusBospItem {
+  title: string;
+  detail: string;
+  ref: string;
+}
+
+export const KAMUS_BOSP_DATA: {
+  allowed: KamusBospItem[];
+  prohibited: KamusBospItem[];
+} = {
   allowed: [
     {
-      title: 'Peralatan Praktikum Kejuruan & Lab Komputer',
-      detail: 'Wajib dibiayai dana BOSP untuk pemeliharaan server, switch gigabit, router mikrotik, kipas pendingin ruang lab, dan meja kursi ergonomis praktikum.',
-      ref: 'Juknis BOSP SMK Komponen 02 & 05',
+      title: 'Penerimaan Peserta Didik Baru (PPDB/SPMB)',
+      detail:
+        'Pendataan, formulir, spanduk, panitia, dan administrasi seleksi. Calon siswa tidak boleh dikenai biaya pendaftaran.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen penerimaan peserta didik baru',
     },
     {
-      title: 'Buku Modul Kejuruan & Perpustakaan Digital',
-      detail: 'Wajib dibiayai BOSP untuk penyediaan modul ajar cloud computing, jaringan komputer, buku kurikulum nasional tanpa memungut uang buku dari wali murid.',
-      ref: 'Permendikbudristek No. 63/2023 Pasal 24',
+      title: 'Buku Pelajaran, Modul & Perpustakaan',
+      detail:
+        'Buku teks, buku bacaan, bahan ajar, referensi, dan langganan perpustakaan digital. Siswa tidak perlu membeli buku yang sudah disediakan sekolah.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen pengembangan perpustakaan',
     },
     {
-      title: 'Langganan Internet Dedicated Fiber Optik Sekolah',
-      detail: 'Pembayaran langganan internet kecepatan tinggi untuk mendukung praktikum koding, ujian berbasis komputer, dan server pembelajaran daring.',
-      ref: 'Juknis BOSP Reguler Komponen 06 & 08',
+      title: 'Kegiatan Pembelajaran & Ekstrakurikuler',
+      detail:
+        'Bahan praktik, alat peraga, pembinaan ekskul, dan keikutsertaan dalam lomba atau kompetisi.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen pelaksanaan kegiatan pembelajaran dan ekstrakurikuler',
     },
     {
-      title: 'Pemeliharaan Sanitasi & Asrama Satuan Pendidikan',
-      detail: 'Perbaikan sarana air bersih, pompa toren, perbaikan kamar mandi dan wastafel cuci tangan untuk kenyamanan siswa belajar.',
-      ref: 'Juknis BOSP Reguler Komponen 05',
+      title: 'Asesmen & Evaluasi Pembelajaran',
+      detail:
+        'Penggandaan soal, ulangan, ujian sekolah, asesmen berbasis komputer, serta cetak rapor dan sertifikat.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen asesmen/evaluasi pembelajaran',
     },
     {
-      title: 'Pelaksanaan Uji Kompetensi Keahlian (UKK)',
-      detail: 'Penyelenggaraan ujian kompetensi sertifikasi kejuruan, bahan praktik siswa, dan honorarium asesor eksternal terdaftar.',
-      ref: 'Permendikbudristek No. 63/2023 Pasal 39',
+      title: 'Administrasi Kegiatan Sekolah',
+      detail:
+        'Alat tulis kantor, fotokopi, cetak dokumen, dan perlengkapan administrasi lain.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen administrasi kegiatan sekolah',
+    },
+    {
+      title: 'Pengembangan Profesi Guru & Tenaga Kependidikan',
+      detail:
+        'Pelatihan, workshop, dan komunitas belajar guru. Ini bukan biaya yang dibebankan ke orang tua.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen pengembangan profesi GTK',
+    },
+    {
+      title: 'Langganan Daya & Jasa',
+      detail:
+        'Listrik, air, telepon, dan internet sekolah, termasuk untuk asesmen berbasis komputer dan server pembelajaran.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen langganan daya dan jasa',
+    },
+    {
+      title: 'Pemeliharaan Sarana & Prasarana (termasuk Sanitasi & Toilet)',
+      detail:
+        'Perbaikan ringan ruang kelas, mebel, toilet, pompa air, wastafel, dan sarana air bersih.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen pemeliharaan sarana dan prasarana',
+    },
+    {
+      title: 'Alat Multimedia & Perangkat Pembelajaran',
+      detail:
+        'Laptop, komputer, proyektor, printer, dan perangkat pendukung pembelajaran.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen penyediaan alat multimedia pembelajaran',
+    },
+    {
+      title: 'Honor Guru & Tenaga Kependidikan Non-ASN',
+      detail:
+        'Dibayarkan dengan syarat dan batas persentase tertentu, termasuk kebijakan relaksasi untuk ASN paruh waktu.',
+      ref: 'Rujukan: Permendikdasmen 8/2026 dan SE Mendikdasmen No. 6/2026',
+    },
+    {
+      title: 'Khusus SMK: Peralatan Praktik, Lab & Uji Kompetensi (UKK)',
+      detail:
+        'Bahan praktik, pemeliharaan peralatan lab dan bengkel, serta penyelenggaraan uji kompetensi, sepanjang masuk komponen yang diatur dalam juknis. Jenjang SMK perlu mencocokkan item ini dengan lampiran jenjangnya.',
+      ref: 'Rujukan: Permendikdasmen 8/2026, komponen kegiatan peningkatan kompetensi keahlian',
     },
   ],
   prohibited: [
     {
-      title: 'Memungut Iuran untuk Fasilitas yang Sudah Dibiayai BOSP',
-      detail: 'Dilarang keras memungut uang patungan dari wali murid untuk pembelian kipas angin lab, modul buku, switch internet, atau sanitasi yang dananya sudah cair di BOSP.',
-      ref: 'Indikasi Pungutan Liar / Tumpang Tindih Anggaran',
+      title: 'Seragam, Sepatu, Tas & Alat Tulis Pribadi',
+      detail: 'Ini kebutuhan pribadi siswa, bukan operasional sekolah.',
+      ref: 'Kebutuhan Pribadi Siswa',
     },
     {
-      title: 'Pungutan Wajib Berkedok Sumbangan Sukarela',
-      detail: 'Komite Sekolah maupun Paguyuban dilarang menarik pungutan yang menentukan nominal tetap dan batas waktu pembayaran yang mengikat bagi siswa.',
-      ref: 'Permendikbud No. 75 Tahun 2016 Pasal 10 & 12',
+      title: 'Pembangunan Gedung & Ruang Baru / Rehabilitasi Berat',
+      detail:
+        'BOSP hanya untuk pemeliharaan. Pembangunan dan rehabilitasi besar dibiayai APBN/APBD, misalnya melalui DAK Fisik.',
+      ref: 'DAK Fisik / APBN / APBD',
     },
     {
-      title: 'Menjual Modul Pembelajaran / LKS Secara Memaksa',
-      detail: 'Pendidik dan satuan pendidikan dilarang membebankan biaya pembelian modul wajib atau bahan ajar fotokopi kepada orang tua murid.',
-      ref: 'PP No. 17 Tahun 2010 Pasal 181',
+      title: 'Wisata, Study Tour & Piknik',
+      detail:
+        'Kegiatan yang bukan pembelajaran inti tidak masuk komponen BOSP. Jika dilakukan, biayanya patungan sukarela orang tua dan tidak boleh dipaksakan.',
+      ref: 'Bukan Pembelajaran Inti (Dilarang Memaksa)',
     },
     {
-      title: 'Menahan Ijazah atau Hak Ujian Siswa',
-      detail: 'Sekolah dilarang mengaitkan hak ujian, kelulusan, atau penerimaan rapor siswa dengan kewajiban pelunasan iuran paguyuban komite.',
-      ref: 'Standar Pelayanan Minimal Pendidikan Nasional',
+      title: 'Gaji Guru ASN (PNS/PPPK Penuh Waktu)',
+      detail: 'Gaji dibayar dari APBN/APBD, bukan BOSP.',
+      ref: 'Belanja Pegawai APBN/APBD',
+    },
+    {
+      title: 'Pinjaman, Investasi & Kegiatan Mencari Bunga',
+      detail:
+        'Dana BOSP tidak boleh dipinjamkan, disimpan untuk mencari bunga, atau diinvestasikan.',
+      ref: 'Larangan Pengelolaan BOSP',
+    },
+    {
+      title: 'Bantuan untuk Pihak Lain, Yayasan atau Kegiatan di Luar Sekolah',
+      detail:
+        'Dana hanya untuk kebutuhan operasional satuan pendidikan itu sendiri.',
+      ref: 'Operasional Satuan Pendidikan Sendiri',
+    },
+    {
+      title: 'Kegiatan yang Sudah Dibiayai Sumber Lain (Dobel Anggaran)',
+      detail:
+        'Satu kegiatan tidak boleh dibiayai dua kali dari sumber dana yang berbeda.',
+      ref: 'Larangan Dobel Anggaran / Tumpang Tindih',
+    },
+    {
+      title: 'Biaya Pribadi dan Kegiatan Mewah',
+      detail:
+        'Belanja yang tidak ada hubungannya dengan pembelajaran dan tidak masuk RKAS.',
+      ref: 'Di Luar RKAS & Pembelajaran',
     },
   ],
 };

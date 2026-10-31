@@ -8,10 +8,11 @@ import {
   AlertCircle,
   X,
   BookOpen,
-  MapPin,
   ReceiptText,
   ScanLine,
   ShieldCheck,
+  Play,
+  ExternalLink,
 } from 'lucide-react';
 import {
   REGION_HIERARCHY,
@@ -19,6 +20,7 @@ import {
   SMK_TI_BAZMA,
   SchoolData,
 } from '../data/schoolsData';
+import { Phone3DCanvas } from './Phone3DCanvas';
 
 interface ScrollRevealOnceProps {
   children: React.ReactNode;
@@ -83,7 +85,46 @@ interface LandingPageProps {
   onOpenAnonymousReport: () => void;
   onOpenLiveTracking: () => void;
   onOpenKamusModal: () => void;
+  isIntroActive?: boolean;
 }
+
+const GRID_CELL_SIZE = 42;
+const GRID_CELL_VARIANTS = [
+  'grid-cell-v1',
+  'grid-cell-v2',
+  'grid-cell-v3',
+  'grid-cell-v4',
+] as const;
+
+interface AmbientGridCell {
+  col: number;
+  row: number;
+  variant: (typeof GRID_CELL_VARIANTS)[number];
+  animClass: 'grid-cell-anim-a' | 'grid-cell-anim-b';
+  delay: string;
+}
+
+// Kotak-kotak kecil (42x42px) pada grid background yang bergerak/berkilau halus secara mandiri
+const AMBIENT_GRID_GLASS_CELLS: AmbientGridCell[] = [
+  { col: 2, row: 2, variant: 'grid-cell-v1', animClass: 'grid-cell-anim-a', delay: '0s' },
+  { col: 5, row: 3, variant: 'grid-cell-v2', animClass: 'grid-cell-anim-b', delay: '-1.4s' },
+  { col: 3, row: 6, variant: 'grid-cell-v3', animClass: 'grid-cell-anim-a', delay: '-2.8s' },
+  { col: 7, row: 5, variant: 'grid-cell-v4', animClass: 'grid-cell-anim-b', delay: '-0.7s' },
+  { col: 4, row: 10, variant: 'grid-cell-v2', animClass: 'grid-cell-anim-a', delay: '-3.5s' },
+  { col: 9, row: 2, variant: 'grid-cell-v3', animClass: 'grid-cell-anim-b', delay: '-2.1s' },
+  { col: 12, row: 4, variant: 'grid-cell-v1', animClass: 'grid-cell-anim-a', delay: '-4.2s' },
+  { col: 15, row: 3, variant: 'grid-cell-v4', animClass: 'grid-cell-anim-b', delay: '-1.1s' },
+  { col: 18, row: 2, variant: 'grid-cell-v2', animClass: 'grid-cell-anim-a', delay: '-3.0s' },
+  { col: 21, row: 4, variant: 'grid-cell-v1', animClass: 'grid-cell-anim-b', delay: '-0.5s' },
+  { col: 24, row: 3, variant: 'grid-cell-v3', animClass: 'grid-cell-anim-a', delay: '-2.4s' },
+  { col: 19, row: 7, variant: 'grid-cell-v4', animClass: 'grid-cell-anim-b', delay: '-4.6s' },
+  { col: 23, row: 8, variant: 'grid-cell-v1', animClass: 'grid-cell-anim-a', delay: '-1.8s' },
+  { col: 16, row: 11, variant: 'grid-cell-v2', animClass: 'grid-cell-anim-b', delay: '-3.3s' },
+  { col: 26, row: 6, variant: 'grid-cell-v3', animClass: 'grid-cell-anim-a', delay: '-0.9s' },
+  { col: 28, row: 10, variant: 'grid-cell-v4', animClass: 'grid-cell-anim-b', delay: '-2.7s' },
+  { col: 8, row: 12, variant: 'grid-cell-v1', animClass: 'grid-cell-anim-a', delay: '-1.5s' },
+  { col: 21, row: 12, variant: 'grid-cell-v2', animClass: 'grid-cell-anim-b', delay: '-3.8s' },
+];
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   selectedSchool,
@@ -91,6 +132,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenAnonymousReport,
   onOpenLiveTracking,
   onOpenKamusModal,
+  isIntroActive = false,
 }) => {
   // Interactive Mouse-Following Grid & 3D Phone Parallax State
   const heroSectionRef = useRef<HTMLElement | null>(null);
@@ -123,6 +165,95 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Progressive disclosure ("Lihat Selengkapnya") for bottom summary
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
+
+  // Intro Video Player State (YouTube: u_KJPfVgRUE) + Scroll Zoom & Blur State
+  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
+  const videoCardRef = useRef<HTMLDivElement | null>(null);
+  const [videoScrollEffect, setVideoScrollEffect] = useState<{
+    scale: number;
+    blur: number;
+    opacity: number;
+  }>({
+    scale: 1,
+    blur: 0,
+    opacity: 1,
+  });
+
+  useEffect(() => {
+    // Pastikan selalu mulai dari paling atas layar saat landing page dimuat/refresh
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    let rafId: number | null = null;
+
+    const updateVideoScroll = () => {
+      rafId = null;
+      const el = videoCardRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || 800;
+      const centerY = rect.top + rect.height / 2;
+      const viewportCenter = vh * 0.5;
+
+      // Saat di-scroll ke bawah melewati tengah layar (centerY naik ke atas viewportCenter)
+      // atau saat baru masuk dari bawah layar: berikan efek zoom & blur halus
+      if (centerY < viewportCenter - 40) {
+        // User sedang scroll ke bawah melewati video
+        const progress = Math.min(
+          1,
+          Math.max(0, (viewportCenter - 40 - centerY) / (vh * 0.55))
+        );
+        const scale = 1 - progress * 0.08;
+        const blur = progress * 8.5;
+        const opacity = Math.max(0.35, 1 - progress * 0.55);
+        setVideoScrollEffect({
+          scale: Number(scale.toFixed(3)),
+          blur: Number(blur.toFixed(2)),
+          opacity: Number(opacity.toFixed(2)),
+        });
+      } else if (centerY > viewportCenter + 90) {
+        // Video baru muncul dari bawah saat di-scroll ke bawah
+        const enterProgress = Math.min(
+          1,
+          Math.max(0, (centerY - (viewportCenter + 90)) / (vh * 0.55))
+        );
+        const scale = 1 - enterProgress * 0.07;
+        const blur = enterProgress * 6.5;
+        const opacity = Math.max(0.45, 1 - enterProgress * 0.45);
+        setVideoScrollEffect({
+          scale: Number(scale.toFixed(3)),
+          blur: Number(blur.toFixed(2)),
+          opacity: Number(opacity.toFixed(2)),
+        });
+      } else {
+        setVideoScrollEffect({ scale: 1, blur: 0, opacity: 1 });
+      }
+    };
+
+    const onScroll = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(updateVideoScroll);
+      }
+    };
+
+    updateVideoScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   const handleHeroMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     if (!heroSectionRef.current) return;
@@ -186,9 +317,89 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const filteredSchools = useMemo(() => {
-    // Sesuai instruksi: Hanya menampilkan SMK TI BAZMA (90 Murid) agar mempermudah juri
-    return [SMK_TI_BAZMA];
-  }, []);
+    const rawQuery = searchQuery.trim().toLowerCase();
+    // Jika input sama persis dengan format pilihan sekolah saat ini, anggap belum mengetik kueri baru
+    const isFormattedSelection =
+      chosenSchool &&
+      rawQuery ===
+        `${chosenSchool.name} (npsn: ${chosenSchool.npsn})`.toLowerCase();
+    const q = isFormattedSelection ? '' : rawQuery;
+
+    // Ketika input search ditekan tanpa mengetik huruf/kata dan tanpa filter wilayah:
+    // HANYA tampilkan SMK TI BAZMA saja
+    if (!q && !provinsi && !kabupaten && !kecamatan) {
+      return [SMK_TI_BAZMA];
+    }
+
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const scored: { school: SchoolData; score: number }[] = [];
+
+    for (const s of SCHOOLS_DATABASE) {
+      if (provinsi && s.provinsi !== provinsi) continue;
+      if (kabupaten && s.kabupaten !== kabupaten) continue;
+      if (kecamatan && s.kecamatan !== kecamatan) continue;
+
+      if (!q) {
+        scored.push({
+          school: s,
+          score: s.id === SMK_TI_BAZMA.id ? 1000 : 10,
+        });
+        continue;
+      }
+
+      const nameLower = s.name.toLowerCase();
+      const npsnLower = s.npsn.toLowerCase();
+      const kecLower = s.kecamatan.toLowerCase();
+      const kabLower = s.kabupaten.toLowerCase();
+      const combined = `${nameLower} ${npsnLower} ${kecLower} ${kabLower}`;
+
+      let score = 0;
+
+      if (nameLower === q || npsnLower === q) {
+        score += 200;
+      } else if (nameLower.startsWith(q) || npsnLower.startsWith(q)) {
+        score += 140;
+      } else if (nameLower.includes(q) || npsnLower.includes(q)) {
+        score += 100;
+      } else if (kecLower.includes(q) || kabLower.includes(q)) {
+        score += 75;
+      }
+
+      // Pencocokan kata per kata (tokens)
+      if (tokens.length > 0) {
+        let matchedTokens = 0;
+        for (const tk of tokens) {
+          if (combined.includes(tk)) {
+            matchedTokens++;
+            score += 30;
+          }
+        }
+        if (matchedTokens === tokens.length) {
+          score += 45;
+        }
+      }
+
+      // Pencocokan huruf-huruf yang mendekati (subsequence / kemiripan karakter)
+      if (score === 0 && q.length >= 2) {
+        let qIdx = 0;
+        for (let i = 0; i < nameLower.length && qIdx < q.length; i++) {
+          if (nameLower[i] === q[qIdx]) qIdx++;
+        }
+        const ratio = qIdx / q.length;
+        if (ratio >= 0.75) {
+          score += Math.round(ratio * 35);
+        }
+      }
+
+      if (score > 0) {
+        if (s.id === SMK_TI_BAZMA.id) score += 500;
+        scored.push({ school: s, score });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 5).map((item) => item.school);
+  }, [provinsi, kabupaten, kecamatan, searchQuery, chosenSchool]);
 
   const handleSelectSchool = (school: SchoolData) => {
     setChosenSchool(school);
@@ -208,8 +419,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const handleSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
-    // Langsung buka SMK TI BAZMA agar tidak memblokir atau membingungkan juri
-    const target = chosenSchool || SMK_TI_BAZMA;
+    const target = chosenSchool || filteredSchools[0] || SMK_TI_BAZMA;
     onSelectSchoolAndOpenProfile(target, 'summary');
   };
 
@@ -218,6 +428,50 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const phoneRotateX = (-mousePos.normY * 5.5).toFixed(2);
   const phoneTranslateX = (mousePos.normX * 8).toFixed(1);
   const phoneTranslateY = (mousePos.normY * 8).toFixed(1);
+
+  // Kotak-kotak kecil grid (42x42px) di sekitar kursor yang menyala seperti kaca mengkilat saat didekati
+  const hoveredGridCells = useMemo(() => {
+    if (!mousePos.active) return [];
+    const centerCol = Math.floor(mousePos.x / GRID_CELL_SIZE);
+    const centerRow = Math.floor(mousePos.y / GRID_CELL_SIZE);
+    const cells: {
+      key: string;
+      col: number;
+      row: number;
+      intensity: number;
+      variant: (typeof GRID_CELL_VARIANTS)[number];
+    }[] = [];
+
+    const radius = 175;
+    for (let dRow = -4; dRow <= 4; dRow++) {
+      for (let dCol = -4; dCol <= 4; dCol++) {
+        const col = centerCol + dCol;
+        const row = centerRow + dRow;
+        if (col < 0 || row < 0) continue;
+
+        const cellCenterX = col * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+        const cellCenterY = row * GRID_CELL_SIZE + GRID_CELL_SIZE / 2;
+        const dist = Math.hypot(
+          mousePos.x - cellCenterX,
+          mousePos.y - cellCenterY
+        );
+
+        if (dist < radius) {
+          const raw = 1 - dist / radius;
+          const intensity = Math.pow(raw, 1.35);
+          const variantIdx = Math.abs(col * 7 + row * 13) % 4;
+          cells.push({
+            key: `${col}-${row}`,
+            col,
+            row,
+            intensity,
+            variant: GRID_CELL_VARIANTS[variantIdx],
+          });
+        }
+      }
+    }
+    return cells;
+  }, [mousePos.active, mousePos.x, mousePos.y]);
 
   return (
     <div className="w-full animate-view-enter">
@@ -228,13 +482,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         ref={heroSectionRef}
         onMouseMove={handleHeroMouseMove}
         onMouseLeave={handleHeroMouseLeave}
-        className="relative w-full min-h-[108vh] daradik-hero-blue-gradient flex flex-col justify-between pt-24 overflow-hidden"
+        className="relative w-full min-h-[92vh] sm:min-h-[100vh] lg:min-h-[108vh] daradik-hero-blue-gradient flex flex-col justify-between pt-20 sm:pt-24 overflow-hidden"
       >
-        {/* 1. Very Thin Base Grid */}
+        {/* 1. Very Thin Base Grid (42px x 42px) */}
         <div
           className="absolute inset-0 daradik-grid-base pointer-events-none"
           aria-hidden="true"
         />
+
+        {/* 1B. Kotak-Kotak Kecil Grid Background yang Bergerak/Berkilau Kaca Secara Mandiri */}
+        <div
+          className="absolute inset-0 pointer-events-none overflow-hidden"
+          aria-hidden="true"
+        >
+          {AMBIENT_GRID_GLASS_CELLS.map((cell, idx) => (
+            <div
+              key={idx}
+              className={`absolute grid-glass-cell ${cell.variant} ${cell.animClass}`}
+              style={{
+                left: `${cell.col * GRID_CELL_SIZE}px`,
+                top: `${cell.row * GRID_CELL_SIZE}px`,
+                animationDelay: cell.delay,
+                border: '1px solid rgba(255, 255, 255, 0.14)',
+                boxShadow:
+                  'inset 0 1px 1px rgba(255, 255, 255, 0.28), inset 1px 0 1px rgba(255, 255, 255, 0.12)',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* 1C. Kotak-Kotak Kecil Grid Background yang Menyala Mengkilat Seperti Kaca Saat Kursor Mendekat */}
+        <div
+          className="absolute inset-0 pointer-events-none overflow-hidden"
+          aria-hidden="true"
+        >
+          {hoveredGridCells.map((cell) => {
+            const borderAlpha = (0.12 + cell.intensity * 0.36).toFixed(2);
+            const topGloss = (0.18 + cell.intensity * 0.48).toFixed(2);
+            const leftGloss = (0.1 + cell.intensity * 0.28).toFixed(2);
+            return (
+              <div
+                key={cell.key}
+                className={`absolute grid-glass-cell ${cell.variant}`}
+                style={{
+                  left: `${cell.col * GRID_CELL_SIZE}px`,
+                  top: `${cell.row * GRID_CELL_SIZE}px`,
+                  opacity: Number((cell.intensity * 0.85).toFixed(2)),
+                  border: `1px solid rgba(255, 255, 255, ${borderAlpha})`,
+                  boxShadow: `inset 0 1px 1.5px rgba(255, 255, 255, ${topGloss}), inset 1px 0 1px rgba(255, 255, 255, ${leftGloss})`,
+                }}
+              />
+            );
+          })}
+        </div>
 
         {/* Decorative White Stroke Rectangle Shapes — Asymmetrical & Not Parallel ("Tinggi Sebelah") */}
         {/* Sisi Kiri: Diposisikan Jauh Lebih Tinggi (Area Atas Hero) */}
@@ -305,15 +605,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         />
 
         {/* Main Hero Content Container */}
-        <div className="relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 my-auto pt-4 pb-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-auto pt-2 sm:pt-4 pb-8 sm:pb-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* LEFT COLUMN: Sturdy Font Headline on 1 line, Sub-headline, & Empty-Default Search Box */}
             <div className="lg:col-span-7 flex flex-col items-start">
               {/* Headline: Transparansi Dana Sekolah (dengan huruf sambung pada kata 'Sekolah' dalam 1 baris) */}
-              <h1 className="mt-4 sm:mt-6 lg:mt-8 mb-5 sm:mb-6 text-[28px] sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold text-[#FFFFFF] tracking-tight leading-[1.08] sm:leading-[1.10] drop-shadow-sm">
-                <span className="block whitespace-nowrap">
+              <h1 className="mt-2 sm:mt-6 lg:mt-8 mb-4 sm:mb-6 text-[24px] sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold text-[#FFFFFF] tracking-tight leading-[1.12] sm:leading-[1.10] drop-shadow-sm">
+                <span className="block whitespace-normal sm:whitespace-nowrap">
                   Transparansi Dana{' '}
-                  <span className="font-script-sekolah text-[1.48em] sm:text-[1.5em] text-[#DCEFEA] px-2 font-normal tracking-wide inline-block drop-shadow-sm select-none">
+                  <span className="font-script-sekolah text-[1.32em] sm:text-[1.5em] text-[#DCEFEA] px-1.5 sm:px-2 font-normal tracking-wide inline-block drop-shadow-sm select-none">
                     Sekolah
                   </span>
                 </span>
@@ -321,14 +621,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </h1>
 
               {/* Calm Sub-headline with comfortable vertical breathing space */}
-              <p className="mb-7 sm:mb-8 text-xs sm:text-sm text-[#FFFFFF]/85 max-w-[48ch] leading-[1.7] font-normal text-left">
+              <p className="mb-5 sm:mb-8 text-xs sm:text-sm text-[#FFFFFF]/85 max-w-[48ch] leading-[1.65] sm:leading-[1.7] font-normal text-left">
                 Pantau langsung dana BOSP Tahap 1 &amp; 2, validasi bukti belanja fisik sekolah, dan deteksi indikasi pungutan liar secara anonim.
               </p>
 
               {/* SCHOOL SEARCH CARD — EMPTY BY DEFAULT */}
               <form
                 onSubmit={handleSubmitSearch}
-                className="w-full bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl shadow-lg p-5 sm:p-6"
+                className="w-full bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                   <label
@@ -444,8 +744,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       setIsDropdownOpen(true);
                       setValidationError(null);
                     }}
-                    placeholder="Cari SMK TI BAZMA atau NPSN (69994998)..."
-                    className="w-full pl-10 pr-10 py-3 text-sm bg-[#F2EFE8]/45 border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium placeholder:text-[#475569]/75 focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/30 focus:border-[#2E6496]"
+                    placeholder="Nama sekolah atau NPSN..."
+                    className="w-full pl-10 pr-10 py-3 text-base sm:text-sm bg-[#F2EFE8]/45 border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium placeholder:text-[#475569]/75 focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/30 focus:border-[#2E6496]"
                   />
                   {searchQuery && (
                     <button
@@ -459,11 +759,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </div>
 
-                {/* Autocomplete Dropdown List: Menampilkan SMK TI BAZMA (90 Murid) untuk penilaian juri */}
+                {/* Autocomplete Dropdown List: Hanya menampilkan Nama Sekolah dan NPSN */}
                 {isDropdownOpen && (
                   <div className="mt-2 border border-[#C9DFDC] rounded-lg bg-[#FFFFFF] divide-y divide-[#C9DFDC]/50 max-h-52 overflow-y-auto shadow-sm animate-view-enter">
                     <div className="px-3.5 py-1.5 bg-[#F2EFE8] flex items-center justify-between text-[11px] text-[#475569]">
-                      <span className="font-semibold text-[#2E6496]">Sekolah Terverifikasi (Penilaian Juri)</span>
+                      <span className="font-semibold text-[#2E6496]">Daftar Sekolah</span>
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(false)}
@@ -479,19 +779,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => handleSelectSchool(s)}
                         className="w-full text-left px-3.5 py-2.5 hover:bg-[#C9DFDC]/35 transition-colors flex items-center justify-between gap-2"
                       >
-                        <div>
-                          <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-1.5">
-                            <span>{s.name}</span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#EBF3F8] text-[#2E6496] rounded border border-[#C9DFDC]">
-                              {s.studentCount} Murid
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-[#475569] flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 text-[#66A3BF] shrink-0" />
-                            <span>
-                              Kec. {s.kecamatan}, {s.kabupaten}, {s.provinsi} • NPSN: {s.npsn}
-                            </span>
-                          </div>
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className="text-xs sm:text-sm font-bold text-[#1E293B]">
+                            {s.name}
+                          </span>
+                          <span className="text-xs text-[#475569] tabular-nums">
+                            NPSN: {s.npsn}
+                          </span>
                         </div>
                         <span className="text-xs text-[#2E6496] font-semibold shrink-0">
                           Pilih →
@@ -525,18 +819,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </form>
             </div>
 
-            {/* RIGHT COLUMN: 3D Mouse Parallax Tilt Phone Mockup */}
-            <div className="lg:col-span-5 flex items-center justify-center">
-              <div className="parallax-phone-container relative w-full max-w-[390px] mx-auto flex items-center justify-center">
-                <img
-                  src="/phone-prototype.png?v=3"
-                  alt="Prototype Tampilan Mobile DARADIK"
-                  style={{
-                    transform: mousePos.active
-                      ? `rotateX(${phoneRotateX}deg) rotateY(${phoneRotateY}deg) translate3d(${phoneTranslateX}px, ${phoneTranslateY}px, 0)`
-                      : 'rotateX(0deg) rotateY(0deg) translate3d(0, 0, 0)',
-                  }}
-                  className="parallax-phone-target relative z-10 w-full max-h-[460px] object-contain drop-shadow-xl select-none"
+            {/* RIGHT COLUMN: Real Interactive 3D iPhone 16 Pro Max Model */}
+            <div className="lg:col-span-5 flex items-center justify-center lg:justify-end mt-2 sm:mt-6 lg:mt-0 lg:translate-x-4 xl:translate-x-8">
+              <div className="relative w-full max-w-[320px] sm:max-w-[380px] lg:max-w-[430px] xl:max-w-[460px] mx-auto lg:mr-0 flex items-center justify-center -mb-6 sm:-mb-10 lg:-mb-16">
+                {/* Soft ambient aura blending with the blue & white landing page gradient */}
+                <div
+                  className="absolute -inset-4 sm:-inset-8 bg-gradient-to-t from-white/35 via-[#C9DFDC]/20 to-transparent rounded-full blur-2xl pointer-events-none -z-10"
+                  aria-hidden="true"
+                />
+                <Phone3DCanvas
+                  isIntroActive={isIntroActive}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -551,49 +844,154 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* =====================================================================
+          VIDEO PERKENALAN DARADIK SECTION
+         ===================================================================== */}
+      <section className="w-full bg-[#FAF8F5] pt-2 sm:pt-4 pb-12 sm:pb-16 px-3.5 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <ScrollRevealOnce>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-4 sm:mb-5">
+              <div>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496] block mb-1">
+                  Video Perkenalan DARADIK
+                </span>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
+                  Mengenal Cara Kerja Pengawasan Dana Sekolah
+                </h2>
+                <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm md:text-base text-[#475569] max-w-2xl leading-relaxed">
+                  Tonton penjelasan singkat bagaimana DARADIK membantu orang tua, siswa, dan masyarakat memantau penggunaan dana BOSP secara terbuka.
+                </p>
+              </div>
+
+              <a
+                href="https://youtu.be/2TfgFusfSWQ?si=psa3osKWhADjRxYY"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#FFFFFF] border border-[#C9DFDC] hover:border-[#2E6496] text-[11px] sm:text-xs font-bold text-[#2E6496] shadow-xs transition-all shrink-0"
+              >
+                <span>Buka di YouTube</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            {/* Framed Video Player Container with Scroll-Driven Zoom & Blur Animation */}
+            <div
+              ref={videoCardRef}
+              style={{
+                transform: `scale(${videoScrollEffect.scale})`,
+                filter:
+                  videoScrollEffect.blur > 0.1
+                    ? `blur(${videoScrollEffect.blur}px)`
+                    : 'none',
+                opacity: videoScrollEffect.opacity,
+                transition:
+                  'transform 180ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease-out, opacity 180ms ease-out',
+                willChange: 'transform, filter, opacity',
+              }}
+              className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] p-2.5 sm:p-3.5 shadow-md origin-center"
+            >
+              <div className="relative w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden bg-[#0F172A] border border-[#C9DFDC]/60">
+                {isVideoPlaying ? (
+                  <iframe
+                    src="https://www.youtube.com/embed/2TfgFusfSWQ?autoplay=1&rel=0&modestbranding=1&vq=hd1080"
+                    title="Video Perkenalan DARADIK"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full border-0"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsVideoPlaying(true)}
+                    className="group relative w-full h-full block text-left focus:outline-none cursor-pointer overflow-hidden"
+                    aria-label="Putar Video Perkenalan DARADIK"
+                  >
+                    {/* YouTube High-Res Thumbnail */}
+                    <img
+                      src="https://i.ytimg.com/vi/2TfgFusfSWQ/maxresdefault.jpg"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.src.includes('hqdefault.jpg')) {
+                          target.src =
+                            'https://i.ytimg.com/vi/2TfgFusfSWQ/hqdefault.jpg';
+                        }
+                      }}
+                      alt="Thumbnail Video Perkenalan DARADIK"
+                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                    />
+
+                    {/* Subtle Coastal Blue Gradient Overlay */}
+                    <div
+                      className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/85 via-[#1A3D66]/35 to-[#0F172A]/20 transition-opacity duration-300 group-hover:opacity-90"
+                      aria-hidden="true"
+                    />
+
+                    {/* Center Glassmorphic Play Button */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#FFFFFF]/90 group-hover:bg-[#FFFFFF] text-[#2E6496] flex items-center justify-center shadow-xl border border-white/80 transition-all duration-300 group-hover:scale-110">
+                        <Play className="w-7 h-7 sm:w-8 sm:h-8 fill-[#2E6496] text-[#2E6496] ml-1" />
+                      </div>
+                      <span className="mt-3.5 px-3.5 py-1 rounded-full bg-[#0F172A]/65 backdrop-blur-md border border-white/20 text-xs sm:text-sm font-semibold text-[#FFFFFF]">
+                        Putar Video Perkenalan
+                      </span>
+                    </div>
+
+                    {/* Bottom Info Bar Inside Player */}
+                    <div className="absolute bottom-0 inset-x-0 p-4 sm:p-6 flex items-end justify-between gap-4">
+                      <div>
+                        <span className="text-[11px] font-semibold text-[#C9DFDC] block">
+                          DARADIK — Transparansi Dana BOSP
+                        </span>
+                        <p className="text-sm sm:text-base font-bold text-[#FFFFFF] mt-0.5">
+                          Pengenalan Platform &amp; Panduan Penggunaan untuk Publik
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </div>
+          </ScrollRevealOnce>
+        </div>
+      </section>
+
       {/* =====================================================================
           VERTICAL 3-POINT FLOW (No Boxes, No Table, Animated 1-by-1)
          ===================================================================== */}
-      <section className="w-full bg-[#FAF8F5] pt-10 pb-28 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-[#FAF8F5] pt-6 sm:pt-10 pb-16 sm:pb-28 px-3.5 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           {/* Section Heading */}
-          <ScrollRevealOnce className="mb-14 text-left">
-            <h2 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
+          <ScrollRevealOnce className="mb-8 sm:mb-14 text-left">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
               Satu tempat untuk tahu ke mana dana sekolah mengalir.
             </h2>
-            <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed max-w-2xl">
-              Tanpa istilah akuntansi yang rumit. Tiga langkah mudah untuk memantau dana sekolah, memvalidasi bukti belanja fisik, dan menjaga hak siswa secara terbuka.
+            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed max-w-2xl">
+              Tanpa istilah akuntansi yang rumit. Tiga fitur utama untuk memantau realisasi dana BOSP, memvalidasi bukti belanja fisik, dan melindungi hak siswa secara terbuka.
             </p>
           </ScrollRevealOnce>
 
-          {/* Vertical Timeline Track with 3 Sequential Points (Self-Centering Flex Track, No Drift) */}
+          {/* Vertical Track with 3 Core Features (Only Point Numbers 01, 02, 03) */}
           <div className="space-y-0">
-            {/* POINT 1 */}
+            {/* FITUR 01 */}
             <ScrollRevealOnce delayMs={0} className="relative">
-              <div className="flex items-start gap-4 sm:gap-6">
+              <div className="flex items-start gap-3 sm:gap-6">
                 {/* Node & Connecting Line Column */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
                     01
                   </div>
-                  <div className="w-[2px] bg-[#C9DFDC] flex-1 my-2 min-h-[72px] sm:min-h-[80px]" />
+                  <div className="w-[2px] bg-[#C9DFDC] flex-1 my-1.5 sm:my-2 min-h-[56px] sm:min-h-[80px]" />
                 </div>
 
                 {/* Content Column */}
-                <div className="pt-1 pb-10 sm:pb-12 max-w-2xl flex-1">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#66A3BF] block">
-                        Langkah Pertama
-                      </span>
-                      <h3 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-0.5">
-                        Cek Dana &amp; Nota Belanja
-                      </h3>
-                    </div>
-                    <ReceiptText className="w-8 h-8 sm:w-9 sm:h-9 text-[#2E6496] shrink-0 stroke-[1.75]" />
+                <div className="pt-0.5 pb-8 sm:pb-12 max-w-2xl flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#1E293B]">
+                      Transparansi Dana &amp; Bukti Belanja BOSP
+                    </h3>
+                    <ReceiptText className="w-6 h-6 sm:w-8 sm:h-8 text-[#2E6496] shrink-0 stroke-[1.75]" aria-hidden="true" />
                   </div>
-                  <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
-                    Lihat berapa dana BOSP yang dicairkan tahun ini beserta foto kwitansi, rincian nota barang, dan bukti fisik yang terpasang di ruang kelas sekolah.
+                  <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
+                    Pantau langsung pencairan dana BOSP Tahap 1 &amp; 2 lengkap dengan arsip nota kuitansi, rincian belanja barang, serta titik koordinat bukti fisik (geotagging) di ruang kelas.
                   </p>
                   <button
                     type="button"
@@ -603,41 +1001,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         'items-ai'
                       )
                     }
-                    className="mt-3.5 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
+                    className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
                   >
-                    <span>Lihat bukti belanja sekolah</span>
+                    <span>Lihat rincian dana &amp; bukti nota</span>
                     <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
             </ScrollRevealOnce>
 
-            {/* POINT 2 */}
+            {/* FITUR 02 */}
             <ScrollRevealOnce delayMs={150} className="relative">
-              <div className="flex items-start gap-4 sm:gap-6">
+              <div className="flex items-start gap-3 sm:gap-6">
                 {/* Node & Connecting Line Column */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
                     02
                   </div>
-                  <div className="w-[2px] bg-[#C9DFDC] flex-1 my-2 min-h-[72px] sm:min-h-[80px]" />
+                  <div className="w-[2px] bg-[#C9DFDC] flex-1 my-1.5 sm:my-2 min-h-[56px] sm:min-h-[80px]" />
                 </div>
 
                 {/* Content Column */}
-                <div className="pt-1 pb-10 sm:pb-12 max-w-2xl flex-1">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#66A3BF] block">
-                        Langkah Kedua
-                      </span>
-                      <h3 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-0.5">
-                        Pindai Iuran Grup WA
-                      </h3>
-                    </div>
-                    <ScanLine className="w-8 h-8 sm:w-9 sm:h-9 text-[#2E6496] shrink-0 stroke-[1.75]" />
+                <div className="pt-0.5 pb-8 sm:pb-12 max-w-2xl flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#1E293B]">
+                      Pemindai Iuran Grup WhatsApp
+                    </h3>
+                    <ScanLine className="w-6 h-6 sm:w-8 sm:h-8 text-[#2E6496] shrink-0 stroke-[1.75]" aria-hidden="true" />
                   </div>
-                  <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
-                    Unggah screenshot pengumuman iuran atau paguyuban kelas untuk mencocokkan otomatis dengan data anggaran BOSP. Ketahui apakah barang tersebut sebenarnya sudah dibiayai negara.
+                  <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
+                    Unggah screenshot pengumuman iuran dari grup WhatsApp wali murid untuk mencocokkan otomatis dengan anggaran BOSP dan mendeteksi indikasi tumpang tindih biaya.
                   </p>
                   <button
                     type="button"
@@ -647,40 +1040,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         'wa-scanner'
                       )
                     }
-                    className="mt-3.5 inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
+                    className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
                   >
-                    <span>Coba pemindai screenshot</span>
+                    <span>Coba pemindai screenshot WA</span>
                     <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
             </ScrollRevealOnce>
 
-            {/* POINT 3 */}
+            {/* FITUR 03 */}
             <ScrollRevealOnce delayMs={300} className="relative">
-              <div className="flex items-start gap-4 sm:gap-6">
+              <div className="flex items-start gap-3 sm:gap-6">
                 {/* Node Column (No trailing line on final step) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
                     03
                   </div>
                 </div>
 
                 {/* Content Column */}
-                <div className="pt-1 max-w-2xl flex-1">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#66A3BF] block">
-                        Langkah Ketiga
-                      </span>
-                      <h3 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-0.5">
-                        Lapor Tanpa Identitas
-                      </h3>
-                    </div>
-                    <ShieldCheck className="w-8 h-8 sm:w-9 sm:h-9 text-[#2E6496] shrink-0 stroke-[1.75]" />
+                <div className="pt-0.5 max-w-2xl flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-lg sm:text-xl font-bold text-[#1E293B]">
+                      Pelaporan Anonim &amp; Lacak Tiket Aduan
+                    </h3>
+                    <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-[#2E6496] shrink-0 stroke-[1.75]" aria-hidden="true" />
                   </div>
                   <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
-                    Sampaikan temuan indikasi pungutan liar ke Dinas Pendidikan tanpa perlu menyertakan nama, alamat, maupun nomor telepon. Pelaporan dienkripsi dan 100% anonim.
+                    Laporkan temuan indikasi pungutan liar ke Inspektorat dan Dinas Pendidikan secara terenkripsi tanpa menyertakan identitas pribadi, serta pantau status tindak lanjutnya melalui kode tiket.
                   </p>
                   <div className="mt-3.5 flex flex-wrap items-center gap-4 text-xs sm:text-sm">
                     <button
@@ -688,7 +1076,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       onClick={onOpenAnonymousReport}
                       className="inline-flex items-center gap-2 font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
                     >
-                      <span>Buat laporan</span>
+                      <span>Buat laporan anonim</span>
                       <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
                     <span className="text-[#C9DFDC]">•</span>
@@ -716,7 +1104,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   Ketahui Hak Siswa &amp; Batas Larangan Pungutan Sekolah
                 </h3>
                 <p className="text-xs sm:text-sm text-[#475569] mt-1 leading-relaxed">
-                  Sesuai Permendikbudristek No. 63/2023 &amp; Permendikbud No. 75/2016, seluruh operasional dasar dan perlengkapan sarana prasarana sekolah negeri telah dialokasikan melalui BOSP.
+                  Sesuai Permendikdasmen No. 8 Tahun 2026, seluruh operasional dasar dan perlengkapan sarana prasarana sekolah negeri telah dialokasikan melalui BOSP.
                 </p>
               </div>
 
@@ -757,7 +1145,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <span className="text-[#64748B]">
-                    Dasar Regulasi: Permendikbudristek No. 63/2023 &amp; Permendikbud No. 75/2016
+                    Dasar Regulasi: Permendikdasmen No. 8 Tahun 2026
                   </span>
                   <button
                     type="button"

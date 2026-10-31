@@ -8,6 +8,7 @@ import {
   Globe,
   Mail,
   MessageSquare,
+  Flag,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -24,19 +25,22 @@ import {
 } from './components/SchoolProfilePage';
 import { AnonymousReportPage } from './components/AnonymousReportPage';
 import { LiveTrackingPage } from './components/LiveTrackingPage';
+import { KamusBospPage } from './components/KamusBospPage';
+import { IntroSplashScreen } from './components/IntroSplashScreen';
 import {
   GeotagModal,
   InvoiceModal,
-  KamusBospModal,
 } from './components/Modals';
 
 export type AppView =
   | 'landing'
   | 'school-profile'
   | 'anonymous-report'
-  | 'live-tracking';
+  | 'live-tracking'
+  | 'kamus-bosp';
 
 export function App() {
+  const [showIntro, setShowIntro] = useState<boolean>(true);
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [previousView, setPreviousView] = useState<AppView>('landing');
 
@@ -45,11 +49,27 @@ export function App() {
   );
   const [profileTab, setProfileTab] = useState<ProfileTab>('summary');
 
+  // Pastikan saat refresh atau load awal selalu mulai dari paling atas layar
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleIntroFinish = useCallback(() => {
+    setShowIntro(false);
+  }, []);
+
   // Supabase Sync: Mengambil data sekolah dari Supabase jika database aktif
   useEffect(() => {
     async function loadSchoolFromSupabase() {
       try {
-        const remote = await fetchSchoolFromSupabase('69994998');
+        const remote = await fetchSchoolFromSupabase('smk-ti-bazma');
         if (remote) {
           setSelectedSchool(remote);
         }
@@ -61,7 +81,6 @@ export function App() {
   }, []);
 
   // Modals State
-  const [isKamusOpen, setIsKamusOpen] = useState<boolean>(false);
   const [activeInvoiceItem, setActiveInvoiceItem] =
     useState<BospRealizationItem | null>(null);
   const [activeGeotagItem, setActiveGeotagItem] =
@@ -103,6 +122,16 @@ export function App() {
     setSelectedSchool(school);
     setProfileTab(initialTab);
     navigateTo('school-profile');
+
+    fetchSchoolFromSupabase(school.id)
+      .then((remote) => {
+        if (remote && remote.id === school.id) {
+          setSelectedSchool(remote);
+        }
+      })
+      .catch(() => {
+        // Fallback ke data lokal terverifikasi
+      });
   };
 
   const handleReportFromItem = (item: BospRealizationItem) => {
@@ -145,35 +174,43 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1E293B]">
+      {showIntro && (
+        <IntroSplashScreen onFinish={handleIntroFinish} />
+      )}
+
       {/* =====================================================================
           WHITE LIQUID GLASS NAVBAR (TRANSPARANSI TIPIS, NEMBUS DIKIT)
          ===================================================================== */}
-      <header className="fixed top-3 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto h-16 px-4 sm:px-6 rounded-xl liquid-glass-nav-white flex items-center justify-between gap-4">
+      <header className="fixed top-2 sm:top-3 left-0 right-0 z-50 px-2 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-6 rounded-xl liquid-glass-nav-white flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Official DARADIK Logo */}
           <button
             type="button"
             onClick={() => navigateTo('landing')}
-            className="flex items-center gap-3 text-left focus:outline-none group"
+            className="flex items-center gap-2 sm:gap-3 text-left focus:outline-none group shrink-0"
             aria-label="Beranda DARADIK"
           >
             <img
               src="/logo-daradik.png"
               alt="Logo DARADIK"
-              className="h-6 sm:h-7 w-auto object-contain select-none transition-transform duration-200 group-hover:scale-[1.02] group-hover:opacity-90"
+              className="h-5 sm:h-7 w-auto object-contain select-none transition-transform duration-200 group-hover:scale-[1.02] group-hover:opacity-90"
             />
           </button>
 
           {/* Right: 2 Clean Menus (Kamus BOSP & Lacak Lapor) + 1 CTA Button (Lapor) */}
           <nav
-            className="flex items-center gap-2 sm:gap-3"
+            className="flex items-center gap-1 sm:gap-2.5"
             aria-label="Navigasi Utama DARADIK"
           >
             {/* Menu 1: Kamus BOSP */}
             <button
               type="button"
-              onClick={() => setIsKamusOpen(true)}
-              className="nav-link-interactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35 flex items-center gap-1.5"
+              onClick={() => navigateTo('kamus-bosp')}
+              className={`nav-link-interactive px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 ${
+                currentView === 'kamus-bosp'
+                  ? 'text-[#2E6496] bg-[#C9DFDC]/55'
+                  : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
+              }`}
             >
               <BookOpen className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
               <span>Kamus BOSP</span>
@@ -183,7 +220,7 @@ export function App() {
             <button
               type="button"
               onClick={() => navigateTo('live-tracking')}
-              className={`nav-link-interactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 ${
+              className={`nav-link-interactive px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 ${
                 currentView === 'live-tracking'
                   ? 'text-[#2E6496] bg-[#C9DFDC]/55'
                   : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
@@ -197,9 +234,10 @@ export function App() {
             <button
               type="button"
               onClick={handleOpenReportFromHeader}
-              className="px-5 py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px]"
+              className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
             >
-              Lapor
+              <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true" />
+              <span>Lapor</span>
             </button>
           </nav>
         </div>
@@ -238,7 +276,8 @@ export function App() {
             onSelectSchoolAndOpenProfile={handleSelectSchoolAndOpenProfile}
             onOpenAnonymousReport={handleOpenReportFromHeader}
             onOpenLiveTracking={() => navigateTo('live-tracking')}
-            onOpenKamusModal={() => setIsKamusOpen(true)}
+            onOpenKamusModal={() => navigateTo('kamus-bosp')}
+            isIntroActive={showIntro}
           />
         )}
 
@@ -249,7 +288,7 @@ export function App() {
               activeTab={profileTab}
               onTabChange={setProfileTab}
               onBackToLanding={() => navigateTo('landing')}
-              onOpenKamusModal={() => setIsKamusOpen(true)}
+              onOpenKamusModal={() => navigateTo('kamus-bosp')}
               onOpenInvoiceModal={(item) => setActiveInvoiceItem(item)}
               onOpenGeotagModal={(item) => setActiveGeotagItem(item)}
               onReportFromItem={handleReportFromItem}
@@ -289,6 +328,19 @@ export function App() {
               onBackToHome={() => navigateTo('landing')}
               onBackToSchoolProfile={() => navigateTo('school-profile')}
               onShowToast={showToast}
+            />
+          </div>
+        )}
+
+        {currentView === 'kamus-bosp' && (
+          <div className="pt-20">
+            <KamusBospPage
+              onBack={() =>
+                navigateTo(
+                  previousView === 'kamus-bosp' ? 'landing' : previousView
+                )
+              }
+              onReportNow={handleOpenReportFromHeader}
             />
           </div>
         )}
@@ -398,7 +450,7 @@ export function App() {
                 <li>
                   <button
                     type="button"
-                    onClick={() => setIsKamusOpen(true)}
+                    onClick={() => navigateTo('kamus-bosp')}
                     className="hover:text-[#2E6496] transition-colors text-left font-medium"
                   >
                     Kamus Juknis BOSP
@@ -407,16 +459,16 @@ export function App() {
                 <li>
                   <button
                     type="button"
-                    onClick={() => setIsKamusOpen(true)}
+                    onClick={() => navigateTo('kamus-bosp')}
                     className="hover:text-[#2E6496] transition-colors text-left"
                   >
-                    Permendikbud 63/2023
+                    Permendikdasmen 8/2026
                   </button>
                 </li>
                 <li>
                   <button
                     type="button"
-                    onClick={() => setIsKamusOpen(true)}
+                    onClick={() => navigateTo('kamus-bosp')}
                     className="hover:text-[#2E6496] transition-colors text-left"
                   >
                     Permendikbud 75/2016
@@ -493,7 +545,7 @@ export function App() {
               <span>•</span>
               <button
                 type="button"
-                onClick={() => setIsKamusOpen(true)}
+                onClick={() => navigateTo('kamus-bosp')}
                 className="hover:text-[#2E6496] transition-colors"
               >
                 Kamus BOSP
@@ -522,12 +574,6 @@ export function App() {
       {/* =====================================================================
           MODALS
          ===================================================================== */}
-      <KamusBospModal
-        isOpen={isKamusOpen}
-        onClose={() => setIsKamusOpen(false)}
-        onReportNow={handleOpenReportFromHeader}
-      />
-
       <InvoiceModal
         item={activeInvoiceItem}
         school={selectedSchool}

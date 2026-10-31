@@ -129,20 +129,105 @@
     );
 }
 
-/* Very Thin Base Grid */
+/* Very Thin Base Grid (42px x 42px) */
 .daradik-grid-base {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 42px 42px;
 }
 
-/* Subtle Thin Interactive Grid Revealed by Mouse Cursor */
+/* Subtle Thin Interactive Grid Revealed by Mouse Cursor (42px x 42px) */
 .daradik-grid-spotlight {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
   background-size: 42px 42px;
+}
+
+/* =====================================================================
+   BACKGROUND GRID LIQUID GLASS CELLS (42px x 42px Small Grid Squares)
+   ===================================================================== */
+.grid-glass-cell {
+  width: 42px;
+  height: 42px;
+  pointer-events: none;
+  transition:
+    opacity 220ms ease-out,
+    box-shadow 220ms ease-out,
+    border-color 220ms ease-out;
+}
+
+/* 4 Variasi Gradasi & Glossy Berbeda untuk Kotak-Kotak Kecil Grid */
+.grid-cell-v1 {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(201, 223, 220, 0.12) 100%
+  );
+}
+
+.grid-cell-v2 {
+  background: linear-gradient(
+    160deg,
+    rgba(220, 239, 234, 0.24) 0%,
+    rgba(255, 255, 255, 0.03) 55%,
+    rgba(102, 163, 191, 0.15) 100%
+  );
+}
+
+.grid-cell-v3 {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.26), transparent 65%),
+    linear-gradient(125deg, rgba(255, 255, 255, 0.08) 0%, rgba(181, 211, 212, 0.04) 100%);
+}
+
+.grid-cell-v4 {
+  background: linear-gradient(
+    215deg,
+    rgba(255, 255, 255, 0.20) 0%,
+    rgba(255, 255, 255, 0.03) 60%,
+    rgba(220, 239, 234, 0.14) 100%
+  );
+}
+
+/* Animasi Mandiri Halus pada Kotak-Kotak Kecil Grid Background */
+@keyframes gridCellBreathA {
+  0%, 100% {
+    opacity: 0.08;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.34;
+    transform: scale(1);
+  }
+}
+
+@keyframes gridCellBreathB {
+  0%, 100% {
+    opacity: 0.30;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.06;
+    transform: scale(0.98);
+  }
+}
+
+.grid-cell-anim-a {
+  animation: gridCellBreathA 5.5s ease-in-out infinite;
+}
+
+.grid-cell-anim-b {
+  animation: gridCellBreathB 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid-cell-anim-a,
+  .grid-cell-anim-b {
+    animation: none !important;
+  }
 }
 
 /* Clean, Minimalist Solid Brand CTA Button (Minimalkan Gradasi) */

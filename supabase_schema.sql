@@ -31,7 +31,7 @@ CREATE POLICY "Public Read Schools" ON public.schools FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public Modify Schools" ON public.schools;
 CREATE POLICY "Public Modify Schools" ON public.schools FOR ALL USING (true);
 
--- 4. Masukkan Data Seed Nyata SMK TI BAZMA (90 Siswa)
+-- 4. Masukkan Data Seed Nyata SMK TI BAZMA (92 Siswa)
 INSERT INTO public.schools (
   id,
   name,
@@ -47,16 +47,19 @@ INSERT INTO public.schools (
 ) VALUES (
   'smk-ti-bazma',
   'SMK TI BAZMA',
-  '69994998',
-  90,
+  '70029710',
+  92,
   151200000,
   1680000,
   'Kab. Bogor',
   'Ciampea',
   'Jawa Barat',
-  'Jl. Cikampak Cicadas RT 01/RW 01, Kp. Cirangkong, Cibatok II, Kec. Ciampea / Cibungbulang, Kab. Bogor, Jawa Barat',
+  'Kp. Cicadas RT. 001/001, Desa Cicadas, Kec. Ciampea, Kab. Bogor, Jawa Barat',
   'Terverifikasi Dapodik & BOSP 2026'
 ) ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  npsn = EXCLUDED.npsn,
+  address = EXCLUDED.address,
   student_count = EXCLUDED.student_count,
   total_bosp = EXCLUDED.total_bosp,
   updated_at = NOW();
