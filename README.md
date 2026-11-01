@@ -1,6 +1,6 @@
 # DARADIK — Data Transparansi Dana Pendidikan
 
-> **DARADIK** adalah platform keterbukaan dana pendidikan yang menyajikan rincian alokasi BOSP Tahap 1 dan 2 beserta bukti fisik nota belanja sekolah dalam format visual yang mudah dipahami orang tua murid tanpa istilah akuntansi yang rumit. Dilengkapi deteksi cerdas berbasis AI untuk mencocokkan pengumuman iuran di grup WhatsApp kelas dengan anggaran resmi, platform ini menyediakan jalur pelaporan 100% anonim dan aman dari risiko diskriminasi sekolah.
+> **DARADIK** adalah platform keterbukaan dana pendidikan yang menyajikan rincian alokasi BOSP Tahap 1 dan 2 dalam format visual yang mudah dipahami orang tua murid tanpa istilah akuntansi yang rumit. Dilengkapi deteksi cerdas berbasis AI untuk mencocokkan pengumuman iuran di grup WhatsApp kelas dengan anggaran resmi, platform ini menyediakan jalur pelaporan 100% anonim dan aman dari risiko diskriminasi sekolah.
 
 ---
 
