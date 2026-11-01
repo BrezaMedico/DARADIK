@@ -4,9 +4,6 @@ import {
   Search,
   CheckCircle2,
   X,
-  ArrowUpRight,
-  Globe,
-  Mail,
   MessageSquare,
   Flag,
 } from 'lucide-react';
@@ -347,18 +344,18 @@ export function App() {
       </main>
 
       {/* =====================================================================
-          COMPREHENSIVE CIVIC FOOTER (LEBIH BERISI DENGAN HALAMAN & LAYANAN)
+          SIMPLE & MODERN CIVIC FOOTER (SESUAI HALAMAN WEBSITE DARADIK)
          ===================================================================== */}
-      <footer className="bg-[#F2EFE8] border-t border-[#C9DFDC] pt-14 pb-10 px-4 sm:px-6 lg:px-8 mt-12">
+      <footer className="bg-[#F2EFE8] border-t border-[#C9DFDC] pt-10 sm:pt-12 pb-8 sm:pb-10 px-4 sm:px-6 lg:px-8 mt-12 sm:mt-16">
         <div className="max-w-6xl mx-auto">
-          {/* Main 4-Column Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-12 border-b border-[#C9DFDC]">
-            {/* Col 1: Brand & Purpose (4 cols) */}
-            <div className="lg:col-span-4 space-y-4">
+          {/* Main Content: Brand & Navigation */}
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 sm:gap-10 pb-8 sm:pb-10 border-b border-[#C9DFDC]">
+            {/* Left Column: Brand & Concise Mission */}
+            <div className="max-w-md space-y-3">
               <button
                 type="button"
                 onClick={() => navigateTo('landing')}
-                className="focus:outline-none group text-left"
+                className="focus:outline-none group text-left inline-block"
                 aria-label="DARADIK Beranda"
               >
                 <img
@@ -368,204 +365,93 @@ export function App() {
                 />
               </button>
 
-              <p className="text-xs sm:text-sm text-[#475569] leading-relaxed max-w-[36ch]">
-                Platform pengawasan independen dan transparansi dana Bantuan Operasional Satuan Pendidikan (BOSP) berbasis data terbuka dan pelaporan 100% anonim.
+              <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+                Platform keterbukaan data alokasi dan realisasi dana Bantuan Operasional Satuan Pendidikan (BOSP) serta kanal pelaporan warga yang aman dan independen.
               </p>
+            </div>
 
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-mono text-[#2E6496]">
-                <span className="w-2 h-2 rounded-full bg-[#2E7D32]" />
-                <span>Status: Sistem Terhubung &amp; Terverifikasi</span>
+            {/* Right Column: Real Navigable Pages on DARADIK */}
+            <div className="flex flex-wrap sm:flex-nowrap gap-10 sm:gap-16">
+              {/* Navigasi Utama */}
+              <div>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496] block mb-3 font-mono">
+                  Navigasi
+                </span>
+                <ul className="space-y-2 text-xs sm:text-sm">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => navigateTo('landing')}
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                    >
+                      Beranda
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => navigateTo('kamus-bosp')}
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                    >
+                      Kamus BOSP
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => navigateTo('live-tracking')}
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                    >
+                      Lacak Lapor
+                    </button>
+                  </li>
+                </ul>
               </div>
-            </div>
 
-            {/* Col 2: Navigasi Layanan Utama (3 cols) */}
-            <div className="lg:col-span-3 space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-[#1E293B] font-bold">
-                Layanan &amp; Fitur
-              </h4>
-              <ul className="space-y-2 text-xs sm:text-sm text-[#475569]">
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileTab('summary');
-                      navigateTo('school-profile');
-                    }}
-                    className="hover:text-[#2E6496] transition-colors text-left"
-                  >
-                    Ringkasan Pagu &amp; Pencairan BOSP
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileTab('items-ai');
-                      navigateTo('school-profile');
-                    }}
-                    className="hover:text-[#2E6496] transition-colors text-left"
-                  >
-                    Validasi Nota &amp; Geotagging Kelas
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileTab('wa-scanner');
-                      navigateTo('school-profile');
-                    }}
-                    className="hover:text-[#2E6496] transition-colors text-left"
-                  >
-                    Pemindai Iuran Grup WhatsApp (AI)
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={handleOpenReportFromHeader}
-                    className="hover:text-[#2E6496] transition-colors text-left font-medium"
-                  >
-                    Kirim Laporan Whistleblowing (Anonim)
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('live-tracking')}
-                    className="hover:text-[#2E6496] transition-colors text-left"
-                  >
-                    Pelacakan Tiket Laporan &amp; Chat Petugas
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 3: Regulasi & Acuan Juknis (2 cols) */}
-            <div className="lg:col-span-2 space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-[#1E293B] font-bold">
-                Regulasi Resmi
-              </h4>
-              <ul className="space-y-2 text-xs sm:text-sm text-[#475569]">
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('kamus-bosp')}
-                    className="hover:text-[#2E6496] transition-colors text-left font-medium"
-                  >
-                    Kamus Juknis BOSP
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('kamus-bosp')}
-                    className="hover:text-[#2E6496] transition-colors text-left"
-                  >
-                    Permendikdasmen 8/2026
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('kamus-bosp')}
-                    className="hover:text-[#2E6496] transition-colors text-left"
-                  >
-                    Permendikbud 75/2016
-                  </button>
-                </li>
-                <li>
-                  <span className="text-[#475569]/80 block text-xs">
-                    UU KIP No. 14/2008
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Col 4: Bantuan & Kontak Publik (3 cols) */}
-            <div className="lg:col-span-3 space-y-3">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-[#1E293B] font-bold">
-                Kontak &amp; Verifikasi
-              </h4>
-              <p className="text-xs text-[#475569] leading-relaxed">
-                Saluran pengaduan terenkripsi diawasi langsung oleh Inspektorat Daerah dan Dinas Pendidikan.
-              </p>
-
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    showToast(
-                      'Surel resmi pelaporan disalin: lapor@daradik.id'
-                    )
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-medium text-[#2E6496] hover:bg-[#2E6496] hover:text-[#FFFFFF] hover:border-[#2E6496] transition-all flex items-center gap-2"
-                >
-                  <Mail className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">lapor@daradik.id</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    showToast(
-                      'Kanal sosial media resmi disalin: @daradik.id'
-                    )
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-medium text-[#2E6496] hover:bg-[#2E6496] hover:text-[#FFFFFF] hover:border-[#2E6496] transition-all flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <Globe className="w-3.5 h-3.5 shrink-0" />
-                    <span>Instagram &amp; X: @daradik.id</span>
-                  </span>
-                  <ArrowUpRight className="w-3 h-3" />
-                </button>
+              {/* Layanan Publik */}
+              <div>
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496] block mb-3 font-mono">
+                  Layanan Publik
+                </span>
+                <ul className="space-y-2 text-xs sm:text-sm">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileTab('summary');
+                        navigateTo('school-profile');
+                      }}
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                    >
+                      Profil Data Sekolah
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handleOpenReportFromHeader}
+                      className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:text-[#245385] transition-colors text-left"
+                    >
+                      <Flag className="w-3.5 h-3.5" />
+                      <span>Kirim Laporan Anonim</span>
+                    </button>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
 
-          {/* Bottom Copyright & Guarantee Bar */}
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#475569]">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="font-mono tabular-nums">
-                © 2026 DARADIK. Hak Cipta Dilindungi.
-              </span>
+          {/* Bottom Bar: Copyright & Verified Badge */}
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] sm:text-xs text-[#64748B]">
+            <div className="flex items-center gap-2 tabular-nums font-mono">
+              <span>© 2026 DARADIK.</span>
               <span>•</span>
-              <span>Enkripsi Zero-Knowledge Whistleblowing Aktif</span>
+              <span className="font-sans">Transparansi Dana Pendidikan Indonesia</span>
             </div>
 
-            <div className="flex items-center gap-4 font-medium">
-              <button
-                type="button"
-                onClick={() => navigateTo('landing')}
-                className="hover:text-[#2E6496] transition-colors"
-              >
-                Beranda
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => navigateTo('kamus-bosp')}
-                className="hover:text-[#2E6496] transition-colors"
-              >
-                Kamus BOSP
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => navigateTo('live-tracking')}
-                className="hover:text-[#2E6496] transition-colors"
-              >
-                Lacak Lapor
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={handleOpenReportFromHeader}
-                className="hover:text-[#2E6496] transition-colors text-[#2E6496] font-bold"
-              >
-                Lapor
-              </button>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#2E7D32]" />
+              <span>Kanal Pelaporan Terlindungi &amp; 100% Tanpa Identitas</span>
             </div>
           </div>
         </div>

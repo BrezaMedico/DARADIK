@@ -29,6 +29,11 @@
 }
 
 @layer base {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
   html {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #1E293B;
@@ -61,6 +66,77 @@
   line-height: 1;
   vertical-align: baseline;
   text-shadow: 0 1px 2px rgba(10, 30, 55, 0.35);
+}
+
+/* =====================================================================
+   DARADIK TYPOGRAPHY SYSTEM RULES (Aturan Konsistensi Font & Skala Teks)
+   ===================================================================== */
+/* Judul Utama Halaman / Hero (Heading 1) */
+.daradik-h1 {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: #1E293B;
+}
+
+/* Judul Seksi / Bagian (Heading 2) */
+.daradik-h2 {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: #1E293B;
+}
+
+/* Judul Kartu / Modul (Heading 3) */
+.daradik-h3 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  color: #1E293B;
+}
+
+/* Paragraf Lead / Pengantar */
+.daradik-lead {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+/* Paragraf Utama / Isi */
+.daradik-body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* Kicker / Label Seksi (Huruf Kapital Kecil) */
+.daradik-kicker {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2E6496;
+}
+
+/* Keterangan Tambahan / Metadata */
+.daradik-caption {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #64748B;
+}
+
+/* Angka Keuangan & Tabular */
+.daradik-stat {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 
 /* White Stroke-Only Architectural Rectangle Shapes */
@@ -435,34 +511,61 @@
 }
 
 /* =====================================================================
-   Smooth, Natural Scroll Reveal Entrance Animation (Landing Page)
+   Animasi Masuk Landing Page: Efek Kaca Cekung (Concave Perspective)
+   "animasi cekung: di bagian bawahnya dia ngelebar dan ketengah kembali normal, ngelebar sekaligus ngeblur"
    ===================================================================== */
-@keyframes smoothRiseReveal {
+@keyframes concaveLensReveal {
   0% {
     opacity: 0;
-    transform: translateY(24px);
-    filter: blur(4px);
+    transform: perspective(700px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(700px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0px);
+    transform: perspective(700px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
+  }
+}
+
+/* Backward compatibility alias */
+@keyframes convexLensZoomOutReveal {
+  0% {
+    opacity: 0;
+    transform: perspective(700px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(700px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(700px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
   }
 }
 
 .scroll-reveal-once {
   will-change: transform, opacity, filter;
+  transform-origin: 50% 12%;
 }
 
 .scroll-reveal-hidden {
   opacity: 0;
-  transform: translateY(24px);
-  filter: blur(4px);
+  transform-origin: 50% 12%;
+  transform: perspective(700px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+  filter: blur(16px) contrast(108%);
   pointer-events: none;
 }
 
 .scroll-reveal-visible {
-  animation: smoothRiseReveal 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: concaveLensReveal 1400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
   pointer-events: auto;
 }
 
@@ -477,26 +580,46 @@
   will-change: transform;
 }
 
-@keyframes cembungPageEnter {
+@keyframes concavePageEnter {
   0% {
     opacity: 0;
-    transform: perspective(1000px) translate3d(0, 32px, -24px) rotateX(8deg) scaleX(0.94) scaleY(0.96);
-    filter: blur(10px);
+    transform: perspective(750px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
   }
-  55% {
-    opacity: 0.92;
-    transform: perspective(1000px) translate3d(0, -4px, 10px) rotateX(-1.5deg) scaleX(1.02) scaleY(1.015);
-    filter: blur(1px);
+  65% {
+    opacity: 0.96;
+    transform: perspective(750px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
   }
   100% {
     opacity: 1;
-    transform: perspective(1000px) translate3d(0, 0, 0) rotateX(0deg) scale(1);
-    filter: blur(0px);
+    transform: perspective(750px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
+  }
+}
+
+@keyframes cembungPageEnter {
+  0% {
+    opacity: 0;
+    transform: perspective(750px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(750px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(750px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
   }
 }
 
 .animate-view-enter {
-  animation: cembungPageEnter 950ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: concavePageEnter 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform-origin: 50% 12%;
+  will-change: transform, opacity, filter;
 }
 
 /* Accessibility: Respect prefers-reduced-motion across all animations */

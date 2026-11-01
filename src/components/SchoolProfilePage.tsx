@@ -589,7 +589,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                         </div>
                       </div>
 
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#1E293B] text-[#FFFFFF] flex items-center justify-center shadow-xs shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#2E6496] text-[#FFFFFF] flex items-center justify-center shadow-xs shrink-0">
                         <CheckCircle2 className="w-4 h-4" />
                       </div>
                     </div>

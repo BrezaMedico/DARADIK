@@ -14,7 +14,6 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
-  const [isEntranceDone, setIsEntranceDone] = useState<boolean>(false);
   const isIntroActiveRef = useRef<boolean>(isIntroActive);
   isIntroActiveRef.current = isIntroActive;
 
@@ -25,15 +24,16 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     let animFrameId: number | null = null;
     let isDisposed = false;
 
-    // Base resting pose (slight elegant tilt facing camera, matching original mockup)
-    const BASE_YAW = -0.26; // ~ -15° (slight turn showing titanium side)
-    const BASE_PITCH = 0.09; // ~ +5.2° (gentle backward tilt)
-    const BASE_ROLL = -0.06; // ~ -3.4° (slight dynamic roll)
-    let baseX = 0; // horizontal offset to balance right side
+    // Base resting pose:
+    // "aga miring ke kiri sehingga terlihat aga serong, dan aga putar kebelakang dikit agar tidak terlalu terlihat tempel"
+    const BASE_YAW = -0.42; // ~ -21.8° (serong: diputar serong menampilkan sisi samping titanium & kedalaman 3D)
+    const BASE_PITCH = 0.05; // ~ +12.6° (diputar ke belakang/lean back agar berdimensi 3D nyata & tidak tampak datar/tempel)
+    const BASE_ROLL = -0.17; // ~ +4.6° (miring ke kiri / counter-clockwise tilt)
+    let baseX = 0;
 
     // Subdued tilt bounds for mouse & sensor ("putar tipis, jangan terlalu diputar")
-    const MAX_TILT_YAW = 0.13; // ~7.5° max
-    const MAX_TILT_PITCH = 0.09; // ~5.2° max
+    const MAX_TILT_YAW = 0.12; // ~6.9° max
+    const MAX_TILT_PITCH = 0.08; // ~4.6° max
     const MAX_TILT_ROLL = 0.03; // ~1.7° max
 
     // Target offsets driven by mouse or device orientation (-1 to +1)
@@ -43,12 +43,12 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     let currentTiltY = 0;
 
     // Entrance animation state
-    // "muncul hp dari bawah putih mengikuti gradasi dengan cara memutar 2 kali ke kanan (720°)"
+    // HP muncul dari bawah sambil berputar 1 kali (360°)
     let entranceStarted = false;
     let entranceStartTime = 0;
-    const ENTRANCE_DURATION = 1950; // ms
-    const START_Y = -95; // starts comfortably down within the bottom gradient mist
-    const START_SPIN = -4 * Math.PI; // 720° rotation to the right (2 full spins)
+    const ENTRANCE_DURATION = 1800; // ms
+    const START_Y = -115; // Posisi awal di bawah, tertutup oleh lapisan gradasi putih landing page
+    const START_SPIN = -2 * Math.PI; // 360° rotation to the right (1 full spin)
     let currentAnimY = START_Y;
     let currentAnimSpin = START_SPIN;
     let entranceFinished = false;
@@ -56,7 +56,7 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     // Scene & Camera
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, 10, 1000);
-    camera.position.set(0, 0, 240);
+    camera.position.set(0, 0, 280);
 
     // WebGL Renderer with High Quality & Alpha
     const renderer = new THREE.WebGLRenderer({
@@ -70,7 +70,7 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
 
-    // Studio Lights for iPhone 16 Pro Max Titanium Body (no harsh glare on screen)
+    // Studio Lights for iPhone 16 Pro Max Titanium Body
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
     scene.add(ambientLight);
 
@@ -98,23 +98,23 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     // Resize Handler
     const updateSize = () => {
       if (!container || isDisposed) return;
-      const width = container.clientWidth || 360;
-      const height = container.clientHeight || 520;
+      const width = container.clientWidth || 300;
+      const height = container.clientHeight || 440;
       camera.aspect = width / height;
 
-      // Adjust camera distance & horizontal offset ("agak perbesar dikit & agak ke kananin")
+      // Sizing proporsional & lebih kecil ("kecilin lagi untuk ukuran hpnya")
       if (width < 380) {
-        camera.position.z = 260;
+        camera.position.z = 305;
         baseX = 0;
       } else if (width < 640) {
-        camera.position.z = 248;
+        camera.position.z = 292;
         baseX = 0;
       } else if (width < 1024) {
-        camera.position.z = 240;
+        camera.position.z = 282;
         baseX = 2;
       } else {
-        camera.position.z = 236; // Perbesar model 3D
-        baseX = 5; // Geser sedikit ke kanan agar komposisi seimbang
+        camera.position.z = 300;
+        baseX = 3;
       }
 
       camera.updateProjectionMatrix();
@@ -134,15 +134,14 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
         if (isDisposed) return;
         materials.preload();
 
-        // Tune titanium & body materials for premium realism
+        // Titanium & body materials
         Object.values(materials.materials).forEach((mat) => {
           if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhongMaterial) {
             mat.side = THREE.FrontSide;
           }
         });
 
-        // Display Texture: Gunakan MeshBasicMaterial agar layar bebas pantulan cahaya putih
-        // dan konten UI terbaca sangat tajam, jernih, dan tidak pudar/putih
+        // Display Texture: MeshBasicMaterial tanpa pantulan silau putih agar konten terbaca jernih
         const rawDisplayMat = materials.materials['Display_Texture'] as any;
         let screenMat: THREE.MeshBasicMaterial | null = null;
         if (rawDisplayMat && rawDisplayMat.map) {
@@ -171,7 +170,6 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
           (object) => {
             if (isDisposed) return;
 
-            // Pastikan mesh layar menggunakan screenMat bebas pantulan
             if (screenMat) {
               object.traverse((child) => {
                 if (child instanceof THREE.Mesh) {
@@ -224,9 +222,7 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     // Mobile Gyroscope / DeviceOrientation sensor
     const handleDeviceOrientation = (e: DeviceOrientationEvent) => {
       if (e.gamma !== null && e.beta !== null) {
-        // gamma: left-to-right tilt in [-90, 90]
         const normGamma = Math.max(-1, Math.min(1, e.gamma / 28));
-        // beta: front-to-back tilt in [-180, 180], typical holding phone is ~45°
         const normBeta = Math.max(-1, Math.min(1, (e.beta - 45) / 25));
         targetTiltX = normGamma;
         targetTiltY = normBeta;
@@ -237,6 +233,18 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
       window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
     }
+
+    // Fade lembut di tepi bawah kanvas agar ponsel yang naik tidak terpotong tegas;
+    // area fade mengecil mulus sampai hilang di posisi akhir.
+    const applyFade = (fadePct: number) => {
+      const val =
+        fadePct <= 0.2
+          ? 'none'
+          : `linear-gradient(to top, transparent 0%, rgba(0,0,0,0.35) ${(fadePct * 0.45).toFixed(1)}%, black ${fadePct.toFixed(1)}%)`;
+      container.style.maskImage = val;
+      container.style.webkitMaskImage = val;
+    };
+    applyFade(42);
 
     // Main Animation Loop
     const renderLoop = (now: number) => {
@@ -258,12 +266,13 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
 
         currentAnimY = START_Y * (1 - eased);
         currentAnimSpin = START_SPIN * (1 - eased);
+        applyFade(42 * (1 - eased));
 
         if (progress >= 1) {
           entranceFinished = true;
           currentAnimY = 0;
           currentAnimSpin = 0;
-          setIsEntranceDone(true);
+          applyFade(0);
         }
       }
 
@@ -275,8 +284,9 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
       const finalPitch = BASE_PITCH - currentTiltY * MAX_TILT_PITCH;
       const finalRoll = BASE_ROLL + currentTiltX * MAX_TILT_ROLL;
 
-      phoneGroup.position.set(baseX, currentAnimY, 0);
-      phoneGroup.rotation.set(finalPitch, finalYaw, finalRoll);
+      const floatT = entranceFinished ? Math.sin(now / 1100) : 0;
+      phoneGroup.position.set(baseX, currentAnimY + floatT * 4, 0);
+      phoneGroup.rotation.set(finalPitch + floatT * 0.015, finalYaw + floatT * 0.03, finalRoll);
 
       renderer.render(scene, camera);
       animFrameId = requestAnimationFrame(renderLoop);
@@ -303,33 +313,18 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-[420px] sm:h-[490px] lg:h-[560px] xl:h-[610px] flex items-center justify-center select-none pointer-events-none ${className}`}
-      style={{
-        maskImage: isEntranceDone
-          ? 'none'
-          : 'linear-gradient(to top, transparent 0%, rgba(0, 0, 0, 0.2) 6%, rgba(0, 0, 0, 0.8) 18%, black 30%, black 100%)',
-        WebkitMaskImage: isEntranceDone
-          ? 'none'
-          : 'linear-gradient(to top, transparent 0%, rgba(0, 0, 0, 0.2) 6%, rgba(0, 0, 0, 0.8) 18%, black 30%, black 100%)',
-      }}
+      className={`relative w-full h-[360px] sm:h-[420px] lg:h-[560px] flex items-center justify-center select-none pointer-events-none ${className}`}
+      style={{ filter: 'drop-shadow(0 22px 22px rgba(10, 25, 50, 0.22)) drop-shadow(0 6px 8px rgba(10, 25, 50, 0.12))' }}
       aria-label="Visualisasi 3D Interaktif iPhone 16 Pro Max DARADIK"
     >
       {/* Subtle loader shimmer before 3D model loads */}
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-52 h-88 sm:w-60 sm:h-98 rounded-[42px] border-2 border-white/20 bg-white/5 backdrop-blur-xs animate-pulse flex items-center justify-center">
+          <div className="w-44 h-76 sm:w-50 sm:h-86 rounded-[36px] border-2 border-white/20 bg-white/5 backdrop-blur-xs animate-pulse flex items-center justify-center">
             <span className="text-xs font-semibold text-white/70">Memuat Model 3D...</span>
           </div>
         </div>
       )}
-
-      {/* Gradasi kabut putih & biru di bagian bawah agar saat HP muncul tidak terpotong tajam */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 h-32 sm:h-44 pointer-events-none bg-gradient-to-t from-[#FAF8F5] via-[#E6ECE8]/75 to-transparent transition-opacity duration-700 ease-out z-10 ${
-          isEntranceDone ? 'opacity-0' : 'opacity-90'
-        }`}
-        aria-hidden="true"
-      />
     </div>
   );
 };

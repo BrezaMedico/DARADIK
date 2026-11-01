@@ -166,93 +166,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Progressive disclosure ("Lihat Selengkapnya") for bottom summary
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
-  // Intro Video Player State (YouTube: u_KJPfVgRUE) + Scroll Zoom & Blur State
+  // Intro Video Player State (YouTube: u_KJPfVgRUE)
   const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
-  const videoCardRef = useRef<HTMLDivElement | null>(null);
-  const [videoScrollEffect, setVideoScrollEffect] = useState<{
-    scale: number;
-    blur: number;
-    opacity: number;
-  }>({
-    scale: 1,
-    blur: 0,
-    opacity: 1,
-  });
 
   useEffect(() => {
     // Pastikan selalu mulai dari paling atas layar saat landing page dimuat/refresh
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
-  }, []);
-
-  useEffect(() => {
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
-    let rafId: number | null = null;
-
-    const updateVideoScroll = () => {
-      rafId = null;
-      const el = videoCardRef.current;
-      if (!el) return;
-
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || 800;
-      const centerY = rect.top + rect.height / 2;
-      const viewportCenter = vh * 0.5;
-
-      // Saat di-scroll ke bawah melewati tengah layar (centerY naik ke atas viewportCenter)
-      // atau saat baru masuk dari bawah layar: berikan efek zoom & blur halus
-      if (centerY < viewportCenter - 40) {
-        // User sedang scroll ke bawah melewati video
-        const progress = Math.min(
-          1,
-          Math.max(0, (viewportCenter - 40 - centerY) / (vh * 0.55))
-        );
-        const scale = 1 - progress * 0.08;
-        const blur = progress * 8.5;
-        const opacity = Math.max(0.35, 1 - progress * 0.55);
-        setVideoScrollEffect({
-          scale: Number(scale.toFixed(3)),
-          blur: Number(blur.toFixed(2)),
-          opacity: Number(opacity.toFixed(2)),
-        });
-      } else if (centerY > viewportCenter + 90) {
-        // Video baru muncul dari bawah saat di-scroll ke bawah
-        const enterProgress = Math.min(
-          1,
-          Math.max(0, (centerY - (viewportCenter + 90)) / (vh * 0.55))
-        );
-        const scale = 1 - enterProgress * 0.07;
-        const blur = enterProgress * 6.5;
-        const opacity = Math.max(0.45, 1 - enterProgress * 0.45);
-        setVideoScrollEffect({
-          scale: Number(scale.toFixed(3)),
-          blur: Number(blur.toFixed(2)),
-          opacity: Number(opacity.toFixed(2)),
-        });
-      } else {
-        setVideoScrollEffect({ scale: 1, blur: 0, opacity: 1 });
-      }
-    };
-
-    const onScroll = () => {
-      if (rafId === null) {
-        rafId = requestAnimationFrame(updateVideoScroll);
-      }
-    };
-
-    updateVideoScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
   }, []);
 
   const handleHeroMouseMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -474,7 +395,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   }, [mousePos.active, mousePos.x, mousePos.y]);
 
   return (
-    <div className="w-full animate-view-enter">
+    <div className="w-full animate-view-enter overflow-x-hidden">
       {/* =====================================================================
           HERO SECTION — 1 FULL VIEWPORT + LONG SMOOTH BOTTOM GRADIENT TRANSITION
          ===================================================================== */}
@@ -605,10 +526,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         />
 
         {/* Main Hero Content Container */}
-        <div className="relative z-10 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-auto pt-2 sm:pt-4 pb-8 sm:pb-10">
+        <div className="relative lg:-translate-y-12 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-auto pt-2 sm:pt-4 pb-8 sm:pb-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* LEFT COLUMN: Sturdy Font Headline on 1 line, Sub-headline, & Empty-Default Search Box */}
-            <div className="lg:col-span-7 flex flex-col items-start">
+            <div className="relative z-30 lg:col-span-7 flex flex-col items-start">
               {/* Headline: Transparansi Dana Sekolah (dengan huruf sambung pada kata 'Sekolah' dalam 1 baris) */}
               <h1 className="mt-2 sm:mt-6 lg:mt-8 mb-4 sm:mb-6 text-[24px] sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold text-[#FFFFFF] tracking-tight leading-[1.12] sm:leading-[1.10] drop-shadow-sm">
                 <span className="block whitespace-normal sm:whitespace-nowrap">
@@ -820,13 +741,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* RIGHT COLUMN: Real Interactive 3D iPhone 16 Pro Max Model */}
-            <div className="lg:col-span-5 flex items-center justify-center lg:justify-end mt-2 sm:mt-6 lg:mt-0 lg:translate-x-4 xl:translate-x-8">
-              <div className="relative w-full max-w-[320px] sm:max-w-[380px] lg:max-w-[430px] xl:max-w-[460px] mx-auto lg:mr-0 flex items-center justify-center -mb-6 sm:-mb-10 lg:-mb-16">
-                {/* Soft ambient aura blending with the blue & white landing page gradient */}
-                <div
-                  className="absolute -inset-4 sm:-inset-8 bg-gradient-to-t from-white/35 via-[#C9DFDC]/20 to-transparent rounded-full blur-2xl pointer-events-none -z-10"
-                  aria-hidden="true"
-                />
+            <div className="lg:col-span-5 flex items-center justify-center lg:justify-end mt-2 sm:mt-6 lg:mt-0 lg:translate-x-2 xl:translate-x-4">
+              <div className="relative w-full max-w-[250px] sm:max-w-[280px] lg:max-w-[400px] xl:max-w-[430px] mx-auto lg:mr-0 flex items-center justify-center -mb-8 sm:-mb-14 lg:-mb-24 lg:-mt-16 z-10">
+                <div className="absolute inset-x-[8%] top-[18%] bottom-[12%] rounded-full bg-[radial-gradient(closest-side,rgba(201,223,220,0.38),rgba(102,163,191,0.12)_60%,transparent)] blur-2xl pointer-events-none" aria-hidden="true" />
                 <Phone3DCanvas
                   isIntroActive={isIntroActive}
                   className="w-full"
@@ -836,9 +753,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
 
-        {/* Long, Smooth Gradient Transition into the Bottom Section */}
+        {/* Gradasi Asli Latar Landing Page: Lapisan putih di atas menimpa bagian bawah HP */}
         <div
-          className="relative z-10 w-full h-32 sm:h-44 bg-gradient-to-b from-transparent via-[#e6ece8]/75 to-[#FAF8F5] pointer-events-none"
+          className="absolute bottom-0 left-0 right-0 h-32 sm:h-44 bg-gradient-to-b from-transparent via-[#e6ece8]/80 to-[#FAF8F5] pointer-events-none z-20"
           aria-hidden="true"
         />
       </section>
@@ -873,22 +790,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </a>
             </div>
 
-            {/* Framed Video Player Container with Scroll-Driven Zoom & Blur Animation */}
-            <div
-              ref={videoCardRef}
-              style={{
-                transform: `scale(${videoScrollEffect.scale})`,
-                filter:
-                  videoScrollEffect.blur > 0.1
-                    ? `blur(${videoScrollEffect.blur}px)`
-                    : 'none',
-                opacity: videoScrollEffect.opacity,
-                transition:
-                  'transform 180ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease-out, opacity 180ms ease-out',
-                willChange: 'transform, filter, opacity',
-              }}
-              className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] p-2.5 sm:p-3.5 shadow-md origin-center"
-            >
+            {/* Framed Video Player Container */}
+            <div className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] p-2.5 sm:p-3.5 shadow-md">
               <div className="relative w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden bg-[#0F172A] border border-[#C9DFDC]/60">
                 {isVideoPlaying ? (
                   <iframe
