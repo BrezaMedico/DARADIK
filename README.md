@@ -44,12 +44,12 @@ Pasang semua pustaka yang dibutuhkan oleh proyek:
 npm install
 ```
 
-### 4. Konfigurasi Environment (Opsional)
-Aplikasi sudah dilengkapi data lokal bawaan (*seed fallback*) sehingga langsung berjalan tanpa pengaturan database rumit. Namun, jika ingin menghubungkan dengan instance Supabase milikmu sendiri, buat berkas `.env` di folder root dan isi:
+### 4. Konfigurasi Environment (File `.env`)
+Aplikasi sudah dilengkapi data lokal bawaan (*seed fallback*) sehingga langsung berjalan tanpa pengaturan database yang rumit. Namun, jika ingin menghubungkannya ke layanan database Supabase, buat berkas `.env` di folder root dengan variabel berikut (contoh konfigurasi aktif):
 
 ```env
-VITE_SUPABASE_URL=https://proyek-kamu.supabase.co
-VITE_SUPABASE_ANON_KEY=kunci-anon-kamu
+VITE_SUPABASE_URL=https://eteimuixvdbcnzokckff.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable__L_ZAHdcCN9NXZn1myW90A_QfDZyD8J
 ```
 
 ### 5. Jalankan Development Server
@@ -76,9 +76,8 @@ npm run preview
 
 ## Progress Saat Ini
 
-Berikut ringkasan perkembangan pengerjaan fitur di dalam aplikasi DARADIK:
+Berikut ringkasan perkembangan pengerjaan fitur yang telah selesai di dalam aplikasi DARADIK:
 
-### Selesai Dikembangkan (Ready)
 1. **Landing Page Utama**:
    - Hero banner dengan 3D interactive phone canvas (animasi 1 putaran masuk dan respons terhadap kursor).
    - Pencarian sekolah instan berdasarkan NPSN, nama sekolah, dan filter hierarki wilayah (Provinsi, Kabupaten/Kota, Kecamatan).
@@ -117,17 +116,4 @@ Berikut ringkasan perkembangan pengerjaan fitur di dalam aplikasi DARADIK:
 7. **Kamus Juknis BOSP**:
    - Referensi aturan resmi mengenai 12 komponen belanja yang diperbolehkan serta daftar larangan penggunaan dana BOSP.
    - Fitur pencarian cepat istilah dan regulasi pendidikan.
-
----
-
-### Sedang Disiapkan & Rencana Lanjutan (Next Roadmap)
-- [ ] **Koneksi API Nasional**: Integrasi langsung dengan API terbuka Dapodik dan SIPLah Kemendikbudristek untuk pembaruan data ribuan sekolah secara otomatis.
-- [ ] **Notifikasi Lapor Terjadwal**: Opsi penerimaan pembaruan status tiket aduan melalui kanal bot pesan atau webhook terenkripsi tanpa membocorkan identitas pengguna.
-- [ ] **Dashboard Wilayah Terbuka**: Rangkuman statistik agregat persebaran transparansi dana sekolah per kabupaten dan provinsi.
-
----
-
-## Lisensi & Kontribusi
-
-Proyek ini dikembangkan untuk mendorong keterbukaan informasi publik dan akuntabilitas tata kelola dana pendidikan di Indonesia. Kontribusi, perbaikan kode, dan saran fitur sangat terbuka melalui *pull request* maupun *issue tracker*.
 
