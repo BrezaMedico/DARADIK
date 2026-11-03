@@ -150,10 +150,8 @@ export function App() {
   };
 
   const handleOpenReportFromHeader = () => {
-    setReportCategoryPrefill(
-      'Iuran Kipas Angin (Tumpang Tindih dengan Dana BOSP Rp 35.000.000)'
-    );
-    setReportAttachmentPrefill('1 Foto Screenshot WA (Tersensor Otomatis)');
+    setReportCategoryPrefill('');
+    setReportAttachmentPrefill('');
     navigateTo('anonymous-report');
   };
 
