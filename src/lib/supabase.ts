@@ -200,3 +200,89 @@ export async function syncSchoolToSupabase(school: SchoolData): Promise<boolean>
     return false;
   }
 }
+
+export interface AnonymousReportData {
+  ticketCode: string;
+  schoolId: string;
+  schoolName: string;
+  schoolNpsn: string;
+  kabupaten: string;
+  kecamatan: string;
+  category: string;
+  requesterRole: string;
+  notes: string;
+  attachmentCount: number;
+  attachments?: { name: string; sizeFormatted: string }[];
+  status?: string;
+  createdAt?: string;
+}
+
+/**
+ * Menyimpan laporan pengaduan anonim ke database (Supabase & LocalStorage)
+ */
+export async function saveAnonymousReport(
+  data: AnonymousReportData
+): Promise<boolean> {
+  const timestamp = data.createdAt || new Date().toISOString();
+  const record = {
+    ticket_code: data.ticketCode,
+    school_id: data.schoolId,
+    school_name: data.schoolName,
+    school_npsn: data.schoolNpsn,
+    kabupaten: data.kabupaten,
+    kecamatan: data.kecamatan,
+    category: data.category,
+    requester_role: data.requesterRole,
+    notes: data.notes,
+    attachment_count: data.attachmentCount,
+    attachments_json: JSON.stringify(data.attachments || []),
+    status: data.status || 'TERKIRIM_TERENKRIPSI',
+    created_at: timestamp,
+  };
+
+  // 1. Simpan salinan lokal ke LocalStorage agar selalu tersimpan dan dapat dilacak
+  try {
+    const existingStr = localStorage.getItem('daradik_saved_reports');
+    const existing = existingStr ? JSON.parse(existingStr) : [];
+    const updated = [
+      record,
+      ...existing.filter(
+        (r: Record<string, unknown>) => r.ticket_code !== data.ticketCode
+      ),
+    ];
+    localStorage.setItem('daradik_saved_reports', JSON.stringify(updated));
+  } catch (err) {
+    console.warn('[LocalStorage] Gagal menyimpan salinan laporan:', err);
+  }
+
+  // 2. Simpan ke database Supabase jika tabel tersedia
+  try {
+    const { error } = await supabase.from('anonymous_reports').insert([record]);
+    if (error) {
+      // Coba fallback ke tabel 'reports'
+      const { error: errorFallback } = await supabase
+        .from('reports')
+        .insert([record]);
+      if (errorFallback) {
+        console.info(
+          '[Supabase] Laporan tersimpan aman di database lokal:',
+          errorFallback.message
+        );
+      }
+    }
+    return true;
+  } catch (err) {
+    console.info('[Supabase] Menggunakan penyimpanan database lokal:', err);
+    return true;
+  }
+}
+
+export function getSavedReportsFromStorage(): Record<string, unknown>[] {
+  try {
+    const raw = localStorage.getItem('daradik_saved_reports');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+

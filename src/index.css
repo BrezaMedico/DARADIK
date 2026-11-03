@@ -774,3 +774,85 @@
   animation: glare-shift 2.8s ease-in-out infinite;
 }
 
+/* =====================================================================
+   4-SQUARE COUNTER-CLOCKWISE LOADER (Animasi Persegi Berputar Berbalik Arah Jarum Jam)
+   Top-Right -> Top-Left -> Bottom-Left -> Bottom-Right -> Top-Right
+   Pace: Tenang, santai, halus (2.8s)
+   Warna: Nuansa abu-abu lembut menyatu dengan background (#FAF8F5 / #E4E0D8)
+   ===================================================================== */
+.ccw-square-container {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.ccw-square-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  animation-duration: 2.8s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-iteration-count: infinite;
+}
+
+/* Square 1: Starts at Top-Left (0, 0) -> Bottom-Left (0, 24) -> Bottom-Right (24, 24) -> Top-Right (24, 0) -> Top-Left (0, 0) */
+@keyframes ccw-square-1 {
+  0%, 100% { transform: translate(0px, 0px); }
+  25% { transform: translate(0px, 24px); }
+  50% { transform: translate(24px, 24px); }
+  75% { transform: translate(24px, 0px); }
+}
+
+/* Square 2: Starts at Top-Right (24, 0) -> Top-Left (0, 0) -> Bottom-Left (0, 24) -> Bottom-Right (24, 24) -> Top-Right (24, 0) */
+@keyframes ccw-square-2 {
+  0%, 100% { transform: translate(24px, 0px); }
+  25% { transform: translate(0px, 0px); }
+  50% { transform: translate(0px, 24px); }
+  75% { transform: translate(24px, 24px); }
+}
+
+/* Square 3: Starts at Bottom-Right (24, 24) -> Top-Right (24, 0) -> Top-Left (0, 0) -> Bottom-Left (0, 24) -> Bottom-Right (24, 24) */
+@keyframes ccw-square-3 {
+  0%, 100% { transform: translate(24px, 24px); }
+  25% { transform: translate(24px, 0px); }
+  50% { transform: translate(0px, 0px); }
+  75% { transform: translate(0px, 24px); }
+}
+
+/* Square 4: Starts at Bottom-Left (0, 24) -> Bottom-Right (24, 24) -> Top-Right (24, 0) -> Top-Left (0, 0) -> Bottom-Left (0, 24) */
+@keyframes ccw-square-4 {
+  0%, 100% { transform: translate(0px, 24px); }
+  25% { transform: translate(24px, 24px); }
+  50% { transform: translate(24px, 0px); }
+  75% { transform: translate(0px, 0px); }
+}
+
+/* Warna Abu-Abu Halus yang Menyatu dengan Background */
+.ccw-sq-1 {
+  background-color: #64748B; /* slate-500 netral */
+  box-shadow: 0 1px 2px rgba(100, 116, 139, 0.15);
+  animation-name: ccw-square-1;
+}
+
+.ccw-sq-2 {
+  background-color: #94A3B8; /* slate-400 */
+  box-shadow: 0 1px 2px rgba(148, 163, 184, 0.12);
+  animation-name: ccw-square-2;
+}
+
+.ccw-sq-3 {
+  background-color: #CBD5E1; /* slate-300 */
+  box-shadow: 0 1px 2px rgba(203, 213, 225, 0.1);
+  animation-name: ccw-square-3;
+}
+
+.ccw-sq-4 {
+  background-color: #E2E8F0; /* slate-200 lembut */
+  box-shadow: 0 1px 2px rgba(226, 232, 240, 0.1);
+  animation-name: ccw-square-4;
+}
+
+

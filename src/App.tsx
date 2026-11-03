@@ -155,6 +155,11 @@ export function App() {
     navigateTo('anonymous-report');
   };
 
+  const handleOpenLiveTrackingFromHeader = () => {
+    setActiveTicketCode('');
+    navigateTo('live-tracking');
+  };
+
   const handleReportSubmitted = (
     ticketCode: string,
     notes: string,
@@ -214,7 +219,7 @@ export function App() {
             {/* Menu 2: Lacak Lapor */}
             <button
               type="button"
-              onClick={() => navigateTo('live-tracking')}
+              onClick={handleOpenLiveTrackingFromHeader}
               className={`nav-link-interactive px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 ${
                 currentView === 'live-tracking'
                   ? 'text-[#2E6496] bg-[#C9DFDC]/55'
@@ -270,7 +275,7 @@ export function App() {
             selectedSchool={selectedSchool}
             onSelectSchoolAndOpenProfile={handleSelectSchoolAndOpenProfile}
             onOpenAnonymousReport={handleOpenReportFromHeader}
-            onOpenLiveTracking={() => navigateTo('live-tracking')}
+            onOpenLiveTracking={handleOpenLiveTrackingFromHeader}
             onOpenKamusModal={() => navigateTo('kamus-bosp')}
             isIntroActive={showIntro}
           />
@@ -397,7 +402,7 @@ export function App() {
                   <li>
                     <button
                       type="button"
-                      onClick={() => navigateTo('live-tracking')}
+                      onClick={handleOpenLiveTrackingFromHeader}
                       className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
                     >
                       Lacak Lapor
