@@ -119,6 +119,23 @@ export function App() {
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Status Scroll untuk Adaptasi Warna Tombol Bantuan (?) sesuai Background
+  const [isScrolled, setIsScrolled] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Lebih dari 90px berarti sudah keluar dari area hero utama landing page
+      setIsScrolled(window.scrollY > 90);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // True hanya ketika berada di area hero gelap di halaman beranda
+  const isDarkBackground = currentView === 'landing' && !isScrolled;
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -309,29 +326,41 @@ export function App() {
       </header>
 
       {/* =====================================================================
-          TOMBOL BANTUAN ONBOARDING (?) KHUSUS DI POJOK KANAN ATAS (SEJAJAR VERTIKAL NAVBAR)
+          TOMBOL BANTUAN ONBOARDING (?) KHUSUS DI POJOK KANAN ATAS (ADAPTIF WARNA BG)
          ===================================================================== */}
       <div className="fixed top-2 sm:top-3 right-3 sm:right-6 lg:right-8 h-14 sm:h-16 flex items-center z-[60] pointer-events-auto group">
         {/* Balon Chat (Speech Bubble) "Panduan" muncul saat tombol di-hover */}
         <div
           role="tooltip"
-          className="mr-2.5 px-3 py-1.5 rounded-xl bg-[#1E293B] text-[#FFFFFF] text-xs font-semibold shadow-lg border border-[#334155] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none translate-x-2 group-hover:translate-x-0 relative flex items-center select-none"
+          className={`mr-2.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none translate-x-2 group-hover:translate-x-0 relative flex items-center select-none ${
+            isDarkBackground
+              ? 'bg-[#1E293B] text-[#FFFFFF] border border-[#334155]'
+              : 'bg-[#FFFFFF] text-[#1E293B] border border-[#C9DFDC] shadow-md'
+          }`}
         >
           <span>Panduan</span>
           {/* Ekor Balon Chat mengarah ke tombol ? */}
           <div
-            className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#1E293B] border-r border-t border-[#334155] rotate-45"
+            className={`absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rotate-45 ${
+              isDarkBackground
+                ? 'bg-[#1E293B] border-r border-t border-[#334155]'
+                : 'bg-[#FFFFFF] border-r border-t border-[#C9DFDC]'
+            }`}
             aria-hidden="true"
           />
         </div>
 
-        {/* Tombol ? Berwarna Putih dengan Stroke Bulat Transparan (Tanpa Background) */}
+        {/* Tombol ? Interaktif: Putih saat di atas Hero Gelap, Biru/Slate saat di atas Background Putih/Terang */}
         <button
           type="button"
           onClick={handleStartOnboardingTour}
           title="Panduan Fitur"
           aria-label="Buka panduan penggunaan fitur"
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-[#FFFFFF] text-[#FFFFFF] hover:border-[#FFFFFF] hover:text-[#FFFFFF] bg-transparent flex items-center justify-center font-bold text-sm sm:text-base leading-none select-none transition-all cursor-pointer shrink-0 active:scale-95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]"
+          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 flex items-center justify-center font-bold text-sm sm:text-base leading-none select-none transition-all duration-300 cursor-pointer shrink-0 active:scale-95 ${
+            isDarkBackground
+              ? 'border-[#FFFFFF] text-[#FFFFFF] bg-transparent hover:border-white hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]'
+              : 'border-[#2E6496] text-[#2E6496] bg-white/80 hover:bg-white hover:border-[#1E293B] hover:text-[#1E293B] shadow-xs backdrop-blur-xs'
+          }`}
         >
           ?
         </button>
