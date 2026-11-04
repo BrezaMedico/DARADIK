@@ -42,20 +42,25 @@ export function hydrateSupabaseRowToSchoolData(
     payload.treasurerName || localMatch.treasurerName || 'Rina Marlina, S.E.'
   );
 
-  const items =
-    Array.isArray(payload.items) && payload.items.length > 0
-      ? payload.items
-      : customizeBospItemsForSchool(
-          BAZMA_BOSP_ITEMS,
-          name,
-          principalName,
-          treasurerName
-        );
+  const items = localMatch.items?.length
+    ? localMatch.items
+    : customizeBospItemsForSchool(
+        BAZMA_BOSP_ITEMS,
+        name,
+        principalName,
+        treasurerName
+      );
 
   const history =
-    payload.history && typeof payload.history === 'object'
-      ? payload.history
-      : buildSchoolYearlyHistory(name, principalName, treasurerName);
+    localMatch.history ||
+    buildSchoolYearlyHistory(name, principalName, treasurerName, {
+      studentCount: localMatch.studentCount,
+      perStudentEstimate: localMatch.perStudentEstimate,
+      totalBosp: localMatch.totalBosp,
+      schoolType: localMatch.schoolType,
+      educationLevel: localMatch.educationLevel,
+      kabupaten: localMatch.kabupaten,
+    });
 
   return {
     id,
@@ -76,26 +81,20 @@ export function hydrateSupabaseRowToSchoolData(
         ? SMK_TI_BAZMA.address
         : row.address || payload.address || localMatch.address
     ),
-    status: String(row.status || payload.status || localMatch.status),
-    studentCount: Number(
-      isFeatured
-        ? SMK_TI_BAZMA.studentCount
-        : row.student_count || payload.studentCount || localMatch.studentCount
-    ),
-    perStudentEstimate: Number(
-      row.per_student_estimate ||
-        payload.perStudentEstimate ||
-        localMatch.perStudentEstimate
-    ),
-    totalBosp: Number(
-      row.total_bosp || payload.totalBosp || localMatch.totalBosp
-    ),
-    tahap1: payload.tahap1 || { ...localMatch.tahap1 },
-    tahap2: payload.tahap2 || { ...localMatch.tahap2 },
-    compositions:
-      Array.isArray(payload.compositions) && payload.compositions.length > 0
-        ? payload.compositions
-        : localMatch.compositions.map((c) => ({ ...c })),
+    status: localMatch.status,
+    schoolType: localMatch.schoolType,
+    educationLevel: localMatch.educationLevel,
+    jenjang: localMatch.jenjang || localMatch.educationLevel || 'SMK',
+    maxHonorariumLimit: localMatch.maxHonorariumLimit,
+    regionCostZone: localMatch.regionCostZone,
+    studentCount: localMatch.studentCount,
+    perStudentEstimate: localMatch.perStudentEstimate,
+    totalBosp: localMatch.totalBosp,
+    tahap1: { ...localMatch.tahap1 },
+    tahap2: { ...localMatch.tahap2 },
+    compositions: localMatch.compositions.map((c) => ({ ...c })),
+    tahap1Compositions: localMatch.tahap1Compositions?.map((c) => ({ ...c })),
+    tahap2Compositions: localMatch.tahap2Compositions?.map((c) => ({ ...c })),
     items,
     history,
     imageUrl: String(row.image_url || payload.imageUrl || localMatch.imageUrl || ''),

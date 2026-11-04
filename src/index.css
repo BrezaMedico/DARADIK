@@ -849,10 +849,22 @@
   animation-name: ccw-square-3;
 }
 
-.ccw-sq-4 {
-  background-color: #E2E8F0; /* slate-200 lembut */
-  box-shadow: 0 1px 2px rgba(226, 232, 240, 0.1);
-  animation-name: ccw-square-4;
+.school-custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #C9DFDC transparent;
+}
+.school-custom-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.school-custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.school-custom-scroll::-webkit-scrollbar-thumb {
+  background: #C9DFDC;
+  border-radius: 9999px;
+}
+.school-custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #A8C8C4;
 }
 
 

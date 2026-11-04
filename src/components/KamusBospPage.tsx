@@ -156,6 +156,74 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
         </div>
       ) : (
         <div className="mt-10 space-y-12">
+          {/* Batas Alokasi Penggunaan Dana BOSP 2026 */}
+          {showAllowed && !q && (
+            <section aria-labelledby="section-allocation-limits">
+              <h2
+                id="section-allocation-limits"
+                className="text-lg sm:text-xl font-bold text-[#1E293B]"
+              >
+                Ketentuan Batas Alokasi Penggunaan BOSP 2026
+              </h2>
+              <p className="text-sm text-[#64748B] mt-1">
+                Batasan persentase penggunaan dana sesuai petunjuk teknis Kemendikdasmen untuk menjaga mutu pembelajaran dan sarana sekolah.
+              </p>
+
+              <div className="mt-4 overflow-x-auto rounded-xl border border-[#C9DFDC]">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-[#FAF8F5] border-b border-[#C9DFDC] text-[#475569]">
+                      <th className="py-2.5 px-3.5 font-bold">Komponen</th>
+                      <th className="py-2.5 px-3.5 font-bold">Ketentuan Kemendikdasmen 2026</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#C9DFDC]/60 bg-[#FFFFFF]">
+                    <tr>
+                      <td className="py-2.5 px-3.5 font-medium text-[#1E293B]">
+                        Pengembangan perpustakaan / buku
+                      </td>
+                      <td className="py-2.5 px-3.5 font-semibold text-[#2E6496]">
+                        Minimal 10%
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-3.5 font-medium text-[#1E293B]">
+                        Pemeliharaan sarana dan prasarana
+                      </td>
+                      <td className="py-2.5 px-3.5 font-semibold text-[#475569]">
+                        Maksimal 20%
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-3.5 font-medium text-[#1E293B]">
+                        Pembayaran honor sekolah negeri
+                      </td>
+                      <td className="py-2.5 px-3.5 font-semibold text-[#475569]">
+                        Maksimal 20%
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-3.5 font-medium text-[#1E293B]">
+                        Pembayaran honor sekolah swasta
+                      </td>
+                      <td className="py-2.5 px-3.5 font-semibold text-[#475569]">
+                        Maksimal 40%
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-3.5 font-medium text-[#1E293B]">
+                        Komponen lainnya
+                      </td>
+                      <td className="py-2.5 px-3.5 font-semibold text-[#475569]">
+                        Sesuai kebutuhan dan ketentuan
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           {/* Bagian 1: Ditanggung Dana BOSP */}
           {showAllowed && filteredAllowed.length > 0 && (
             <section aria-labelledby="section-allowed-heading">

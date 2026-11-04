@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { BudgetComposition, formatRupiah } from '../data/schoolsData';
 
 interface DonutChartProps {
   compositions: BudgetComposition[];
   totalAmount: number;
+  centerSubtitle?: string;
+  badgeLabel?: string;
 }
 
-const SEGMENT_COLORS = ['#2E6496', '#528AB4', '#8CBCCF', '#C9DFDC'];
+const SEGMENT_COLORS = ['#2E6496', '#4B83B1', '#66A3BF', '#8CBCCF', '#A7D0DC'];
 
 function polarToCartesian(
   centerX: number,
@@ -81,9 +83,38 @@ function formatShortRupiah(amount: number): string {
 export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
   compositions,
   totalAmount,
+  centerSubtitle = 'Total Pagu',
+  badgeLabel = '100% RKAS',
 }) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [animProgress, setAnimProgress] = useState<number>(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [hasMoreToScroll, setHasMoreToScroll] = useState<boolean>(false);
+
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } =
+        scrollContainerRef.current;
+      setHasMoreToScroll(scrollTop + clientHeight < scrollHeight - 12);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkScroll();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [compositions]);
+
+  const handleScrollDown = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ top: 110, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    setActiveIndex(null);
+  }, [compositions]);
 
   useEffect(() => {
     const prefersReducedMotion =
@@ -139,7 +170,7 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
   const activeItem = activeIndex !== null ? slices[activeIndex] : null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start">
       {/* LEFT 5 COLS: Full 360° Circle Donut Chart with Modern Dashboard Card Styling */}
       <div className="md:col-span-5 flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl bg-[#FAF8F5]/75 border border-[#C9DFDC]/80">
         <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 flex items-center justify-center select-none">
@@ -225,11 +256,11 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
           {/* Center Readout Inside Circle Donut */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-7">
             {activeItem ? (
-              <div className="animate-school-header flex flex-col items-center">
-                <span className="px-2 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] font-extrabold text-[#2E6496] tabular-nums">
-                  {activeItem.percentage}% Porsi
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-extrabold text-[#2E6496] tabular-nums">
+                  {activeItem.percentage}%
                 </span>
-                <span className="text-[11px] font-bold text-[#1E293B] leading-tight line-clamp-2 mt-1 max-w-[112px]">
+                <span className="text-[11px] font-bold text-[#1E293B] leading-tight line-clamp-2 mt-0.5 max-w-[112px]">
                   {activeItem.label}
                 </span>
                 <span className="text-xs font-extrabold text-[#2E6496] mt-1 tabular-nums">
@@ -238,86 +269,100 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
               </div>
             ) : (
               <div className="flex flex-col items-center">
-                <span className="text-[11px] text-[#64748B] font-semibold">
-                  Total Pagu
+                <span className="text-[11px] text-[#64748B] font-medium">
+                  {centerSubtitle}
                 </span>
                 <span className="text-lg sm:text-xl font-extrabold text-[#1E293B] mt-0.5 tabular-nums tracking-tight">
                   {formatShortRupiah(Math.round(totalAmount * animProgress))}
                 </span>
-                <span className="inline-flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full bg-[#EBF3F8] text-[10px] font-bold text-[#2E6496]">
-                  <span>100% RKAS</span>
-                  <ArrowUpRight className="w-2.5 h-2.5" />
-                </span>
+                {badgeLabel && (
+                  <span className="text-[11px] font-medium text-[#64748B] mt-0.5">
+                    {badgeLabel}
+                  </span>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Bottom Mini Summary Pills Under Circle */}
-        <div className="w-full grid grid-cols-2 gap-2.5 mt-3 pt-3 border-t border-[#C9DFDC]/60">
-          <div className="px-3 py-2 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]/70 flex items-center justify-between gap-1.5">
-            <span className="text-[11px] font-medium text-[#64748B]">
-              Pos RKAS
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-[#1E293B] text-[#FFFFFF] text-[10px] font-bold tabular-nums">
-              {compositions.length} Komponen
-            </span>
-          </div>
-          <div className="px-3 py-2 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC]/70 flex items-center justify-between gap-1.5">
-            <span className="text-[11px] font-medium text-[#64748B]">
-              Alokasi
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-[#2E6496] text-[#FFFFFF] text-[10px] font-bold tabular-nums">
-              100% Aktif
-            </span>
-          </div>
-        </div>
+        <p className="text-[11px] text-[#64748B] text-center mt-2">
+          Klik bagian lingkaran untuk melihat rincian tiap komponen
+        </p>
       </div>
 
-      {/* RIGHT 7 COLS: 3 Interactive RKAS Component Breakdown Cards (Modern Dashboard Style) */}
-      <div className="md:col-span-7 space-y-3">
-        {slices.map((comp) => {
-          const isSelected = activeIndex === comp.idx;
-          return (
-            <div
-              key={comp.id}
-              onMouseEnter={() => setActiveIndex(comp.idx)}
-              onMouseLeave={() => setActiveIndex(null)}
-              onClick={() =>
-                setActiveIndex(activeIndex === comp.idx ? null : comp.idx)
-              }
-              className={`p-4 sm:p-4.5 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                isSelected
-                  ? 'bg-[#EBF3F8]/60 border-[#2E6496] shadow-xs'
-                  : 'bg-[#FAF8F5]/65 border-[#C9DFDC]/80 hover:border-[#66A3BF] hover:bg-[#FFFFFF]'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  <div
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[#FFFFFF] text-xs font-extrabold shrink-0 shadow-xs tabular-nums"
-                    style={{ backgroundColor: comp.color }}
-                  >
-                    {comp.percentage}%
-                  </div>
-                  <span className="text-xs sm:text-sm md:text-base font-bold text-[#1E293B] tracking-tight leading-snug">
-                    {comp.label}
-                  </span>
-                </div>
+      {/* RIGHT 7 COLS: Clean, Scrollable List Matching Donut Height */}
+      <div className="md:col-span-7 flex flex-col justify-start relative">
+        <div className="flex items-center justify-between text-[11px] text-[#64748B] font-medium mb-1.5 px-0.5">
+          <span>{slices.length} Komponen Penggunaan</span>
+          <span className="text-[#2E6496] font-semibold">Dapat digulir / scroll</span>
+        </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto pl-9 sm:pl-0 shrink-0 tabular-nums">
-                  <span className="text-xs sm:text-sm md:text-base font-extrabold text-[#1E293B]">
-                    {formatRupiah(Math.round(comp.amount * animProgress))}
-                  </span>
+        <div
+          ref={scrollContainerRef}
+          onScroll={checkScroll}
+          className="max-h-[285px] sm:max-h-[305px] md:max-h-[300px] overflow-y-auto pr-1.5 space-y-2 school-custom-scroll pb-6"
+        >
+          {slices.map((comp) => {
+            const isSelected = activeIndex === comp.idx;
+            return (
+              <div
+                key={comp.id}
+                onMouseEnter={() => setActiveIndex(comp.idx)}
+                onMouseLeave={() => setActiveIndex(null)}
+                onClick={() =>
+                  setActiveIndex(activeIndex === comp.idx ? null : comp.idx)
+                }
+                className={`p-3 rounded-xl border transition-colors duration-150 cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#EBF3F8]/50 border-[#2E6496]'
+                    : 'bg-[#FFFFFF] border-[#C9DFDC]/80 hover:border-[#66A3BF]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span
+                      className="px-2 py-0.5 rounded-md text-[#FFFFFF] text-xs font-extrabold shrink-0 tabular-nums mt-0.5"
+                      style={{ backgroundColor: comp.color }}
+                    >
+                      {comp.percentage}%
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#1E293B] leading-snug">
+                        {comp.label}
+                      </h4>
+                      <p className="mt-1 text-xs text-[#64748B] leading-relaxed">
+                        {comp.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 tabular-nums">
+                    <span className="text-xs sm:text-sm font-extrabold text-[#1E293B] block">
+                      {formatRupiah(Math.round(comp.amount * animProgress))}
+                    </span>
+                    {comp.regulationRule && (
+                      <span className="text-[11px] font-medium text-[#64748B] block mt-0.5">
+                        {comp.regulationRule}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
 
-              <p className="mt-2.5 text-xs text-[#64748B] leading-relaxed">
-                {comp.description}
-              </p>
-            </div>
-          );
-        })}
+        {/* Scroll Indicator Hint at Bottom */}
+        {hasMoreToScroll && (
+          <button
+            type="button"
+            onClick={handleScrollDown}
+            className="absolute bottom-0 left-0 right-1.5 pt-5 pb-1 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF]/90 to-transparent flex items-center justify-center gap-1 text-[11px] font-bold text-[#2E6496] hover:text-[#1E293B] cursor-pointer transition-colors z-10"
+          >
+            <span>Gulir ke bawah untuk rincian lainnya</span>
+            <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+          </button>
+        )}
       </div>
     </div>
   );

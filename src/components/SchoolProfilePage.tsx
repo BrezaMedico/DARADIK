@@ -129,10 +129,52 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
   }, [school.history]);
 
   const currentItems = activeYearData.items;
-  const currentTotalBosp = activeYearData.totalBosp;
+  const currentStudentCount =
+    activeYearData.studentCount || school.studentCount || 90;
+  const currentPerStudentEstimate =
+    activeYearData.perStudentEstimate || school.perStudentEstimate || 1680000;
+  const currentTotalBosp =
+    activeYearData.totalBosp || currentStudentCount * currentPerStudentEstimate;
   const currentTahap1 = activeYearData.tahap1;
   const currentTahap2 = activeYearData.tahap2;
-  const currentCompositions = activeYearData.compositions;
+
+  const schoolType =
+    school.schoolType ||
+    (/^SMKN|^SMAN|\bNegeri\b/i.test(school.name) ? 'Negeri' : 'Swasta');
+  const educationLevel =
+    school.educationLevel || (/^SMK/i.test(school.name) ? 'SMK' : 'SMA');
+  const maxHonorLimit =
+    school.maxHonorariumLimit || (schoolType === 'Swasta' ? 40 : 20);
+
+  // State 3 Tab Komposisi Pie Chart: Global (Juknis 2026), Tahap 1, Tahap 2
+  const [compositionTab, setCompositionTab] = useState<
+    'global' | 'tahap1' | 'tahap2'
+  >('global');
+
+  const globalCompositions = activeYearData.compositions;
+  const currentCompositions = globalCompositions;
+  const tahap1Compositions =
+    activeYearData.tahap1Compositions ||
+    school.tahap1Compositions ||
+    activeYearData.compositions;
+  const tahap2Compositions =
+    activeYearData.tahap2Compositions ||
+    school.tahap2Compositions ||
+    activeYearData.compositions;
+
+  const activeCompositionList =
+    compositionTab === 'tahap1'
+      ? tahap1Compositions
+      : compositionTab === 'tahap2'
+      ? tahap2Compositions
+      : globalCompositions;
+
+  const activeCompositionTotal =
+    compositionTab === 'tahap1'
+      ? currentTahap1.amount
+      : compositionTab === 'tahap2'
+      ? currentTahap2.amount
+      : currentTotalBosp;
 
   // Tab 2 State: Search & Expand
   const [searchInput, setSearchInput] = useState<string>('');
@@ -350,12 +392,12 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
 
             {/* School Identity Main Details */}
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
-                <span className="px-2.5 sm:px-3 py-0.5 rounded-full bg-[#EBF3F8] text-[11px] sm:text-xs font-bold text-[#2E6496] tabular-nums">
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span className="px-2.5 py-0.5 rounded-md bg-[#EBF3F8] text-[11px] sm:text-xs font-bold text-[#2E6496] tabular-nums">
                   NPSN {school.npsn}
                 </span>
-                <span className="px-2.5 sm:px-3 py-0.5 rounded-full bg-[#FAF8F5] border border-[#C9DFDC] text-[11px] sm:text-xs font-medium text-[#64748B]">
-                  Kec. {school.kecamatan}, {school.kabupaten}
+                <span className="text-[11px] sm:text-xs font-semibold text-[#64748B]">
+                  Sekolah {schoolType}
                 </span>
               </div>
               <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
@@ -379,10 +421,10 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               </div>
               <div className="p-2.5 sm:p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC]/70">
                 <span className="text-[10px] sm:text-[11px] font-medium text-[#64748B] block">
-                  Peserta Didik
+                  Jumlah Siswa
                 </span>
                 <span className="text-xs sm:text-sm font-extrabold text-[#2E6496] tabular-nums block mt-0.5">
-                  {school.studentCount} Siswa Aktif
+                  {currentStudentCount.toLocaleString('id-ID')} Siswa
                 </span>
               </div>
             </div>
@@ -481,39 +523,50 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
            =================================================================== */}
         {activeTab === 'summary' && (
           <div className="space-y-6">
-            {/* CARD 1: EXECUTIVE TOTAL BOSP CARD */}
+            {/* CARD 1: DANA BOSP TAHUN INI & PENCAIRAN 2 TAHAP */}
             <div
               className="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#2E6496] via-[#3570A6] to-[#5B98B5] text-[#FFFFFF] p-4 sm:p-6 lg:p-8 shadow-sm animate-school-item"
               style={{ animationDelay: '60ms' }}
             >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center">
-                {/* Left 7 Cols: Total Pagu */}
-                <div className="lg:col-span-7 space-y-2.5 sm:space-y-3">
-                  <div className="flex items-center justify-between sm:justify-start gap-3">
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#FFFFFF] text-[#2E6496] flex items-center justify-center shadow-xs shrink-0">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                {/* Left 7 Cols: Perhitungan & Total Dana BOSP (Alur Membaca Alami & Nyaman) */}
+                <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-[#FFFFFF] text-[#2E6496] flex items-center justify-center shrink-0 shadow-xs">
                       <Wallet className="w-5 h-5" />
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-[#FFFFFF]/95">
-                        Total Alokasi Pagu Dana BOSP
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#FFFFFF]/20 text-[10px] sm:text-[11px] font-bold text-[#FFFFFF] tabular-nums">
-                        TA 2026
-                      </span>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-base sm:text-lg font-extrabold text-[#FFFFFF]">
+                          Dana BOSP Tahun {selectedYear}
+                        </h2>
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#FFFFFF]/20 text-[11px] font-bold text-[#FFFFFF]">
+                          {educationLevel} {schoolType}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#FFFFFF]/85 mt-0.5">
+                        Wilayah {school.kabupaten}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="pt-1">
-                    <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-[44px] font-extrabold text-[#FFFFFF] tracking-tight tabular-nums leading-none break-words">
+                  <div>
+                    <span className="text-xs sm:text-sm font-semibold text-[#FFFFFF]/85 tabular-nums block mb-1">
+                      {currentStudentCount.toLocaleString('id-ID')} Siswa &times; {formatRupiah(currentPerStudentEstimate)} / tahun
+                    </span>
+                    <div className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold text-[#FFFFFF] tracking-tight tabular-nums leading-none break-words">
                       {formatRupiah(Math.round(currentTotalBosp * animProgress))}
                     </div>
+                    <p className="text-xs text-[#FFFFFF]/80 mt-1.5">
+                      Total alokasi pagu dana BOSP selama 1 tahun
+                    </p>
                   </div>
 
-                  <div className="pt-1.5 sm:pt-2">
+                  <div className="pt-0.5">
                     <button
                       type="button"
                       onClick={onOpenKamusModal}
-                      className="px-3.5 sm:px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#2E6496] text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#2E6496] text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5 cursor-pointer"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
                       <span>Kamus Aturan BOSP</span>
@@ -521,35 +574,53 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                   </div>
                 </div>
 
-                {/* Right 5 Cols: Status Penyaluran Summary Box */}
-                <div className="lg:col-span-5 rounded-xl sm:rounded-2xl bg-[#FFFFFF] text-[#1E293B] p-4 sm:p-5 shadow-xs space-y-2.5 sm:space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#C9DFDC]/70 pb-2">
-                    <span className="text-xs font-extrabold text-[#1E293B]">
-                      Status Penyaluran
+                {/* Right 5 Cols: Pencairan Tahap 1 & Tahap 2 (Tanpa Duplikasi) */}
+                <div className="lg:col-span-5 rounded-2xl bg-[#FFFFFF] text-[#1E293B] p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#C9DFDC]/70 pb-2.5">
+                    <span className="text-xs sm:text-sm font-extrabold text-[#1E293B]">
+                      Pencairan Dana (2 Tahap)
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#EBF3F8] text-[10px] sm:text-[11px] font-bold text-[#2E6496]">
-                      2 Tahap / Tahun
+                    <span className="text-[11px] font-semibold text-[#64748B]">
+                      50% per semester
                     </span>
                   </div>
 
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[#64748B] font-medium text-[11px] sm:text-xs">
-                        Tahap 1 ({currentTahap1.period})
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] font-bold text-[#2E6496] text-[11px] sm:text-xs shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496]" />
-                        <span>{currentTahap1.status}</span>
+                  <div className="space-y-2.5">
+                    {/* Tahap 1 */}
+                    <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC]/80">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-[#64748B]">
+                          Tahap 1 ({currentTahap1.period})
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2E6496]">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{currentTahap1.status}</span>
+                        </span>
+                      </div>
+                      <div className="text-base sm:text-lg font-extrabold text-[#1E293B] tabular-nums mt-1">
+                        {formatRupiah(Math.round(currentTahap1.amount * animProgress))}
+                      </div>
+                      <span className="text-[11px] text-[#64748B] block mt-0.5">
+                        Cair: {currentTahap1.disbursedDate}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[#64748B] font-medium text-[11px] sm:text-xs">
-                        Tahap 2 ({currentTahap2.period})
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EBF3F8] font-bold text-[#2E6496] text-[11px] sm:text-xs shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496]" />
-                        <span>{currentTahap2.status}</span>
+                    {/* Tahap 2 */}
+                    <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC]/80">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-[#64748B]">
+                          Tahap 2 ({currentTahap2.period})
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2E6496]">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{currentTahap2.status}</span>
+                        </span>
+                      </div>
+                      <div className="text-base sm:text-lg font-extrabold text-[#1E293B] tabular-nums mt-1">
+                        {formatRupiah(Math.round(currentTahap2.amount * animProgress))}
+                      </div>
+                      <span className="text-[11px] text-[#64748B] block mt-0.5">
+                        Cair: {currentTahap2.disbursedDate}
                       </span>
                     </div>
                   </div>
@@ -557,107 +628,90 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               </div>
             </div>
 
-            {/* CARD 2: JADWAL & STATUS PENCAIRAN TAHAPAN BOSP */}
+            {/* CARD 2: KOMPOSISI PENGGUNAAN DANA (3 TAB: GLOBAL, TAHAP 1, TAHAP 2) */}
             <div
               className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] p-4 sm:p-6 lg:p-8 shadow-xs animate-school-item"
               style={{ animationDelay: '120ms' }}
             >
-              <div className="mb-4 sm:mb-5">
-                <h2 className="text-base sm:text-lg font-extrabold text-[#1E293B] tracking-tight">
-                  Jadwal &amp; Status Pencairan Tahapan BOSP
-                </h2>
-                <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">
-                  Penyaluran resmi dari Kas Negara ke rekening satuan pendidikan
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-                {/* Tahap 1 Card */}
-                <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-[#FAF8F5]/75 border border-[#C9DFDC] flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="text-xs font-semibold text-[#64748B] block">
-                          Tahap 1 · Semester Awal ({currentTahap1.period})
-                        </span>
-                        <div className="mt-1.5 sm:mt-2 flex flex-wrap items-baseline gap-2">
-                          <span className="text-xl sm:text-2xl lg:text-[26px] font-extrabold text-[#1E293B] tabular-nums tracking-tight">
-                            {formatRupiah(
-                              Math.round(currentTahap1.amount * animProgress)
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#2E6496] text-[#FFFFFF] flex items-center justify-center shadow-xs shrink-0">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 sm:mt-4 pt-3 border-t border-[#C9DFDC]/60 flex items-center justify-between text-xs text-[#64748B]">
-                    <span>Tanggal Cair: {currentTahap1.disbursedDate}</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#EBF3F8] font-bold text-[#2E6496]">
-                      {currentTahap1.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tahap 2 Card */}
-                <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-[#FAF8F5]/75 border border-[#C9DFDC] flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="text-xs font-semibold text-[#64748B] block">
-                          Tahap 2 · Semester Akhir ({currentTahap2.period})
-                        </span>
-                        <div className="mt-1.5 sm:mt-2 flex flex-wrap items-baseline gap-2">
-                          <span className="text-xl sm:text-2xl lg:text-[26px] font-extrabold text-[#1E293B] tabular-nums tracking-tight">
-                            {formatRupiah(
-                              Math.round(currentTahap2.amount * animProgress)
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#2E6496] text-[#FFFFFF] flex items-center justify-center shadow-xs shrink-0">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 sm:mt-4 pt-3 border-t border-[#C9DFDC]/60 flex items-center justify-between text-xs text-[#64748B]">
-                    <span>Tanggal Cair: {currentTahap2.disbursedDate}</span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#EBF3F8] font-bold text-[#2E6496]">
-                      {currentTahap2.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 3: KOMPOSISI PENGGUNAAN DANA */}
-            <div
-              className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] p-4 sm:p-6 lg:p-8 shadow-xs animate-school-item"
-              style={{ animationDelay: '180ms' }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-[#C9DFDC]/70">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-[#C9DFDC]/70">
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-[#1E293B] tracking-tight">
                     Komposisi Penggunaan Dana
                   </h2>
                   <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">
-                    Proporsi 3 komponen utama RKAS BOSP tahun anggaran 2026
+                    {compositionTab === 'global'
+                      ? `Pembagian dana 1 tahun sesuai ketentuan Kemendikdasmen 2026 (Sekolah ${schoolType})`
+                      : compositionTab === 'tahap1'
+                      ? `Alokasi pemakaian dana Tahap 1 (${currentTahap1.period})`
+                      : `Alokasi pemakaian dana Tahap 2 (${currentTahap2.period})`}
                   </p>
                 </div>
-                <span className="text-xs text-[#64748B] font-medium">
-                  Arahkan kursor atau klik segmen lingkaran untuk melihat detail
-                </span>
+
+                {/* 3-Tab Switcher: Global, Tahap 1, Tahap 2 */}
+                <div
+                  className="inline-grid grid-cols-3 p-1 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] gap-1 self-start sm:self-auto w-full sm:w-auto"
+                  role="tablist"
+                  aria-label="Pilih tahap komposisi dana"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={compositionTab === 'global'}
+                    onClick={() => setCompositionTab('global')}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                      compositionTab === 'global'
+                        ? 'bg-[#2E6496] text-[#FFFFFF]'
+                        : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
+                    }`}
+                  >
+                    Global
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={compositionTab === 'tahap1'}
+                    onClick={() => setCompositionTab('tahap1')}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                      compositionTab === 'tahap1'
+                        ? 'bg-[#2E6496] text-[#FFFFFF]'
+                        : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
+                    }`}
+                  >
+                    Tahap 1
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={compositionTab === 'tahap2'}
+                    onClick={() => setCompositionTab('tahap2')}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                      compositionTab === 'tahap2'
+                        ? 'bg-[#2E6496] text-[#FFFFFF]'
+                        : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FFFFFF]'
+                    }`}
+                  >
+                    Tahap 2
+                  </button>
+                </div>
               </div>
 
               <InteractiveDonutChart
-                compositions={currentCompositions}
-                totalAmount={currentTotalBosp}
+                compositions={activeCompositionList}
+                totalAmount={activeCompositionTotal}
+                centerSubtitle={
+                  compositionTab === 'global'
+                    ? 'Total 1 Tahun'
+                    : compositionTab === 'tahap1'
+                    ? 'Dana Tahap 1'
+                    : 'Dana Tahap 2'
+                }
+                badgeLabel={
+                  compositionTab === 'global'
+                    ? `Sekolah ${schoolType}`
+                    : compositionTab === 'tahap1'
+                    ? currentTahap1.period
+                    : currentTahap2.period
+                }
               />
             </div>
           </div>
@@ -1010,9 +1064,9 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
         )}
 
         {/* ===================================================================
-            5. BOTTOM REPORT CALLOUT BANNER (Exact Previous Placement)
+            5. BOTTOM REPORT CALLOUT
            =================================================================== */}
-        <div className="rounded-2xl bg-[#FFFFFF] border border-[#C9DFDC] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+        <div className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div>
             <h3 className="text-sm sm:text-base font-extrabold text-[#1E293B]">
               Menemukan data yang tidak sesuai?
