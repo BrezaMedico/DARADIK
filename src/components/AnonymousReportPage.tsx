@@ -1081,33 +1081,45 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
             </button>
           </div>
 
-          {/* Hero Header */}
-          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden space-y-4">
-            <div className="space-y-2">
-              <h1 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
-                Kirim Laporan Pungutan Liar
-              </h1>
-              <p className="daradik-lead text-xs sm:text-sm text-[#475569] leading-relaxed">
-                Laporkan pungutan sekolah tanpa dasar hukum secara aman. Data identitas dan perangkat Anda tidak dilacak.
-              </p>
+          {/* Hero Header Terpadu dengan Banner */}
+          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
+            {/* Banner Ilustrasi Terpadu */}
+            <div className="w-full bg-[#FFFFFF] border-b border-[#E4E0D8]/80 overflow-hidden">
+              <img
+                src="/banner-lapor.jpg"
+                alt="Banner Lapor DARADIK: Ada yang janggal? Jangan diam. Lapor."
+                className="w-full h-auto object-contain block select-none"
+              />
             </div>
 
-            {/* 3 Pills Ringkas & Modern */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EBF3F8] to-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] shadow-2xs">
-                <ShieldCheck className="w-4 h-4 text-[#2E6496]" />
-                <span>Tanpa Akun & No. HP</span>
-              </span>
+            {/* Konten Hero Header */}
+            <div className="p-6 sm:p-8 space-y-4">
+              <div className="space-y-2">
+                <h1 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+                  Kirim Laporan Pungutan Liar
+                </h1>
+                <p className="daradik-lead text-xs sm:text-sm text-[#475569] leading-relaxed">
+                  Laporkan pungutan sekolah tanpa dasar hukum secara aman. Data identitas dan perangkat Anda tidak dilacak.
+                </p>
+              </div>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EBF3F8] to-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] shadow-2xs">
-                <EyeOff className="w-4 h-4 text-[#2E6496]" />
-                <span>Foto Dihapus Metadata</span>
-              </span>
+              {/* 3 Pills Ringkas & Modern */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EBF3F8] to-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] shadow-2xs">
+                  <ShieldCheck className="w-4 h-4 text-[#2E6496]" />
+                  <span>Tanpa Akun & No. HP</span>
+                </span>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EBF3F8] to-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] shadow-2xs">
-                <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
-                <span>Langsung ke Dinas</span>
-              </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EBF3F8] to-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] shadow-2xs">
+                  <EyeOff className="w-4 h-4 text-[#2E6496]" />
+                  <span>Foto Dihapus Metadata</span>
+                </span>
+
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#EBF3F8] to-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] shadow-2xs">
+                  <CheckCircle2 className="w-4 h-4 text-[#2E7D32]" />
+                  <span>Langsung ke Dinas</span>
+                </span>
+              </div>
             </div>
           </div>
 
