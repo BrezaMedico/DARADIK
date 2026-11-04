@@ -28,10 +28,12 @@ import { saveAnonymousReport } from '../lib/supabase';
 
 interface AnonymousReportPageProps {
   selectedSchool?: SchoolData | null;
+  preselectSchool?: boolean;
   onChangeSchool: (school: SchoolData) => void;
   prefilledCategory?: string;
   prefilledAttachment?: string;
   onCancel: () => void;
+  onBackToHome?: () => void;
   onSubmitSuccess: (ticketCode: string, notes: string, category: string) => void;
 }
 
@@ -466,14 +468,16 @@ const ScrambleToAsteriskCipher: React.FC = () => {
 
 export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
   selectedSchool,
+  preselectSchool = false,
   onChangeSchool,
   prefilledCategory = '',
   prefilledAttachment = '',
   onCancel,
+  onBackToHome,
   onSubmitSuccess,
 }) => {
   // 1. Sekolah State
-  const isDirectItemPrefill = Boolean(prefilledCategory);
+  const isDirectItemPrefill = Boolean(prefilledCategory) || preselectSchool;
   const [chosenSchool, setChosenSchool] = useState<SchoolData | null>(() => {
     if (isDirectItemPrefill && selectedSchool) {
       return selectedSchool;
@@ -1056,7 +1060,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
 
               <button
                 type="button"
-                onClick={onCancel}
+                onClick={onBackToHome || onCancel}
                 className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-[#C9DFDC] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-xs font-bold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
               >
                 Kembali ke Beranda

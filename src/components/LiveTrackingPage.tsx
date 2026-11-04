@@ -46,6 +46,7 @@ interface LiveTrackingPageProps {
   reporterNote?: string;
   onBackToHome: () => void;
   onBackToSchoolProfile: () => void;
+  onOpenAnonymousReport?: () => void;
   onShowToast: (message: string) => void;
 }
 
@@ -103,6 +104,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   reporterNote = '',
   onBackToHome,
   onBackToSchoolProfile,
+  onOpenAnonymousReport,
   onShowToast,
 }) => {
   // 1. State: Default KOSONG bila tidak ada kode dari props pelaporan
@@ -165,9 +167,15 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     const list = Array.from(mergedMap.values());
     setHistoryList(list);
 
-    // Jika ada ticketCode aktif dari prop
+    // Jika ada ticketCode aktif dari prop, tampilkan; jika kosong, reset ke tampilan bersih
     if (ticketCode) {
+      setTicketInput(ticketCode);
+      setActiveTicket(ticketCode);
       handleResolveActiveTicket(ticketCode, list);
+    } else {
+      setTicketInput('');
+      setActiveTicket('');
+      setCurrentReportData(null);
     }
   }, [ticketCode]);
 
@@ -459,6 +467,18 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     Masukkan kode tiket pelaporan pada kolom di atas untuk memantau status secara langsung.
                   </p>
                 </div>
+                {onOpenAnonymousReport && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={onOpenAnonymousReport}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#FAF8F5] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-colors cursor-pointer"
+                    >
+                      <span>Belum punya tiket? Buat Laporan Anonim</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -512,9 +532,15 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs">
                 <div>
                   <span className="text-[11px] text-[#64748B] block">Sekolah Terlapor:</span>
-                  <span className="font-bold text-[#1E293B] block truncate">
-                    {currentReportData?.schoolName || school.name}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={onBackToSchoolProfile}
+                    className="font-bold text-[#2E6496] hover:underline flex items-center gap-1 truncate max-w-full text-left cursor-pointer"
+                    title="Lihat Profil Dana BOSP Sekolah"
+                  >
+                    <Building2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{currentReportData?.schoolName || school.name}</span>
+                  </button>
                 </div>
                 <div>
                   <span className="text-[11px] text-[#64748B] block">Jenis Pungutan:</span>

@@ -4,8 +4,8 @@ import {
   Search,
   CheckCircle2,
   X,
-  MessageSquare,
   Flag,
+  HelpCircle,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -24,6 +24,7 @@ import { AnonymousReportPage } from './components/AnonymousReportPage';
 import { LiveTrackingPage } from './components/LiveTrackingPage';
 import { KamusBospPage } from './components/KamusBospPage';
 import { IntroSplashScreen } from './components/IntroSplashScreen';
+import { OnboardingTour } from './components/OnboardingTour';
 import {
   GeotagModal,
   InvoiceModal,
@@ -39,19 +40,35 @@ export type AppView =
 export function App() {
   const [showIntro, setShowIntro] = useState<boolean>(true);
   const [currentView, setCurrentView] = useState<AppView>('landing');
-  const [previousView, setPreviousView] = useState<AppView>('landing');
+  const [viewHistory, setViewHistory] = useState<AppView[]>([]);
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
 
   const [selectedSchool, setSelectedSchool] = useState<SchoolData>(
     SCHOOLS_DATABASE[0]
   );
   const [profileTab, setProfileTab] = useState<ProfileTab>('summary');
 
-  // Pastikan saat refresh atau load awal selalu mulai dari paling atas layar
+  // Pastikan saat refresh atau load awal selalu mulai dari paling atas layar & cek parameter URL (?npsn=...)
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const npsnParam = params.get('npsn');
+      if (npsnParam) {
+        const matched = SCHOOLS_DATABASE.find(
+          (s) => s.npsn.toLowerCase() === npsnParam.trim().toLowerCase()
+        );
+        if (matched) {
+          setSelectedSchool(matched);
+          setCurrentView('school-profile');
+        }
+      }
+    }
+
     const timer = setTimeout(() => {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }, 80);
@@ -68,7 +85,9 @@ export function App() {
       try {
         const remote = await fetchSchoolFromSupabase('smk-ti-bazma');
         if (remote) {
-          setSelectedSchool(remote);
+          setSelectedSchool((prev) =>
+            prev.id === 'smk-ti-bazma' ? remote : prev
+          );
         }
       } catch (err) {
         console.info('[Supabase] Menggunakan data lokal terverifikasi:', err);
@@ -83,16 +102,17 @@ export function App() {
   const [activeGeotagItem, setActiveGeotagItem] =
     useState<BospRealizationItem | null>(null);
 
-  // Anonymous Report Prefill State
-  const [reportCategoryPrefill, setReportCategoryPrefill] = useState<string>(
-    'Iuran Kipas Angin (Tumpang Tindih dengan Dana BOSP Rp 35.000.000)'
-  );
+  // Anonymous Report Prefill & Reset State
+  const [reportCategoryPrefill, setReportCategoryPrefill] =
+    useState<string>('');
   const [reportAttachmentPrefill, setReportAttachmentPrefill] =
-    useState<string>('1 Foto Screenshot WA (Tersensor Otomatis)');
+    useState<string>('');
+  const [preselectReportSchool, setPreselectReportSchool] =
+    useState<boolean>(false);
+  const [reportFormResetKey, setReportFormResetKey] = useState<number>(0);
 
-  // Live Tracking Ticket State
-  const [activeTicketCode, setActiveTicketCode] =
-    useState<string>('CHK-2026-8849-BGR');
+  // Live Tracking Ticket State (Default Kosong)
+  const [activeTicketCode, setActiveTicketCode] = useState<string>('');
   const [submittedReporterNote, setSubmittedReporterNote] =
     useState<string>('');
 
@@ -106,11 +126,32 @@ export function App() {
     }, 4000);
   }, []);
 
-  const navigateTo = (view: AppView) => {
-    setPreviousView(currentView);
-    setCurrentView(view);
+  const navigateTo = useCallback(
+    (view: AppView) => {
+      setCurrentView((prev) => {
+        if (prev !== view) {
+          setViewHistory((history) => [...history, prev]);
+        }
+        return view;
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    []
+  );
+
+  const handleGoBack = useCallback(() => {
+    setViewHistory((history) => {
+      if (history.length === 0) {
+        setCurrentView('landing');
+        return [];
+      }
+      const nextHistory = [...history];
+      const targetView = nextHistory.pop() || 'landing';
+      setCurrentView(targetView);
+      return nextHistory;
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
   const handleSelectSchoolAndOpenProfile = (
     school: SchoolData,
@@ -132,6 +173,7 @@ export function App() {
   };
 
   const handleReportFromItem = (item: BospRealizationItem) => {
+    setPreselectReportSchool(true);
     setReportCategoryPrefill(
       `Kejanggalan / Pungutan ${item.name} (Anggaran BOSP ${formatRupiah(
         item.amount
@@ -140,24 +182,44 @@ export function App() {
     setReportAttachmentPrefill(
       `Arsip Nota ${item.invoice.number} & Data Geotagging (${item.geotag.lat}, ${item.geotag.lng})`
     );
+    setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
 
   const handleReportFromWaScenario = (scenario: WaScenarioData) => {
+    setPreselectReportSchool(true);
     setReportCategoryPrefill(scenario.reportCategoryPrefill);
     setReportAttachmentPrefill(scenario.attachmentLabel);
+    setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
 
   const handleOpenReportFromHeader = () => {
+    setPreselectReportSchool(false);
     setReportCategoryPrefill('');
     setReportAttachmentPrefill('');
+    setReportFormResetKey((k) => k + 1);
+    navigateTo('anonymous-report');
+  };
+
+  const handleOpenReportFromSchoolProfile = () => {
+    setPreselectReportSchool(true);
+    setReportCategoryPrefill('');
+    setReportAttachmentPrefill('');
+    setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
 
   const handleOpenLiveTrackingFromHeader = () => {
     setActiveTicketCode('');
     navigateTo('live-tracking');
+  };
+
+  const handleStartOnboardingTour = () => {
+    if (currentView !== 'landing') {
+      navigateTo('landing');
+    }
+    setIsTourOpen(true);
   };
 
   const handleReportSubmitted = (
@@ -199,14 +261,15 @@ export function App() {
 
           {/* Right: 2 Clean Menus (Kamus BOSP & Lacak Lapor) + 1 CTA Button (Lapor) */}
           <nav
-            className="flex items-center gap-1 sm:gap-2.5"
+            className="flex items-center gap-1 sm:gap-2"
             aria-label="Navigasi Utama DARADIK"
           >
             {/* Menu 1: Kamus BOSP */}
             <button
               type="button"
+              data-tour-id="tour-kamus-bosp"
               onClick={() => navigateTo('kamus-bosp')}
-              className={`nav-link-interactive px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 ${
+              className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
                 currentView === 'kamus-bosp'
                   ? 'text-[#2E6496] bg-[#C9DFDC]/55'
                   : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
@@ -219,8 +282,9 @@ export function App() {
             {/* Menu 2: Lacak Lapor */}
             <button
               type="button"
+              data-tour-id="tour-lacak-lapor"
               onClick={handleOpenLiveTrackingFromHeader}
-              className={`nav-link-interactive px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 ${
+              className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
                 currentView === 'live-tracking'
                   ? 'text-[#2E6496] bg-[#C9DFDC]/55'
                   : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
@@ -233,8 +297,9 @@ export function App() {
             {/* Primary CTA Button: Lapor */}
             <button
               type="button"
+              data-tour-id="tour-lapor"
               onClick={handleOpenReportFromHeader}
-              className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
+              className="px-2.5 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
             >
               <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true" />
               <span>Lapor</span>
@@ -242,6 +307,35 @@ export function App() {
           </nav>
         </div>
       </header>
+
+      {/* =====================================================================
+          TOMBOL BANTUAN ONBOARDING (?) KHUSUS DI POJOK KANAN ATAS (SEJAJAR VERTIKAL NAVBAR)
+         ===================================================================== */}
+      <div className="fixed top-2 sm:top-3 right-3 sm:right-6 lg:right-8 h-14 sm:h-16 flex items-center z-[60] pointer-events-auto group">
+        {/* Balon Chat (Speech Bubble) "Panduan" muncul saat tombol di-hover */}
+        <div
+          role="tooltip"
+          className="mr-2.5 px-3 py-1.5 rounded-xl bg-[#1E293B] text-[#FFFFFF] text-xs font-semibold shadow-lg border border-[#334155] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none translate-x-2 group-hover:translate-x-0 relative flex items-center select-none"
+        >
+          <span>Panduan</span>
+          {/* Ekor Balon Chat mengarah ke tombol ? */}
+          <div
+            className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#1E293B] border-r border-t border-[#334155] rotate-45"
+            aria-hidden="true"
+          />
+        </div>
+
+        {/* Tombol ? Berwarna Putih dengan Stroke Bulat Transparan (Tanpa Background) */}
+        <button
+          type="button"
+          onClick={handleStartOnboardingTour}
+          title="Panduan Fitur"
+          aria-label="Buka panduan penggunaan fitur"
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-[#FFFFFF] text-[#FFFFFF] hover:border-[#FFFFFF] hover:text-[#FFFFFF] bg-transparent flex items-center justify-center font-bold text-sm sm:text-base leading-none select-none transition-all cursor-pointer shrink-0 active:scale-95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]"
+        >
+          ?
+        </button>
+      </div>
 
       {/* =====================================================================
           TOAST NOTIFICATION BANNER
@@ -293,7 +387,7 @@ export function App() {
               onOpenGeotagModal={(item) => setActiveGeotagItem(item)}
               onReportFromItem={handleReportFromItem}
               onReportFromWaScenario={handleReportFromWaScenario}
-              onOpenAnonymousReport={handleOpenReportFromHeader}
+              onOpenAnonymousReport={handleOpenReportFromSchoolProfile}
               onShowToast={showToast}
             />
           </div>
@@ -302,17 +396,14 @@ export function App() {
         {currentView === 'anonymous-report' && (
           <div className="pt-20">
             <AnonymousReportPage
+              key={reportFormResetKey}
               selectedSchool={selectedSchool}
+              preselectSchool={preselectReportSchool}
               onChangeSchool={setSelectedSchool}
               prefilledCategory={reportCategoryPrefill}
               prefilledAttachment={reportAttachmentPrefill}
-              onCancel={() =>
-                navigateTo(
-                  previousView === 'anonymous-report'
-                    ? 'school-profile'
-                    : previousView
-                )
-              }
+              onCancel={handleGoBack}
+              onBackToHome={() => navigateTo('landing')}
               onSubmitSuccess={handleReportSubmitted}
             />
           </div>
@@ -327,6 +418,7 @@ export function App() {
               reporterNote={submittedReporterNote}
               onBackToHome={() => navigateTo('landing')}
               onBackToSchoolProfile={() => navigateTo('school-profile')}
+              onOpenAnonymousReport={handleOpenReportFromHeader}
               onShowToast={showToast}
             />
           </div>
@@ -335,11 +427,7 @@ export function App() {
         {currentView === 'kamus-bosp' && (
           <div className="pt-20">
             <KamusBospPage
-              onBack={() =>
-                navigateTo(
-                  previousView === 'kamus-bosp' ? 'landing' : previousView
-                )
-              }
+              onBack={handleGoBack}
               onReportNow={handleOpenReportFromHeader}
             />
           </div>
@@ -358,7 +446,7 @@ export function App() {
               <button
                 type="button"
                 onClick={() => navigateTo('landing')}
-                className="focus:outline-none group text-left inline-block"
+                className="focus:outline-none group text-left inline-block cursor-pointer"
                 aria-label="DARADIK Beranda"
               >
                 <img
@@ -385,7 +473,7 @@ export function App() {
                     <button
                       type="button"
                       onClick={() => navigateTo('landing')}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
                     >
                       Beranda
                     </button>
@@ -394,7 +482,7 @@ export function App() {
                     <button
                       type="button"
                       onClick={() => navigateTo('kamus-bosp')}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
                     >
                       Kamus BOSP
                     </button>
@@ -403,9 +491,19 @@ export function App() {
                     <button
                       type="button"
                       onClick={handleOpenLiveTrackingFromHeader}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
                     >
                       Lacak Lapor
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handleStartOnboardingTour}
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-[#2E6496]" />
+                      <span>Panduan Fitur</span>
                     </button>
                   </li>
                 </ul>
@@ -424,7 +522,7 @@ export function App() {
                         setProfileTab('summary');
                         navigateTo('school-profile');
                       }}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left"
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
                     >
                       Profil Data Sekolah
                     </button>
@@ -432,8 +530,20 @@ export function App() {
                   <li>
                     <button
                       type="button"
+                      onClick={() => {
+                        setProfileTab('wa-scanner');
+                        navigateTo('school-profile');
+                      }}
+                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
+                    >
+                      Pemindai Iuran WA
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
                       onClick={handleOpenReportFromHeader}
-                      className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:text-[#245385] transition-colors text-left"
+                      className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:text-[#245385] transition-colors text-left cursor-pointer"
                     >
                       <Flag className="w-3.5 h-3.5" />
                       <span>Kirim Laporan Anonim</span>
@@ -461,8 +571,13 @@ export function App() {
       </footer>
 
       {/* =====================================================================
-          MODALS
+          ONBOARDING TOUR & MODALS
          ===================================================================== */}
+      <OnboardingTour
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+      />
+
       <InvoiceModal
         item={activeInvoiceItem}
         school={selectedSchool}

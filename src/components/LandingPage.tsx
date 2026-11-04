@@ -548,6 +548,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               {/* SCHOOL SEARCH CARD — EMPTY BY DEFAULT */}
               <form
+                data-tour-id="tour-search-box"
                 onSubmit={handleSubmitSearch}
                 className="w-full bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6"
               >
