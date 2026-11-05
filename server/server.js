@@ -238,7 +238,9 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
   const candidateModels = [
     GEMINI_MODEL,
     'gemini-3.5-flash',
-  ].filter((v, i, a) => a.indexOf(v) === i);
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+  ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
   let rawOutput = '';
   let lastError = null;
@@ -274,12 +276,13 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
               },
               required: ['teks', 'emosi'],
             },
-            temperature: 0.3,
-            maxOutputTokens: 500,
+            thinkingConfig: { thinkingBudget: 0 },
+            temperature: 0.7,
+            maxOutputTokens: 450,
           },
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 12_000)
+          setTimeout(() => reject(new Error('Model timeout')), 22_000)
         ),
       ]);
 
