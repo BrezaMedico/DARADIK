@@ -22,8 +22,9 @@ import { normalizeIndonesianTextForTts } from './textNormalizer.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
-dotenv.config();
+const ENV_FILE_PATH = path.resolve(__dirname, '..', '.env');
+dotenv.config({ path: ENV_FILE_PATH, override: true });
+dotenv.config({ override: true });
 
 const PORT = Number(process.env.PORT || 3001);
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
@@ -59,6 +60,7 @@ const VALID_EMOTIONS = new Set([
 ]);
 
 function getAiClient() {
+  dotenv.config({ path: ENV_FILE_PATH, override: true });
   const key = (process.env.GEMINI_API_KEY || GEMINI_API_KEY || '').trim();
   if (!key || key.startsWith('[ISI_')) return null;
   return new GoogleGenAI({ apiKey: key });
@@ -238,8 +240,9 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
   const candidateModels = [
     GEMINI_MODEL,
     'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-3.6-flash',
     'gemini-3.5-flash-lite',
-    'gemini-3.8-flash',
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
   let rawOutput = '';
@@ -247,42 +250,46 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
 
   for (const modelName of candidateModels) {
     try {
+      const genConfig = {
+        systemInstruction: FINAL_SYSTEM_PROMPT,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            teks: {
+              type: 'string',
+              description:
+                'Jawaban bahasa Indonesia maksimal 2-4 kalimat tanpa markdown, simbol, atau emoji. Angka ditulis dengan kata.',
+            },
+            emosi: {
+              type: 'string',
+              enum: [
+                'senang',
+                'netral',
+                'bingung',
+                'semangat',
+                'empati',
+                'berpikir',
+              ],
+            },
+          },
+          required: ['teks', 'emosi'],
+        },
+        temperature: 0.7,
+        maxOutputTokens: 450,
+      };
+      if (modelName !== 'gemini-3.5-flash-lite') {
+        genConfig.thinkingConfig = { thinkingBudget: 0 };
+      }
+
       const response = await Promise.race([
         aiClient.models.generateContent({
           model: modelName,
           contents: contextualInput,
-          config: {
-            systemInstruction: FINAL_SYSTEM_PROMPT,
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'object',
-              properties: {
-                teks: {
-                  type: 'string',
-                  description:
-                    'Jawaban bahasa Indonesia maksimal 2-4 kalimat tanpa markdown, simbol, atau emoji. Angka ditulis dengan kata.',
-                },
-                emosi: {
-                  type: 'string',
-                  enum: [
-                    'senang',
-                    'netral',
-                    'bingung',
-                    'semangat',
-                    'empati',
-                    'berpikir',
-                  ],
-                },
-              },
-              required: ['teks', 'emosi'],
-            },
-            thinkingConfig: { thinkingBudget: 0 },
-            temperature: 0.7,
-            maxOutputTokens: 450,
-          },
+          config: genConfig,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 22_000)
+          setTimeout(() => reject(new Error('Model timeout')), 9_000)
         ),
       ]);
 
