@@ -604,15 +604,11 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
     if (!q) {
       return SCHOOLS_DATABASE.slice(0, 8);
     }
+    const tokens = q.split(/\s+/).filter(Boolean);
     return SCHOOLS_DATABASE.filter((s) => {
-      return (
-        s.name.toLowerCase().includes(q) ||
-        s.npsn.toLowerCase().includes(q) ||
-        s.kecamatan.toLowerCase().includes(q) ||
-        s.kabupaten.toLowerCase().includes(q) ||
-        s.jenjang.toLowerCase().includes(q)
-      );
-    }).slice(0, 15);
+      const combined = `${s.name} ${s.npsn} ${s.kecamatan} ${s.kabupaten} ${s.provinsi} ${s.jenjang} ${s.schoolType || ''}`.toLowerCase();
+      return tokens.every((tk) => combined.includes(tk));
+    }).slice(0, 16);
   }, [schoolSearchQuery]);
 
   const handleSelectSchool = (school: SchoolData) => {

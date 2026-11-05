@@ -132,7 +132,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
   const currentStudentCount =
     activeYearData.studentCount || school.studentCount || 90;
   const currentPerStudentEstimate =
-    activeYearData.perStudentEstimate || school.perStudentEstimate || 1680000;
+    activeYearData.perStudentEstimate || school.perStudentEstimate || 1900000;
   const currentTotalBosp =
     activeYearData.totalBosp || currentStudentCount * currentPerStudentEstimate;
   const currentTahap1 = activeYearData.tahap1;
@@ -140,9 +140,16 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
 
   const schoolType =
     school.schoolType ||
-    (/^SMKN|^SMAN|\bNegeri\b/i.test(school.name) ? 'Negeri' : 'Swasta');
+    (/^SDN|^SMPN|^SMAN|^SMKN|\bNegeri\b/i.test(school.name) ? 'Negeri' : 'Swasta');
   const educationLevel =
-    school.educationLevel || (/^SMK/i.test(school.name) ? 'SMK' : 'SMA');
+    school.educationLevel ||
+    (/^SD/i.test(school.name)
+      ? 'SD'
+      : /^SMP/i.test(school.name)
+      ? 'SMP'
+      : /^SMK/i.test(school.name)
+      ? 'SMK'
+      : 'SMA');
   const maxHonorLimit =
     school.maxHonorariumLimit || (schoolType === 'Swasta' ? 40 : 20);
 

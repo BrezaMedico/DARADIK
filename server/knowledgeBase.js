@@ -19,10 +19,10 @@ export const DOKUMEN_BOSP_2026 = `
   a. Tahap Satu (sebesar lima puluh persen dari pagu tahunan): cair untuk periode Januari sampai Juni (semester ganjil), dengan syarat laporan penggunaan dana tahun sebelumnya sudah tuntas.
   b. Tahap Dua (sebesar lima puluh persen dari pagu tahunan): cair untuk periode Juli sampai Desember (semester genap), dengan syarat minimal lima puluh persen dana Tahap Satu sudah terealisasi dan dilaporkan.
 
-3. BESARAN SATUAN BIAYA PER SISWA (MAJEMUK SESUAI WILAYAH):
-- Besaran dana BOSP dihitung per siswa untuk satu tahun anggaran berdasarkan Indeks Kemahalan Wilayah tiap kabupaten atau kota dan jenjang pendidikan.
-- Contoh resmi di Kabupaten Bogor untuk jenjang SMK adalah satu juta enam ratus delapan puluh ribu rupiah per siswa setiap tahun.
-- Di daerah lain jumlahnya menyesuaikan kemahalan wilayah, misalnya wilayah Jawa dan Bali berkisar satu juta lima ratus sepuluh ribu sampai satu juta tujuh ratus dua puluh ribu rupiah per siswa, sedangkan wilayah kepulauan atau Papua bisa mencapai lebih dari dua juta seratus delapan puluh ribu rupiah per siswa.
+3. BESARAN SATUAN BIAYA PER SISWA (MAJEMUK SESUAI WILAYAH - KEPMENDIKBUD 16/P/2021):
+- Besaran dana BOSP dihitung per siswa untuk satu tahun anggaran berdasarkan satuan biaya tiap kabupaten atau kota dan jenjang pendidikan (SD, SMP, SMA, SMK).
+- Rentang satuan biaya nasional per siswa setiap tahun: jenjang SD berkisar sembilan ratus ribu sampai satu juta sembilan ratus enam puluh ribu rupiah, SMP berkisar satu juta seratus ribu sampai dua juta empat ratus delapan puluh ribu rupiah, SMA berkisar satu juta lima ratus ribu sampai tiga juta empat ratus tujuh puluh ribu rupiah, dan SMK berkisar satu juta enam ratus ribu sampai tiga juta tujuh ratus dua puluh ribu rupiah.
+- Contoh resmi di Kabupaten Bogor: SD sebesar satu juta tujuh puluh ribu rupiah, SMP sebesar satu juta tiga ratus ribu rupiah, SMA sebesar satu juta tujuh ratus delapan puluh ribu rupiah, dan SMK sebesar satu juta sembilan ratus ribu rupiah per siswa setiap tahun.
 
 4. BATAS ALOKASI PENGGUNAAN DANA (RKAS 2026):
 - RKAS adalah Rencana Kegiatan dan Anggaran Sekolah, ibarat daftar rencana belanja tahunan sekolah.
@@ -397,7 +397,7 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     (q.includes('berapa') && (q.includes('bosp') || q.includes('dana') || q.includes('biaya') || q.includes('uang') || q.includes('didapat') || q.includes('terima')))
   ) {
     return {
-      teks: 'Besaran dana BOSP tahun dua ribu dua puluh enam dihitung per siswa setiap tahun dan menyesuaikan indeks kemahalan wilayah serta jenjang sekolah. Sebagai contoh, untuk SMK di Kabupaten Bogor besarnya satu juta enam ratus delapan puluh ribu rupiah per siswa. Kamu bisa ketik nama sekolah di beranda untuk melihat angka pastinya.',
+      teks: 'Besaran dana BOSP dihitung per siswa setiap tahun dan menyesuaikan indeks kemahalan wilayah serta jenjang sekolah, mulai dari SD, SMP, SMA, hingga SMK. Sebagai contoh di Kabupaten Bogor, besarnya satu juta tujuh puluh ribu untuk SD, satu juta tiga ratus ribu untuk SMP, satu juta tujuh ratus delapan puluh ribu untuk SMA, dan satu juta sembilan ratus ribu rupiah untuk SMK per siswa. Kamu bisa ketik nama sekolah di beranda untuk melihat angka pastinya.',
       emosi: 'berpikir',
     };
   }

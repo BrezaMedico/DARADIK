@@ -19,6 +19,7 @@ import {
   SCHOOLS_DATABASE,
   SMK_TI_BAZMA,
   SchoolData,
+  formatRupiah,
 } from '../data/schoolsData';
 import { Phone3DCanvas } from './Phone3DCanvas';
 
@@ -157,10 +158,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [isRegionFilterOpen, setIsRegionFilterOpen] = useState<boolean>(false);
 
-  // Region Filters
+  // Region & School Filters
   const [provinsi, setProvinsi] = useState<string>('');
   const [kabupaten, setKabupaten] = useState<string>('');
-  const [kecamatan, setKecamatan] = useState<string>('');
+  const [jenjangFilter, setJenjangFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Progressive disclosure ("Lihat Selengkapnya") for bottom summary
@@ -204,38 +206,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return Object.keys(REGION_HIERARCHY[provinsi]);
   }, [provinsi]);
 
-  const kecamatanOptions = useMemo(() => {
-    if (
-      !provinsi ||
-      !kabupaten ||
-      !REGION_HIERARCHY[provinsi] ||
-      !REGION_HIERARCHY[provinsi][kabupaten]
-    ) {
-      return [];
-    }
-    return REGION_HIERARCHY[provinsi][kabupaten];
-  }, [provinsi, kabupaten]);
-
   const handleProvinsiChange = (newProv: string) => {
     setProvinsi(newProv);
     setKabupaten('');
-    setKecamatan('');
     setValidationError(null);
     setIsDropdownOpen(true);
   };
 
   const handleKabupatenChange = (newKab: string) => {
     setKabupaten(newKab);
-    setKecamatan('');
     setValidationError(null);
     setIsDropdownOpen(true);
   };
 
-  const handleKecamatanChange = (newKec: string) => {
-    setKecamatan(newKec);
+  const handleJenjangChange = (newJenjang: string) => {
+    setJenjangFilter(newJenjang);
     setValidationError(null);
     setIsDropdownOpen(true);
   };
+
+  const handleStatusChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    setValidationError(null);
+    setIsDropdownOpen(true);
+  };
+
+  const handleResetFilters = () => {
+    setProvinsi('');
+    setKabupaten('');
+    setJenjangFilter('');
+    setStatusFilter('');
+    setValidationError(null);
+    setIsDropdownOpen(true);
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (provinsi) count++;
+    if (kabupaten) count++;
+    if (jenjangFilter) count++;
+    if (statusFilter) count++;
+    return count;
+  }, [provinsi, kabupaten, jenjangFilter, statusFilter]);
 
   const filteredSchools = useMemo(() => {
     const rawQuery = searchQuery.trim().toLowerCase();
@@ -248,7 +260,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
     // Ketika input search ditekan tanpa mengetik huruf/kata dan tanpa filter wilayah:
     // HANYA tampilkan SMK TI BAZMA saja
-    if (!q && !provinsi && !kabupaten && !kecamatan) {
+    if (!q && !provinsi && !kabupaten && !jenjangFilter && !statusFilter) {
       return [SMK_TI_BAZMA];
     }
 
@@ -258,7 +270,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     for (const s of SCHOOLS_DATABASE) {
       if (provinsi && s.provinsi !== provinsi) continue;
       if (kabupaten && s.kabupaten !== kabupaten) continue;
-      if (kecamatan && s.kecamatan !== kecamatan) continue;
+      if (jenjangFilter && s.jenjang !== jenjangFilter) continue;
+      if (statusFilter && s.schoolType !== statusFilter) continue;
 
       if (!q) {
         scored.push({
@@ -272,7 +285,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const npsnLower = s.npsn.toLowerCase();
       const kecLower = s.kecamatan.toLowerCase();
       const kabLower = s.kabupaten.toLowerCase();
-      const combined = `${nameLower} ${npsnLower} ${kecLower} ${kabLower}`;
+      const provLower = s.provinsi.toLowerCase();
+      const jenjangLower = (s.jenjang || '').toLowerCase();
+      const typeLower = (s.schoolType || '').toLowerCase();
+      const abbrAlias =
+        s.schoolType === 'Negeri'
+          ? `${jenjangLower}n`
+          : `${jenjangLower}s`;
+      const combined = `${nameLower} ${npsnLower} ${kecLower} ${kabLower} ${provLower} ${jenjangLower} ${typeLower} ${abbrAlias}`;
 
       let score = 0;
 
@@ -282,7 +302,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         score += 140;
       } else if (nameLower.includes(q) || npsnLower.includes(q)) {
         score += 100;
-      } else if (kecLower.includes(q) || kabLower.includes(q)) {
+      } else if (kabLower.includes(q) || kecLower.includes(q) || provLower.includes(q)) {
         score += 75;
       }
 
@@ -319,8 +339,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
 
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 5).map((item) => item.school);
-  }, [provinsi, kabupaten, kecamatan, searchQuery, chosenSchool]);
+    return scored.slice(0, 16).map((item) => item.school);
+  }, [provinsi, kabupaten, jenjangFilter, statusFilter, searchQuery, chosenSchool]);
 
   const handleSelectSchool = (school: SchoolData) => {
     setChosenSchool(school);
@@ -552,10 +572,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onSubmit={handleSubmitSearch}
                 className="w-full bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                {/* 1. Label Utama & Tombol Buka/Tutup Filter */}
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <label
                     htmlFor="school-search-field"
-                    className="text-xs font-semibold text-[#2E6496]"
+                    className="text-xs sm:text-sm font-bold text-[#1E293B]"
                   >
                     Cari Nama Sekolah atau NPSN
                   </label>
@@ -563,14 +584,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsRegionFilterOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2E6496] hover:text-[#1E293B] hover:bg-[#C9DFDC]/40 bg-[#F2EFE8] px-2.5 py-1 rounded-md border border-[#C9DFDC] transition-colors"
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                      isRegionFilterOpen || activeFilterCount > 0
+                        ? 'bg-[#EBF3F8] text-[#2E6496] border-[#2E6496]'
+                        : 'bg-[#F2EFE8] text-[#475569] border-[#C9DFDC] hover:text-[#1E293B] hover:bg-[#EBF3F8]'
+                    }`}
                   >
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
-                    <span>
-                      {provinsi
-                        ? `${provinsi}${kabupaten ? ` • ${kabupaten}` : ''}`
-                        : 'Filter Wilayah'}
-                    </span>
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#2E6496]" />
+                    <span>Filter Daerah &amp; Jenjang</span>
+                    {activeFilterCount > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-[#2E6496] text-white text-[10px] flex items-center justify-center font-bold">
+                        {activeFilterCount}
+                      </span>
+                    )}
                     {isRegionFilterOpen ? (
                       <ChevronUp className="w-3.5 h-3.5" />
                     ) : (
@@ -579,81 +605,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </button>
                 </div>
 
-                {isRegionFilterOpen && (
-                  <div className="mb-3.5 p-3.5 rounded-lg bg-[#F2EFE8]/80 border border-[#C9DFDC] grid grid-cols-1 sm:grid-cols-3 gap-2.5 animate-view-enter">
-                    <div>
-                      <label
-                        htmlFor="hero-prov"
-                        className="block text-[11px] text-[#475569] font-semibold mb-1"
-                      >
-                        Provinsi
-                      </label>
-                      <select
-                        id="hero-prov"
-                        value={provinsi}
-                        onChange={(e) => handleProvinsiChange(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-                      >
-                        <option value="">Semua Provinsi</option>
-                        {Object.keys(REGION_HIERARCHY).map((prov) => (
-                          <option key={prov} value={prov}>
-                            {prov}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="hero-kab"
-                        className="block text-[11px] text-[#475569] font-semibold mb-1"
-                      >
-                        Kota / Kabupaten
-                      </label>
-                      <select
-                        id="hero-kab"
-                        value={kabupaten}
-                        onChange={(e) => handleKabupatenChange(e.target.value)}
-                        disabled={!provinsi}
-                        className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-                      >
-                        <option value="">Semua Kota/Kab.</option>
-                        {kabupatenOptions.map((kab) => (
-                          <option key={kab} value={kab}>
-                            {kab}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="hero-kec"
-                        className="block text-[11px] text-[#475569] font-semibold mb-1"
-                      >
-                        Kecamatan
-                      </label>
-                      <select
-                        id="hero-kec"
-                        value={kecamatan}
-                        onChange={(e) => handleKecamatanChange(e.target.value)}
-                        disabled={!kabupaten}
-                        className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-                      >
-                        <option value="">Semua Kecamatan</option>
-                        {kecamatanOptions.map((kec) => (
-                          <option key={kec} value={kec}>
-                            {kec}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Search Input Field (Starts Empty!) */}
-                <div className="relative">
-                  <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                {/* 2. Kotak Pencarian Utama (Selalu Teratas & Langsung di Bawah Label) */}
+                <div className="relative mb-3">
+                  <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     ref={searchInputRef}
                     id="school-search-field"
@@ -666,7 +620,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       setIsDropdownOpen(true);
                       setValidationError(null);
                     }}
-                    placeholder="Nama sekolah atau NPSN..."
+                    placeholder="Ketik nama sekolah, NPSN, atau kota/kabupaten..."
                     className="w-full pl-10 pr-10 py-3 text-base sm:text-sm bg-[#F2EFE8]/45 border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium placeholder:text-[#475569]/75 focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/30 focus:border-[#2E6496]"
                   />
                   {searchQuery && (
@@ -681,11 +635,158 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </div>
 
-                {/* Autocomplete Dropdown List: Hanya menampilkan Nama Sekolah dan NPSN */}
+                {/* 3. Panel Filter Wilayah & Jenjang (Di bawah search input, Grid 2x2 yang pas dan lega) */}
+                {isRegionFilterOpen && (
+                  <div className="mb-3.5 p-3.5 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-3 animate-view-enter">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[#C9DFDC]/70">
+                      <span className="text-[11px] font-bold text-[#2E6496] uppercase tracking-wider">
+                        Saring Berdasarkan Wilayah &amp; Jenjang
+                      </span>
+                      {activeFilterCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleResetFilters}
+                          className="text-[11px] font-semibold text-[#DC2626] hover:underline cursor-pointer"
+                        >
+                          Reset Filter
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label
+                          htmlFor="hero-prov"
+                          className="block text-[11px] text-[#475569] font-semibold mb-1"
+                        >
+                          Provinsi
+                        </label>
+                        <select
+                          id="hero-prov"
+                          value={provinsi}
+                          onChange={(e) => handleProvinsiChange(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                        >
+                          <option value="">Semua Provinsi</option>
+                          {Object.keys(REGION_HIERARCHY).map((prov) => (
+                            <option key={prov} value={prov}>
+                              {prov}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="hero-kab"
+                          className="block text-[11px] text-[#475569] font-semibold mb-1"
+                        >
+                          Kota / Kabupaten
+                        </label>
+                        <select
+                          id="hero-kab"
+                          value={kabupaten}
+                          onChange={(e) => handleKabupatenChange(e.target.value)}
+                          disabled={!provinsi}
+                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium disabled:opacity-50 disabled:bg-[#F1F5F9] focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                        >
+                          <option value="">Semua Kota/Kab.</option>
+                          {kabupatenOptions.map((kab) => (
+                            <option key={kab} value={kab}>
+                              {kab}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="hero-jenjang"
+                          className="block text-[11px] text-[#475569] font-semibold mb-1"
+                        >
+                          Jenjang (SD, SMP, SMA, SMK)
+                        </label>
+                        <select
+                          id="hero-jenjang"
+                          value={jenjangFilter}
+                          onChange={(e) => handleJenjangChange(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                        >
+                          <option value="">Semua Jenjang</option>
+                          <option value="SD">SD</option>
+                          <option value="SMP">SMP</option>
+                          <option value="SMA">SMA</option>
+                          <option value="SMK">SMK</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="hero-status"
+                          className="block text-[11px] text-[#475569] font-semibold mb-1"
+                        >
+                          Status Sekolah
+                        </label>
+                        <select
+                          id="hero-status"
+                          value={statusFilter}
+                          onChange={(e) => handleStatusChange(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                        >
+                          <option value="">Semua Status</option>
+                          <option value="Negeri">Negeri</option>
+                          <option value="Swasta">Swasta</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Active Filter Tags Bar (Saat panel filter ditutup tapi filter masih aktif) */}
+                {!isRegionFilterOpen && activeFilterCount > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs animate-view-enter">
+                    <span className="text-[11px] font-semibold text-[#64748B]">Filter aktif:</span>
+                    {provinsi && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF3F8] text-[#2E6496] font-medium text-[11px]">
+                        {provinsi}
+                        <button type="button" onClick={() => handleProvinsiChange('')} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {kabupaten && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF3F8] text-[#2E6496] font-medium text-[11px]">
+                        {kabupaten}
+                        <button type="button" onClick={() => handleKabupatenChange('')} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {jenjangFilter && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF3F8] text-[#2E6496] font-medium text-[11px]">
+                        {jenjangFilter}
+                        <button type="button" onClick={() => handleJenjangChange('')} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    {statusFilter && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF3F8] text-[#2E6496] font-medium text-[11px]">
+                        {statusFilter}
+                        <button type="button" onClick={() => handleStatusChange('')} className="hover:text-red-500 font-bold ml-0.5">×</button>
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="text-[11px] font-semibold text-[#DC2626] hover:underline ml-1 cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+
+                {/* Autocomplete Dropdown List */}
                 {isDropdownOpen && (
-                  <div className="mt-2 border border-[#C9DFDC] rounded-lg bg-[#FFFFFF] divide-y divide-[#C9DFDC]/50 max-h-52 overflow-y-auto shadow-sm animate-view-enter">
+                  <div className="mt-2 border border-[#C9DFDC] rounded-lg bg-[#FFFFFF] divide-y divide-[#C9DFDC]/50 max-h-64 overflow-y-auto shadow-sm animate-view-enter">
                     <div className="px-3.5 py-1.5 bg-[#F2EFE8] flex items-center justify-between text-[11px] text-[#475569]">
-                      <span className="font-semibold text-[#2E6496]">Daftar Sekolah</span>
+                      <span className="font-semibold text-[#2E6496]">
+                        Daftar Sekolah ({filteredSchools.length})
+                      </span>
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(false)}
@@ -701,13 +802,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => handleSelectSchool(s)}
                         className="w-full text-left px-3.5 py-2.5 hover:bg-[#C9DFDC]/35 transition-colors flex items-center justify-between gap-2"
                       >
-                        <div className="flex flex-wrap items-baseline gap-2">
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-baseline gap-1 sm:gap-2 min-w-0">
                           <span className="text-xs sm:text-sm font-bold text-[#1E293B]">
                             {s.name}
                           </span>
-                          <span className="text-xs text-[#475569] tabular-nums">
-                            NPSN: {s.npsn}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#475569] tabular-nums">
+                            <span className="px-1.5 py-0.5 rounded bg-[#EBF3F8] text-[#2E6496] font-bold text-[10px]">
+                              {s.jenjang} {s.schoolType}
+                            </span>
+                            <span>NPSN: {s.npsn}</span>
+                            <span>•</span>
+                            <span className="font-semibold text-[#2E6496]">
+                              {formatRupiah(s.perStudentEstimate)}/siswa
+                            </span>
+                          </div>
                         </div>
                         <span className="text-xs text-[#2E6496] font-semibold shrink-0">
                           Pilih →

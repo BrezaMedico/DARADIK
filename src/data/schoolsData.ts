@@ -1,5 +1,15 @@
-import { REGION_HIERARCHY } from './indonesiaRegions';
-export { REGION_HIERARCHY };
+import {
+  REGION_HIERARCHY,
+  REGIONAL_BOSP_DATA,
+  REGIONAL_BOSP_BY_KABUPATEN,
+  RegionalBospRate,
+} from './indonesiaRegions';
+export {
+  REGION_HIERARCHY,
+  REGIONAL_BOSP_DATA,
+  REGIONAL_BOSP_BY_KABUPATEN,
+};
+export type { RegionalBospRate };
 
 export interface InvoiceLineItem {
   name: string;
@@ -42,7 +52,7 @@ export interface BospRealizationItem {
 }
 
 export type SchoolOwnershipType = 'Negeri' | 'Swasta';
-export type SchoolEducationLevel = 'SMA' | 'SMK';
+export type SchoolEducationLevel = 'SD' | 'SMP' | 'SMA' | 'SMK';
 
 export interface BudgetComposition {
   id: string;
@@ -498,7 +508,7 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-global-1',
     label: 'Pengembangan Perpustakaan & Buku / Modul Ajar',
     percentage: 15,
-    amount: 22680000,
+    amount: 25650000,
     color: '#2E6496',
     description:
       'Buku teks utama Kurikulum Nasional, modul praktikum kejuruan, dan literasi perpustakaan.',
@@ -507,7 +517,7 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-global-2',
     label: 'Pemeliharaan Sarana dan Prasarana Sekolah',
     percentage: 18,
-    amount: 27216000,
+    amount: 30780000,
     color: '#4B83B1',
     description:
       'Pemeliharaan ruang kelas, perbaikan sanitasi asrama, dan perawatan lab komputer.',
@@ -516,7 +526,7 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-global-3',
     label: 'Pembayaran Honor Guru & Tendik (Sekolah Swasta)',
     percentage: 32,
-    amount: 48384000,
+    amount: 54720000,
     color: '#66A3BF',
     description:
       'Honorarium bulanan pendidik kejuruan non-ASN dan tenaga kependidikan terdaftar.',
@@ -525,7 +535,7 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-global-4',
     label: 'Komponen Lainnya (Praktikum, Daya & Jasa, Asesmen)',
     percentage: 35,
-    amount: 52920000,
+    amount: 59850000,
     color: '#8CBCCF',
     description:
       'Langganan daya & internet dedicated, penyelenggaraan ANBK, dan operasional KBM.',
@@ -537,7 +547,7 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t1-1',
     label: 'Pengadaan Buku Teks, Modul Ajar SIJA & Perpustakaan',
     percentage: 25,
-    amount: 18900000,
+    amount: 21375000,
     color: '#2E6496',
     description:
       'Modul ajar kejuruan SIJA dan buku paket siswa semester awal.',
@@ -546,7 +556,7 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t1-2',
     label: 'Pembayaran Honorarium Guru & Tendik Non-ASN (Jan–Jun)',
     percentage: 30,
-    amount: 22680000,
+    amount: 25650000,
     color: '#4B83B1',
     description:
       'Honorarium guru kejuruan dan staf administrasi periode Januari–Juni.',
@@ -555,7 +565,7 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t1-3',
     label: 'Langganan Internet Dedicated 100 Mbps & Daya/Jasa',
     percentage: 18,
-    amount: 13608000,
+    amount: 15390000,
     color: '#66A3BF',
     description:
       'Akses internet dedicated fiber optik, listrik, dan air bersih semester 1.',
@@ -564,7 +574,7 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t1-4',
     label: 'Pemeliharaan Sanitasi Asrama & Multimedia Proyektor Lab',
     percentage: 15,
-    amount: 11340000,
+    amount: 12825000,
     color: '#8CBCCF',
     description:
       'Perbaikan sanitasi asrama dan pemeliharaan proyektor lab komputer.',
@@ -573,7 +583,7 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t1-5',
     label: 'Pelaksanaan PPDB/SPMB Bebas Pungutan & Kegiatan Ekskul',
     percentage: 12,
-    amount: 9072000,
+    amount: 10260000,
     color: '#A7D0DC',
     description:
       'Operasional PPDB bebas biaya, bahan praktik, dan kegiatan kesiswaan.',
@@ -585,7 +595,7 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t2-1',
     label: 'Pembayaran Honorarium Guru & Tendik Non-ASN (Jul–Des)',
     percentage: 34,
-    amount: 25704000,
+    amount: 29070000,
     color: '#2E6496',
     description:
       'Honorarium guru kejuruan dan tenaga kependidikan periode Juli–Desember.',
@@ -594,7 +604,7 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t2-2',
     label: 'Perangkat Praktikum Jaringan, ANBK & Uji Kompetensi (UKK)',
     percentage: 22,
-    amount: 16632000,
+    amount: 18810000,
     color: '#4B83B1',
     description:
       'Perangkat jaringan lab, pelaksanaan ANBK, dan Uji Kompetensi Keahlian.',
@@ -603,7 +613,7 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t2-3',
     label: 'Pemeliharaan Meubelair Lab & Pendingin Ruangan Server',
     percentage: 21,
-    amount: 15876000,
+    amount: 17955000,
     color: '#66A3BF',
     description:
       'Meja kursi komputer ergonomis dan pemeliharaan pendingin ruang server.',
@@ -612,7 +622,7 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t2-4',
     label: 'Langganan Internet Fiber Optik & Daya/Jasa Semester 2',
     percentage: 14,
-    amount: 10584000,
+    amount: 11970000,
     color: '#8CBCCF',
     description:
       'Tagihan internet fiber optik dan daya listrik periode Juli–Desember.',
@@ -621,7 +631,7 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     id: 'comp-t2-5',
     label: 'Pengembangan Profesi Guru (GTK), Buku & Ekstrakurikuler',
     percentage: 9,
-    amount: 6804000,
+    amount: 7695000,
     color: '#A7D0DC',
     description:
       'Referensi buku perpustakaan dan pelatihan kompetensi guru kejuruan.',
@@ -629,7 +639,7 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
 ];
 
 /**
- * Data Utama SMK TI BAZMA (90 Siswa × Rp 1.680.000 = Rp 151.200.000)
+ * Data Utama SMK TI BAZMA (90 Siswa × Rp 1.900.000 = Rp 171.000.000 — Sesuai Satuan Biaya SMK Kab. Bogor di Excel)
  */
 export const SMK_TI_BAZMA: SchoolData = {
   id: 'smk-ti-bazma',
@@ -647,19 +657,19 @@ export const SMK_TI_BAZMA: SchoolData = {
   educationLevel: 'SMK',
   jenjang: 'SMK',
   maxHonorariumLimit: 40,
-  regionCostZone: 'Indeks Kemahalan Wilayah Kab. Bogor, Jawa Barat (SMK)',
+  regionCostZone: 'Satuan Biaya BOSP Kab. Bogor, Jawa Barat (SMK) — Kepmendikbud 16/P/2021',
   studentCount: 90,
-  perStudentEstimate: 1680000,
-  totalBosp: 151200000,
+  perStudentEstimate: 1900000,
+  totalBosp: 171000000,
   imageUrl: '/smk-ti-bazma.jpg',
   tahap1: {
-    amount: 75600000,
+    amount: 85500000,
     period: 'Jan–Jun',
     status: 'Sudah Cair',
     disbursedDate: '16 Februari 2026',
   },
   tahap2: {
-    amount: 75600000,
+    amount: 85500000,
     period: 'Jul–Des',
     status: 'Sudah Cair',
     disbursedDate: '14 Agustus 2026',
@@ -915,16 +925,16 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
     year: '2026',
     isCurrentYear: true,
     studentCount: 90,
-    perStudentEstimate: 1680000,
-    totalBosp: 151200000,
+    perStudentEstimate: 1900000,
+    totalBosp: 171000000,
     tahap1: {
-      amount: 75600000,
+      amount: 85500000,
       period: 'Jan–Jun',
       status: 'Sudah Cair',
       disbursedDate: '16 Februari 2026',
     },
     tahap2: {
-      amount: 75600000,
+      amount: 85500000,
       period: 'Jul–Des',
       status: 'Sudah Cair',
       disbursedDate: '14 Agustus 2026',
@@ -1072,77 +1082,53 @@ const SWASTA_FOUNDATION_NAMES = [
 ];
 
 /**
- * Menghitung Satuan Biaya BOSP Reguler Majemuk per Siswa / Tahun (TA 2026)
- * Disesuaikan secara realistis berdasarkan Provinsi, Kabupaten/Kota (Indeks Kemahalan Wilayah),
- * serta Jenjang Satuan Pendidikan (SMA vs SMK) sesuai Kepmendikdasmen.
+ * Menghitung Satuan Biaya BOSP Reguler Majemuk per Siswa / Tahun
+ * Berdasarkan data resmi Daftar_Wilayah_SD_SMP_SMA_SMK_terisi.xlsx (Kepmendikbud 16/P/2021)
+ * untuk seluruh 514 Kabupaten/Kota pada jenjang SD, SMP, SMA, dan SMK.
  */
 export function computeRegionalBospUnitCost(
   provinsi: string,
   kabupaten: string,
   level: SchoolEducationLevel
 ): { perStudentRate: number; zoneLabel: string } {
-  if (kabupaten === 'Kab. Bogor' && level === 'SMK') {
+  const exactMatch =
+    REGIONAL_BOSP_BY_KABUPATEN[`${provinsi}::${kabupaten}`] ||
+    REGIONAL_BOSP_DATA.find(
+      (r) =>
+        r.kabupaten.toLowerCase() === kabupaten.toLowerCase() ||
+        r.kabRaw.toLowerCase() === kabupaten.toLowerCase()
+    );
+
+  if (exactMatch) {
+    const rateMap: Record<SchoolEducationLevel, number> = {
+      SD: exactMatch.sd,
+      SMP: exactMatch.smp,
+      SMA: exactMatch.sma,
+      SMK: exactMatch.smk,
+    };
+    const perStudentRate = rateMap[level] ?? exactMatch.sma;
     return {
-      perStudentRate: 1680000,
-      zoneLabel: `Indeks Kemahalan Wilayah ${kabupaten}, ${provinsi} (${level})`,
+      perStudentRate,
+      zoneLabel: `Satuan Biaya BOSP ${exactMatch.kabupaten}, ${exactMatch.provinsi} (${level}) — ${exactMatch.sumber}`,
     };
   }
 
-  let kabHash = 0;
-  for (let i = 0; i < kabupaten.length; i++) {
-    kabHash = (kabHash * 31 + kabupaten.charCodeAt(i)) % 1000;
-  }
-
-  const isKepulauanOrRemote =
-    /Kepulauan|Natuna|Anambas|Mentawai|Nias|Simeulue|Sangihe|Talaud|Sitaro|Rote|Sabu|Sumba|Alor|Lembata|Maluku|Aru|Tanimbar|Buru|Seram|Halmahera|Sula|Morotai|Taliabu|Raja Ampat|Biak|Yapen|Waropen|Supiori|Mamberamo|Pegunungan|Puncak|Intan Jaya|Nduga|Yahukimo|Asmat|Boven Digoel|Mappi|Merauke/i.test(
-      kabupaten
-    );
-
-  const isJavaBali =
-    /Jawa|Banten|Jakarta|Yogyakarta|Bali/i.test(provinsi);
-  const isSumatra =
-    /Aceh|Sumatera|Riau|Jambi|Bengkulu|Lampung|Bangka Belitung/i.test(provinsi);
-  const isKalimantanSulawesiNtb =
-    /Kalimantan|Sulawesi|Gorontalo|Nusa Tenggara Barat/i.test(provinsi);
-  const isNttMaluku =
-    /Nusa Tenggara Timur|Maluku/i.test(provinsi);
-  const isPapua = /Papua/i.test(provinsi);
-
-  let baseSma = 1550000;
-  let baseSmk = 1660000;
-
-  if (isPapua) {
-    baseSma = 2180000 + (kabHash % 6) * 50000;
-    baseSmk = 2360000 + (kabHash % 6) * 50000;
-  } else if (isNttMaluku) {
-    baseSma = 1920000 + (kabHash % 6) * 40000;
-    baseSmk = 2100000 + (kabHash % 6) * 40000;
-  } else if (isKalimantanSulawesiNtb) {
-    baseSma = 1720000 + (kabHash % 6) * 30000;
-    baseSmk = 1880000 + (kabHash % 6) * 30000;
-  } else if (isSumatra) {
-    baseSma = 1620000 + (kabHash % 6) * 30000;
-    baseSmk = 1780000 + (kabHash % 6) * 30000;
-  } else if (isJavaBali) {
-    baseSma = 1510000 + (kabHash % 6) * 20000;
-    baseSmk = 1620000 + (kabHash % 6) * 20000;
-  }
-
-  if (isKepulauanOrRemote && !isPapua) {
-    baseSma += 140000;
-    baseSmk += 160000;
-  }
-
-  const perStudentRate = level === 'SMK' ? baseSmk : baseSma;
+  // Fallback jika wilayah kustom di luar 514 Kab/Kota
+  const fallbackRates: Record<SchoolEducationLevel, number> = {
+    SD: 900000,
+    SMP: 1100000,
+    SMA: 1500000,
+    SMK: 1600000,
+  };
   return {
-    perStudentRate,
+    perStudentRate: fallbackRates[level] || 1500000,
     zoneLabel: `Satuan Biaya BOSP ${kabupaten}, ${provinsi} (${level})`,
   };
 }
 
 /**
  * Menghasilkan 3 Tab Komposisi Penggunaan Dana (Global, Tahap 1, Tahap 2)
- * yang patuh terhadap Permendikdasmen 2026 dan berbeda sesuai Negeri/Swasta, SMA/SMK, dan Daerah.
+ * yang patuh terhadap Permendikdasmen 2026 dan berbeda sesuai Negeri/Swasta, Jenjang (SD/SMP/SMA/SMK), dan Daerah.
  */
 export function buildSchoolCompositions(
   totalBosp: number,
@@ -1150,7 +1136,7 @@ export function buildSchoolCompositions(
   tahap2Amount: number,
   schoolType: SchoolOwnershipType,
   educationLevel: SchoolEducationLevel,
-  kabupaten: string,
+  _kabupaten: string,
   seq: number
 ): {
   globalCompositions: BudgetComposition[];
@@ -1176,11 +1162,6 @@ export function buildSchoolCompositions(
   const amtHonor = Math.round((totalBosp * honorPct) / 100);
   const amtLainnya = totalBosp - amtPerpus - amtSarpras - amtHonor;
 
-  const labOrClassDesc =
-    educationLevel === 'SMK'
-      ? 'laboratorium praktik kejuruan, bengkel kerja,'
-      : 'laboratorium IPA/komputer, ruang multimedia,';
-
   const globalCompositions: BudgetComposition[] = [
     {
       id: `global-perpus-${seq}`,
@@ -1188,7 +1169,7 @@ export function buildSchoolCompositions(
       percentage: perpustakaanPct,
       amount: amtPerpus,
       color: '#2E6496',
-      description: 'Pengadaan buku teks utama, modul ajar, dan literasi perpustakaan.',
+      description: `Pengadaan buku teks utama ${educationLevel}, modul ajar, dan literasi perpustakaan.`,
     },
     {
       id: `global-sarpras-${seq}`,
@@ -1214,7 +1195,7 @@ export function buildSchoolCompositions(
       label:
         educationLevel === 'SMK'
           ? 'Komponen Lainnya (Praktikum Kejuruan, Daya & Jasa, Asesmen)'
-          : 'Komponen Lainnya (Kegiatan Pembelajaran, Daya & Jasa, Asesmen)',
+          : `Komponen Lainnya (Kegiatan Pembelajaran ${educationLevel}, Daya & Jasa, Asesmen)`,
       percentage: lainnyaPct,
       amount: amtLainnya,
       color: '#8CBCCF',
@@ -1312,11 +1293,11 @@ export function buildSchoolCompositions(
       label:
         educationLevel === 'SMK'
           ? 'Praktikum Kejuruan, ANBK & Uji Kompetensi (UKK)'
-          : 'Pelaksanaan ANBK, Evaluasi Ujian & Praktikum Lab',
+          : `Pelaksanaan ANBK, Evaluasi Ujian & Kegiatan Belajar ${educationLevel}`,
       percentage: t2AsesmenPraktikPct,
       amount: t2Amt2,
       color: '#4B83B1',
-      description: 'Bahan praktik kejuruan, asesmen ANBK, dan evaluasi pembelajaran.',
+      description: 'Pelaksanaan asesmen ANBK, evaluasi semester, dan alat peraga pembelajaran.',
     },
     {
       id: `t2-sarpras-${seq}`,
@@ -1361,24 +1342,47 @@ export function customizeBospItemsForSchool(
   kabupaten = 'Kab. Bogor'
 ): BospRealizationItem[] {
   if (schoolName === 'SMK TI BAZMA') return baseItems;
+  const labLabel =
+    educationLevel === 'SD'
+      ? 'Ruang Kelas & Perpustakaan SD'
+      : educationLevel === 'SMP'
+      ? 'Lab Komputer & IPA SMP'
+      : educationLevel === 'SMA'
+      ? 'Lab Komputer & IPA'
+      : 'Lab Praktik Kejuruan';
+
+  const kurikulumLabel =
+    educationLevel === 'SMK'
+      ? 'Kejuruan SMK'
+      : `Kurikulum Nasional ${educationLevel}`;
+
+  const mapelLabel =
+    educationLevel === 'SD'
+      ? 'Mata Pelajaran Tematik & Literasi SD'
+      : educationLevel === 'SMP'
+      ? 'Mata Pelajaran Wajib SMP'
+      : educationLevel === 'SMA'
+      ? 'Mata Pelajaran Wajib & Peminatan SMA'
+      : 'Kompetensi Keahlian Kejuruan SMK';
+
   return baseItems.map((item) => {
     const scaledAmount =
       scaleFactor === 1
         ? item.amount
-        : Math.max(2500000, Math.round((item.amount * scaleFactor) / 100000) * 100000);
+        : Math.max(1500000, Math.round((item.amount * scaleFactor) / 100000) * 100000);
 
     const adaptedName =
-      educationLevel === 'SMA'
-        ? item.name
-            .replace(/Lab SIJA/g, 'Lab Komputer & IPA')
-            .replace(/Kejuruan SIJA/g, 'Kurikulum Merdeka SMA')
-            .replace(/Asrama/g, 'Sekolah')
-        : item.name.replace(/Asrama/g, 'Sekolah');
+      educationLevel === 'SMK'
+        ? item.name.replace(/Asrama/g, 'Sekolah')
+        : item.name
+            .replace(/Lab SIJA/g, labLabel)
+            .replace(/Kejuruan SIJA/g, kurikulumLabel)
+            .replace(/Asrama/g, 'Sekolah');
 
     const adaptedAllocation = item.allocation
       .replace(/SMK TI BAZMA/g, schoolName)
-      .replace(/Lab SIJA 1 dan Lab SIJA 2/g, educationLevel === 'SMA' ? 'Lab Komputer dan Lab IPA' : 'Lab Praktik 1 dan Lab Praktik 2')
-      .replace(/Sistem Informatika Jaringan & Aplikasi \(SIJA\)/g, educationLevel === 'SMA' ? 'Mata Pelajaran Wajib & Peminatan SMA' : 'Kompetensi Keahlian Kejuruan');
+      .replace(/Lab SIJA 1 dan Lab SIJA 2/g, labLabel)
+      .replace(/Sistem Informatika Jaringan & Aplikasi \(SIJA\)/g, mapelLabel);
 
     const adaptedLineItems = item.invoice.lineItems.map((li, idx, arr) => {
       if (scaleFactor === 1) return li;
@@ -1393,8 +1397,8 @@ export function customizeBospItemsForSchool(
       return {
         ...li,
         name:
-          educationLevel === 'SMA'
-            ? li.name.replace(/Kejuruan SIJA/g, 'SMA Kurikulum Nasional')
+          educationLevel !== 'SMK'
+            ? li.name.replace(/Kejuruan SIJA/g, kurikulumLabel)
             : li.name,
         subtotal: newSub,
       };
@@ -1416,7 +1420,7 @@ export function customizeBospItemsForSchool(
         ...item.geotag,
         roomLabel: item.geotag.roomLabel
           .replace(/SMK TI BAZMA/g, schoolName)
-          .replace(/Lab SIJA/g, educationLevel === 'SMA' ? 'Lab Komputer' : 'Lab Kejuruan')
+          .replace(/Lab SIJA/g, labLabel)
           .replace(/Gedung Asrama Siswa/g, 'Gedung Utama Siswa'),
         conditionStatus: item.geotag.conditionStatus.replace(
           /SMK TI BAZMA/g,
@@ -1443,8 +1447,8 @@ export function buildSchoolYearlyHistory(
 ): Record<string, SchoolYearHistory> {
   if (schoolName === 'SMK TI BAZMA') return BAZMA_YEARLY_HISTORY;
 
-  const studentCount = options?.studentCount || 360;
-  const perStudentEstimate = options?.perStudentEstimate || 1680000;
+  const studentCount = options?.studentCount || 300;
+  const perStudentEstimate = options?.perStudentEstimate || 1500000;
   const totalBosp = options?.totalBosp || studentCount * perStudentEstimate;
   const tahap1Amount = Math.round(totalBosp * 0.5);
   const tahap2Amount = totalBosp - tahap1Amount;
@@ -1465,7 +1469,7 @@ export function buildSchoolYearlyHistory(
       seq
     );
 
-  const prevPerStudent = Math.max(1450000, perStudentEstimate - 60000);
+  const prevPerStudent = Math.max(850000, perStudentEstimate - 40000);
   const prevTotalBosp = studentCount * prevPerStudent;
   const prevTahap1 = Math.round(prevTotalBosp * 0.5);
   const prevTahap2 = prevTotalBosp - prevTahap1;
@@ -1546,161 +1550,220 @@ export function buildSchoolYearlyHistory(
 }
 
 /**
- * Membangun daftar sekolah terstruktur untuk seluruh Provinsi, Kabupaten/Kota, dan Kecamatan.
- * - Setiap kecamatan memiliki sekolah Negeri (SMKN 1 & SMAN 1) serta sekolah Swasta (SMKS / SMAS).
- * - Besaran dana BOSP per siswa disesuaikan dengan daerah (Indeks Kemahalan Wilayah Kab/Kota & Provinsi) dan jenjang (SMA/SMK).
- * - Jumlah siswa tiap sekolah berbeda-beda, dan Total BOSP 1 Tahun = Jumlah Siswa × Dana per Siswa.
- * - Komposisi Global, Tahap 1, dan Tahap 2 menyesuaikan jenis sekolah (Negeri maks. 20% honor, Swasta maks. 40% honor).
+ * Membangun daftar sekolah terstruktur untuk seluruh 514 Kabupaten/Kota di 38 Provinsi sesuai Excel:
+ * - Setiap daerah (Kabupaten/Kota) memiliki tepat 1 sekolah untuk masing-masing jenjang (SD, SMP, SMA, SMK)
+ *   dan masing-masing status kepemilikan (Negeri dan Swasta) — total 8 sekolah per daerah:
+ *   1. SD Negeri    2. SD Swasta
+ *   3. SMP Negeri   4. SMP Swasta
+ *   5. SMA Negeri   6. SMA Swasta
+ *   7. SMK Negeri   8. SMK Swasta (untuk Kab. Bogor adalah SMK TI BAZMA)
+ * - Satuan biaya BOSP per siswa/tahun sama persis dengan nilai pada file Excel
+ *   Daftar_Wilayah_SD_SMP_SMA_SMK_terisi.xlsx (Kepmendikbud 16/P/2021).
  */
 function buildStructuredSchoolsDatabase(): SchoolData[] {
   const schools: SchoolData[] = [SMK_TI_BAZMA];
   let seq = 1;
 
-  for (const [provinsi, kabMap] of Object.entries(REGION_HIERARCHY)) {
-    for (const [kabupaten, kecamatanList] of Object.entries(kabMap)) {
-      for (const kecamatan of kecamatanList) {
-        const foundationName =
-          SWASTA_FOUNDATION_NAMES[seq % SWASTA_FOUNDATION_NAMES.length];
-        const swastaIsSmk = seq % 2 === 0;
+  for (const region of REGIONAL_BOSP_DATA) {
+    const { provinsi, kabupaten, kecamatan, no: regionNo } = region;
+    const isKabBogor =
+      provinsi === 'Jawa Barat' && kabupaten === 'Kab. Bogor';
 
-        const schoolTemplates: {
-          prefix: string;
-          schoolName: string;
-          street: string;
-          schoolType: SchoolOwnershipType;
-          educationLevel: SchoolEducationLevel;
-          studentCount: number;
-        }[] = [
-          {
-            prefix: 'SMKN 1',
-            schoolName: `SMKN 1 ${kecamatan}`,
-            street: `Jl. Pendidikan Kejuruan No. ${(seq % 88) + 10}`,
-            schoolType: 'Negeri',
-            educationLevel: 'SMK',
-            studentCount: 340 + ((seq * 19) % 420), // 340 - 759 siswa
-          },
-          {
-            prefix: 'SMAN 1',
-            schoolName: `SMAN 1 ${kecamatan}`,
-            street: `Jl. Raya Utama Pendidikan No. ${((seq * 3) % 120) + 15}`,
-            schoolType: 'Negeri',
-            educationLevel: 'SMA',
-            studentCount: 310 + ((seq * 23) % 450), // 310 - 759 siswa
-          },
-          {
-            prefix: swastaIsSmk ? 'SMKS' : 'SMAS',
-            schoolName: `${swastaIsSmk ? 'SMKS' : 'SMAS'} ${foundationName} ${kecamatan}`,
-            street: `Jl. Yayasan Pendidikan No. ${((seq * 5) % 95) + 8}`,
-            schoolType: 'Swasta',
-            educationLevel: swastaIsSmk ? 'SMK' : 'SMA',
-            studentCount: 120 + ((seq * 17) % 290), // 120 - 409 siswa
-          },
-        ];
+    const fSd =
+      SWASTA_FOUNDATION_NAMES[(regionNo * 3) % SWASTA_FOUNDATION_NAMES.length];
+    const fSmp =
+      SWASTA_FOUNDATION_NAMES[(regionNo * 3 + 1) % SWASTA_FOUNDATION_NAMES.length];
+    const fSma =
+      SWASTA_FOUNDATION_NAMES[(regionNo * 3 + 2) % SWASTA_FOUNDATION_NAMES.length];
+    const fSmk =
+      SWASTA_FOUNDATION_NAMES[(regionNo * 3 + 5) % SWASTA_FOUNDATION_NAMES.length];
 
-        for (const tpl of schoolTemplates) {
-          const npsnNum = 20210000 + seq;
-          const nisnNum = 82000000 + seq;
-          const schoolName = tpl.schoolName;
-          const slug = `${tpl.prefix.toLowerCase().replace(/\s+/g, '-')}-${kecamatan
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')}-${seq}`;
+    const schoolTemplates: {
+      prefix: string;
+      schoolName: string;
+      street: string;
+      schoolType: SchoolOwnershipType;
+      educationLevel: SchoolEducationLevel;
+      perStudentRate: number;
+      studentCount: number;
+      skip?: boolean;
+    }[] = [
+      {
+        prefix: 'SDN 1',
+        schoolName: `SD Negeri 1 ${kabupaten}`,
+        street: `Jl. Pendidikan Dasar No. ${(regionNo % 70) + 5}`,
+        schoolType: 'Negeri',
+        educationLevel: 'SD',
+        perStudentRate: region.sd,
+        studentCount: 180 + ((regionNo * 13) % 180), // 180 - 359 siswa
+      },
+      {
+        prefix: 'SDS',
+        schoolName: `SD Swasta ${fSd} ${kabupaten}`,
+        street: `Jl. Yayasan Pendidikan Dasar No. ${((regionNo * 2) % 85) + 7}`,
+        schoolType: 'Swasta',
+        educationLevel: 'SD',
+        perStudentRate: region.sd,
+        studentCount: 120 + ((regionNo * 11) % 140), // 120 - 259 siswa
+      },
+      {
+        prefix: 'SMPN 1',
+        schoolName: `SMP Negeri 1 ${kabupaten}`,
+        street: `Jl. Pendidikan Menengah Pertama No. ${((regionNo * 3) % 90) + 10}`,
+        schoolType: 'Negeri',
+        educationLevel: 'SMP',
+        perStudentRate: region.smp,
+        studentCount: 250 + ((regionNo * 17) % 240), // 250 - 489 siswa
+      },
+      {
+        prefix: 'SMPS',
+        schoolName: `SMP Swasta ${fSmp} ${kabupaten}`,
+        street: `Jl. Yayasan Menengah Pertama No. ${((regionNo * 4) % 95) + 9}`,
+        schoolType: 'Swasta',
+        educationLevel: 'SMP',
+        perStudentRate: region.smp,
+        studentCount: 140 + ((regionNo * 19) % 170), // 140 - 309 siswa
+      },
+      {
+        prefix: 'SMAN 1',
+        schoolName: `SMA Negeri 1 ${kabupaten}`,
+        street: `Jl. Raya Utama Pendidikan No. ${((regionNo * 5) % 110) + 12}`,
+        schoolType: 'Negeri',
+        educationLevel: 'SMA',
+        perStudentRate: region.sma,
+        studentCount: 320 + ((regionNo * 23) % 320), // 320 - 639 siswa
+      },
+      {
+        prefix: 'SMAS',
+        schoolName: `SMA Swasta ${fSma} ${kabupaten}`,
+        street: `Jl. Yayasan Pendidikan Menengah No. ${((regionNo * 6) % 95) + 8}`,
+        schoolType: 'Swasta',
+        educationLevel: 'SMA',
+        perStudentRate: region.sma,
+        studentCount: 150 + ((regionNo * 15) % 210), // 150 - 359 siswa
+      },
+      {
+        prefix: 'SMKN 1',
+        schoolName: `SMK Negeri 1 ${kabupaten}`,
+        street: `Jl. Pendidikan Kejuruan No. ${((regionNo * 7) % 88) + 10}`,
+        schoolType: 'Negeri',
+        educationLevel: 'SMK',
+        perStudentRate: region.smk,
+        studentCount: 350 + ((regionNo * 21) % 340), // 350 - 689 siswa
+      },
+      {
+        prefix: 'SMKS',
+        schoolName: `SMK Swasta ${fSmk} ${kabupaten}`,
+        street: `Jl. Kejuruan Terpadu No. ${((regionNo * 8) % 92) + 6}`,
+        schoolType: 'Swasta',
+        educationLevel: 'SMK',
+        perStudentRate: region.smk,
+        studentCount: 160 + ((regionNo * 17) % 220), // 160 - 379 siswa
+        skip: isKabBogor, // Kab. Bogor sudah diwakili oleh SMK TI BAZMA (SMK Swasta)
+      },
+    ];
 
-          const firstIdx = (seq * 7) % PRINCIPAL_FIRST_NAMES.length;
-          const lastIdx = (seq * 13 + 3) % PRINCIPAL_LAST_NAMES.length;
-          const principalName = `${PRINCIPAL_FIRST_NAMES[firstIdx]} ${PRINCIPAL_LAST_NAMES[lastIdx]}`;
-          const treasurerName =
-            TREASURER_NAMES[(seq * 5) % TREASURER_NAMES.length];
+    for (const tpl of schoolTemplates) {
+      if (tpl.skip) continue;
 
-          const { perStudentRate, zoneLabel } = computeRegionalBospUnitCost(
-            provinsi,
-            kabupaten,
-            tpl.educationLevel
-          );
-          const studentCount = tpl.studentCount;
-          const totalBosp = studentCount * perStudentRate;
-          const tahap1Amount = Math.round(totalBosp * 0.5);
-          const tahap2Amount = totalBosp - tahap1Amount;
-          const maxHonorariumLimit = tpl.schoolType === 'Swasta' ? 40 : 20;
-          const currentSeq = seq;
-          const currentSchoolType = tpl.schoolType;
-          const currentEducationLevel = tpl.educationLevel;
+      const npsnNum = 20210000 + seq;
+      const nisnNum = 82000000 + seq;
+      const schoolName = tpl.schoolName;
+      const slug = `${tpl.prefix.toLowerCase().replace(/\s+/g, '-')}-${kabupaten
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')}-${seq}`;
 
-          const tahap1Info = {
-            amount: tahap1Amount,
-            period: 'Jan–Jun',
-            status: 'Sudah Cair',
-            disbursedDate: `${10 + (currentSeq % 12)} Februari 2026`,
-          };
-          const tahap2Info = {
-            amount: tahap2Amount,
-            period: 'Jul–Des',
-            status: 'Sudah Cair',
-            disbursedDate: `${11 + (currentSeq % 14)} Agustus 2026`,
-          };
+      const firstIdx = (seq * 7) % PRINCIPAL_FIRST_NAMES.length;
+      const lastIdx = (seq * 13 + 3) % PRINCIPAL_LAST_NAMES.length;
+      const principalName = `${PRINCIPAL_FIRST_NAMES[firstIdx]} ${PRINCIPAL_LAST_NAMES[lastIdx]}`;
+      const treasurerName =
+        TREASURER_NAMES[(seq * 5) % TREASURER_NAMES.length];
 
-          let cachedHistory: Record<string, SchoolYearHistory> | null = null;
-          const getLazyHistory = (): Record<string, SchoolYearHistory> => {
-            if (!cachedHistory) {
-              cachedHistory = buildSchoolYearlyHistory(
-                schoolName,
-                principalName,
-                treasurerName,
-                {
-                  studentCount,
-                  perStudentEstimate: perStudentRate,
-                  totalBosp,
-                  schoolType: currentSchoolType,
-                  educationLevel: currentEducationLevel,
-                  kabupaten,
-                  seq: currentSeq,
-                }
-              );
-            }
-            return cachedHistory;
-          };
+      const perStudentRate = tpl.perStudentRate;
+      const zoneLabel = `Satuan Biaya BOSP ${kabupaten}, ${provinsi} (${tpl.educationLevel}) — ${region.sumber}`;
+      const studentCount = tpl.studentCount;
+      const totalBosp = studentCount * perStudentRate;
+      const tahap1Amount = Math.round(totalBosp * 0.5);
+      const tahap2Amount = totalBosp - tahap1Amount;
+      const maxHonorariumLimit = tpl.schoolType === 'Swasta' ? 40 : 20;
+      const currentSeq = seq;
+      const currentSchoolType = tpl.schoolType;
+      const currentEducationLevel = tpl.educationLevel;
 
-          schools.push({
-            id: slug,
-            name: schoolName,
-            npsn: String(npsnNum),
-            sampleNisn: `00${nisnNum}`,
+      const tahap1Info = {
+        amount: tahap1Amount,
+        period: 'Jan–Jun',
+        status: 'Sudah Cair',
+        disbursedDate: `${10 + (currentSeq % 12)} Februari 2026`,
+      };
+      const tahap2Info = {
+        amount: tahap2Amount,
+        period: 'Jul–Des',
+        status: 'Sudah Cair',
+        disbursedDate: `${11 + (currentSeq % 14)} Agustus 2026`,
+      };
+
+      let cachedHistory: Record<string, SchoolYearHistory> | null = null;
+      const getLazyHistory = (): Record<string, SchoolYearHistory> => {
+        if (!cachedHistory) {
+          cachedHistory = buildSchoolYearlyHistory(
+            schoolName,
             principalName,
             treasurerName,
-            provinsi,
-            kabupaten,
-            kecamatan,
-            address: `${tpl.street}, Kec. ${kecamatan}, ${kabupaten}, ${provinsi}`,
-            status: `Sekolah ${currentSchoolType} • Terdaftar Aktif di Kemendikdasmen`,
-            schoolType: currentSchoolType,
-            educationLevel: currentEducationLevel,
-            jenjang: currentEducationLevel,
-            maxHonorariumLimit,
-            regionCostZone: zoneLabel,
-            studentCount,
-            perStudentEstimate: perStudentRate,
-            totalBosp,
-            tahap1: tahap1Info,
-            tahap2: tahap2Info,
-            get compositions() {
-              return getLazyHistory()['2026'].compositions;
-            },
-            get tahap1Compositions() {
-              return getLazyHistory()['2026'].tahap1Compositions;
-            },
-            get tahap2Compositions() {
-              return getLazyHistory()['2026'].tahap2Compositions;
-            },
-            get items() {
-              return getLazyHistory()['2026'].items;
-            },
-            get history() {
-              return getLazyHistory();
-            },
-          });
-
-          seq++;
+            {
+              studentCount,
+              perStudentEstimate: perStudentRate,
+              totalBosp,
+              schoolType: currentSchoolType,
+              educationLevel: currentEducationLevel,
+              kabupaten,
+              seq: currentSeq,
+            }
+          );
         }
-      }
+        return cachedHistory;
+      };
+
+      schools.push({
+        id: slug,
+        name: schoolName,
+        npsn: String(npsnNum),
+        sampleNisn: `00${nisnNum}`,
+        principalName,
+        treasurerName,
+        provinsi,
+        kabupaten,
+        kecamatan,
+        address: `${tpl.street}, Kec. ${kecamatan}, ${kabupaten}, ${provinsi}`,
+        status: `Sekolah ${currentSchoolType} • Terdaftar Aktif di Kemendikdasmen`,
+        schoolType: currentSchoolType,
+        educationLevel: currentEducationLevel,
+        jenjang: currentEducationLevel,
+        maxHonorariumLimit,
+        regionCostZone: zoneLabel,
+        studentCount,
+        perStudentEstimate: perStudentRate,
+        totalBosp,
+        tahap1: tahap1Info,
+        tahap2: tahap2Info,
+        get compositions() {
+          return getLazyHistory()['2026'].compositions;
+        },
+        get tahap1Compositions() {
+          return getLazyHistory()['2026'].tahap1Compositions;
+        },
+        get tahap2Compositions() {
+          return getLazyHistory()['2026'].tahap2Compositions;
+        },
+        get items() {
+          return getLazyHistory()['2026'].items;
+        },
+        get history() {
+          return getLazyHistory();
+        },
+      });
+
+      seq++;
     }
   }
 
