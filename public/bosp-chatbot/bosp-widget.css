@@ -1,0 +1,824 @@
+/**
+ * BOSP AI CHATBOT WIDGET STYLESHEET (INTERACTIVE EMOTIONAL ORB EDITION)
+ * Desain mengadaptasi bola glossy 3D bermata kapsul interaktif tanpa mulut,
+ * diselaraskan dengan palet warna DARADIK (#2E6496, #0F2742, #66A3BF, #FAF8F5, #C9DFDC).
+ */
+
+:root {
+  --bosp-primary: #2E6496;
+  --bosp-primary-hover: #245385;
+  --bosp-primary-deep: #0F2742;
+  --bosp-primary-soft: #EBF3F8;
+  --bosp-accent-sky: #66A3BF;
+  --bosp-surface: #FFFFFF;
+  --bosp-bg-warm: #FAF8F5;
+  --bosp-border: #C9DFDC;
+  --bosp-text-main: #1E293B;
+  --bosp-text-body: #334155;
+  --bosp-text-muted: #64748B;
+  --bosp-danger: #C24136;
+  --bosp-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --bosp-font-heading: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+}
+
+.bosp-widget-root {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 9990;
+  font-family: var(--bosp-font-sans);
+  color: var(--bosp-text-main);
+  line-height: 1.5;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+.bosp-widget-root *,
+.bosp-widget-root *::before,
+.bosp-widget-root *::after {
+  box-sizing: border-box;
+}
+
+/* ============================================================================
+   1. TOMBOL FLOATING LAUNCHER (JELAS & MUDAH DIPAHAMI ORANG AWAM)
+   ============================================================================ */
+.bosp-fab-btn {
+  position: relative;
+  height: 54px;
+  padding: 7px 18px 7px 8px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(201, 223, 220, 0.9);
+  background: linear-gradient(135deg, #163758 0%, #2E6496 100%);
+  color: #FFFFFF;
+  box-shadow: 0 10px 26px -5px rgba(15, 39, 66, 0.42),
+    0 2px 6px rgba(15, 39, 66, 0.18);
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.22s ease, background 0.2s ease, opacity 0.2s ease,
+    visibility 0.2s;
+  user-select: none;
+  outline: none;
+}
+
+.bosp-fab-btn.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transform: translateY(14px) scale(0.88);
+}
+
+.bosp-fab-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -5px rgba(15, 39, 66, 0.52),
+    0 4px 10px rgba(46, 100, 150, 0.25);
+  background: linear-gradient(135deg, #1B4168 0%, #3470A6 100%);
+}
+
+.bosp-fab-btn:active {
+  transform: scale(0.97);
+}
+
+.bosp-fab-btn:focus-visible {
+  box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px var(--bosp-primary);
+}
+
+/* Miniatur Bot Orb di dalam Tombol */
+.bosp-fab-avatar {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2.2px solid rgba(208, 230, 245, 0.85);
+  background: radial-gradient(
+      circle at 30% 28%,
+      rgba(186, 230, 253, 0.52) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      rgba(102, 163, 191, 0.42) 0%,
+      transparent 65%
+    ),
+    radial-gradient(circle at 45% 45%, #163659 0%, #09182B 70%, #050E1A 100%);
+  box-shadow: 0 0 14px rgba(102, 163, 191, 0.55),
+    inset 0 0 6px rgba(186, 230, 253, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.bosp-fab-eyes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.18s ease-out;
+}
+
+.bosp-fab-eye {
+  width: 4.5px;
+  height: 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #B8D8EE 100%);
+  box-shadow: 0 0 6px rgba(186, 230, 253, 0.85);
+  animation: bospFabBlink 4.2s ease-in-out infinite;
+}
+
+@keyframes bospFabBlink {
+  0%,
+  46%,
+  50%,
+  100% {
+    transform: scaleY(1);
+  }
+  48% {
+    transform: scaleY(0.1);
+  }
+}
+
+.bosp-fab-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.bosp-fab-title {
+  font-family: var(--bosp-font-heading);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.bosp-fab-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: #BAE6FD;
+  margin-top: 1px;
+}
+
+/* ============================================================================
+   2. JENDELA POP-UP CHATBOT
+   ============================================================================ */
+.bosp-popup {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 356px;
+  height: 486px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 48px);
+  background: var(--bosp-surface);
+  border: 1px solid var(--bosp-border);
+  border-radius: 20px;
+  box-shadow: 0 20px 44px -12px rgba(15, 39, 66, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(14px) scale(0.97);
+  transform-origin: bottom right;
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+}
+
+.bosp-popup.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+/* ============================================================================
+   3A. HEADER SIMPLE
+   ============================================================================ */
+.bosp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: var(--bosp-bg-warm);
+  border-bottom: 1px solid var(--bosp-border);
+  flex-shrink: 0;
+}
+
+.bosp-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bosp-header-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2D8A56;
+  box-shadow: 0 0 0 3px rgba(45, 138, 86, 0.16);
+}
+
+.bosp-header-title {
+  font-family: var(--bosp-font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--bosp-text-main);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.bosp-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bosp-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--bosp-text-body);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.bosp-icon-btn:hover {
+  background: #FFFFFF;
+  border-color: var(--bosp-border);
+  color: var(--bosp-primary);
+}
+
+.bosp-icon-btn:focus-visible {
+  outline: 2px solid var(--bosp-primary);
+  outline-offset: 1px;
+}
+
+.bosp-icon-btn.is-muted {
+  color: var(--bosp-danger);
+  background: #FEF2F2;
+  border-color: #FECACA;
+}
+
+/* ============================================================================
+   3B. PANGGUNG MASKOT ORB 3D (SESUAI GAMBAR REFERENSI + EMOSI MATA INTERAKTIF)
+   ============================================================================ */
+.bosp-orb-stage {
+  position: relative;
+  height: 188px;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Gradasi putih pemisah karakter dan teks */
+.bosp-orb-stage::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #FFFFFF 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Gelombang Air (Water Sound Wave Circle) Gradien Biru Muda saat Berbicara */
+.bosp-sw {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.65));
+}
+
+.bosp-sw svg {
+  position: absolute;
+  left: -90px;
+  top: -90px;
+  width: 180px;
+  height: 180px;
+  overflow: visible;
+}
+
+.bosp-star {
+  display: none !important;
+  position: absolute;
+  border-radius: 50%;
+  background: #E0F2FE;
+  box-shadow: 0 0 8px 2px rgba(125, 211, 252, 0.75);
+  pointer-events: none;
+  animation: bospStarTwinkle 3.4s ease-in-out infinite;
+}
+
+.bosp-star--1 {
+  width: 3px;
+  height: 3px;
+  top: 24px;
+  left: 34%;
+  animation-delay: 0s;
+}
+
+.bosp-star--2 {
+  width: 4px;
+  height: 4px;
+  top: 28px;
+  right: 22%;
+  animation-delay: 0.9s;
+}
+
+.bosp-star--3 {
+  width: 3.5px;
+  height: 3.5px;
+  bottom: 34px;
+  left: 24%;
+  animation-delay: 1.7s;
+}
+
+.bosp-star--4 {
+  width: 3px;
+  height: 3px;
+  bottom: 22px;
+  right: 27%;
+  animation-delay: 0.4s;
+}
+
+.bosp-star--5 {
+  width: 2.5px;
+  height: 2.5px;
+  bottom: 18px;
+  left: 42%;
+  animation-delay: 2.2s;
+}
+
+@keyframes bospStarTwinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.2);
+  }
+}
+
+/* Wrapper Orb yang Bergerak Halus */
+.bosp-orb-rig {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+
+/* Aura Cahaya Berlapis di Belakang Bola (Disesuaikan dengan Tema DARADIK) */
+.bosp-orb-aura {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(
+      circle at 68% 24%,
+      rgba(102, 163, 191, 0.65) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      circle at 26% 74%,
+      rgba(46, 100, 150, 0.68) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 76% 72%,
+      rgba(140, 188, 207, 0.58) 0%,
+      transparent 52%
+    );
+  filter: blur(11px);
+  opacity: 0.92;
+  pointer-events: none;
+  transition: filter 0.3s ease, opacity 0.3s ease, transform 0.2s ease;
+}
+
+/* Tubuh Bola Glossy 3D dengan Cincin Tepi Bercahaya */
+.bosp-orb-sphere {
+  position: relative;
+  z-index: 2;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 4.5px solid rgba(196, 221, 240, 0.76);
+  background: radial-gradient(
+      circle at 74% 74%,
+      rgba(94, 156, 194, 0.38) 0%,
+      rgba(46, 100, 150, 0.22) 38%,
+      transparent 68%
+    ),
+    radial-gradient(
+      circle at 45% 45%,
+      #3B7BB0 0%,
+      #2E6496 55%,
+      #1B4468 100%
+    );
+  box-shadow: 0 0 26px rgba(102, 163, 191, 0.38),
+    inset 0 0 18px rgba(186, 230, 253, 0.26),
+    inset -8px -10px 22px rgba(75, 131, 177, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: border-color 0.28s ease, box-shadow 0.25s ease;
+}
+
+/* Kilau Kaca Kiri Atas (Specular Highlight) */
+.bosp-orb-shine {
+  position: absolute;
+  top: -6%;
+  left: -6%;
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 36% 36%,
+    rgba(208, 235, 252, 0.56) 0%,
+    rgba(102, 163, 191, 0.22) 36%,
+    transparent 68%
+  );
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Kontainer Dua Mata Kapsul Interaktif (Tanpa Mulut) */
+.bosp-orb-eyes {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  will-change: transform;
+}
+
+.bosp-orb-eye {
+  position: relative;
+  width: 13px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #DCF0FD 58%, #9EC5E2 100%);
+  box-shadow: 0 0 12px rgba(186, 230, 253, 0.68);
+  overflow: hidden;
+  transition: width 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-radius 0.22s ease,
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+}
+
+/* Masker Bawah untuk Membentuk Lengkungan Mata Senang (^ ^) */
+.bosp-orb-eye::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -18px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2E6496;
+  transform: translateY(100%);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+/* Kedipan Mata Natural */
+.bosp-orb-eyes.is-blinking .bosp-orb-eye {
+  transform: scaleY(0.08) !important;
+  transition-duration: 0.07s;
+}
+
+/* ============================================================================
+   VARIASI EMOSI MATA (MURNI DARI EKSPRESI MATA & GERAK BOLA)
+   ============================================================================ */
+
+/* 1. SENANG & MENYAPA: Mata melengkung ceria (^ ^) + cahaya hangat */
+.bosp-orb-stage[data-emotion='senang'] .bosp-orb-eye,
+.bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-eye {
+  height: 25px;
+  width: 14px;
+  box-shadow: 0 0 16px rgba(186, 230, 253, 0.92);
+}
+
+.bosp-orb-stage[data-emotion='senang'] .bosp-orb-eye::after,
+.bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-eye::after {
+  transform: translateY(18%);
+}
+
+.bosp-orb-stage[data-emotion='senang'] .bosp-orb-sphere,
+.bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-sphere {
+  border-color: rgba(212, 236, 252, 0.9);
+  box-shadow: 0 0 32px rgba(125, 211, 252, 0.52),
+    inset 0 0 20px rgba(186, 230, 253, 0.35);
+}
+
+/* 2. SEMANGAT: Mata membesar antusias & sedikit miring tegas */
+.bosp-orb-stage[data-emotion='semangat'] .bosp-orb-eye {
+  width: 14px;
+  height: 32px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #BAE6FD 65%, #7DD3FC 100%);
+  box-shadow: 0 0 18px rgba(125, 211, 252, 0.95);
+}
+
+.bosp-orb-stage[data-emotion='semangat'] .bosp-orb-eye--left {
+  transform: rotate(5deg);
+}
+
+.bosp-orb-stage[data-emotion='semangat'] .bosp-orb-eye--right {
+  transform: rotate(-5deg);
+}
+
+/* 3. BERPIKIR: Satu mata menyipit fokus, satu mata tinggi melirik ke atas */
+.bosp-orb-stage[data-emotion='berpikir'] .bosp-orb-eye--left {
+  height: 16px;
+  width: 13.5px;
+  transform: translateY(2px);
+}
+
+.bosp-orb-stage[data-emotion='berpikir'] .bosp-orb-eye--right {
+  height: 29px;
+  width: 13px;
+  transform: translateY(-2px);
+}
+
+/* 4. BINGUNG: Mata tidak simetris (satu pendek miring, satu tinggi terangkat) */
+.bosp-orb-stage[data-emotion='bingung'] .bosp-orb-eye--left {
+  height: 15px;
+  width: 13.5px;
+  transform: translateY(3px) rotate(-9deg);
+}
+
+.bosp-orb-stage[data-emotion='bingung'] .bosp-orb-eye--right {
+  height: 31px;
+  width: 13px;
+  transform: translateY(-3px) rotate(6deg);
+}
+
+/* 5. EMPATI: Mata melunak & miring lembut penuh perhatian */
+.bosp-orb-stage[data-emotion='empati'] .bosp-orb-eye {
+  height: 23px;
+  width: 13px;
+  box-shadow: 0 0 14px rgba(186, 230, 253, 0.78);
+}
+
+.bosp-orb-stage[data-emotion='empati'] .bosp-orb-eye--left {
+  transform: rotate(11deg) translateY(2px);
+}
+
+.bosp-orb-stage[data-emotion='empati'] .bosp-orb-eye--right {
+  transform: rotate(-11deg) translateY(2px);
+}
+
+/* ============================================================================
+   3C. AREA BALASAN TUNGGAL (HANYA BALASAN TERBARU BOT)
+   ============================================================================ */
+.bosp-reply-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background: var(--bosp-surface);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bosp-border) transparent;
+}
+
+.bosp-reply-wrapper::-webkit-scrollbar {
+  width: 5px;
+}
+
+.bosp-reply-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--bosp-border);
+  border-radius: 999px;
+}
+
+.bosp-reply-card {
+  background: var(--bosp-bg-warm);
+  border: 1px solid var(--bosp-border);
+  border-radius: 14px;
+  padding: 13px 15px;
+  color: var(--bosp-text-main);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.62;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.bosp-reply-card.is-fading-out {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.bosp-reply-text {
+  margin: 0;
+  word-break: break-word;
+}
+
+.bosp-typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: var(--bosp-primary);
+  animation: bospCursorBlink 0.75s infinite;
+}
+
+@keyframes bospCursorBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ============================================================================
+   3D. KOLOM INPUT TEKS + MIKROFON + TOMBOL KIRIM
+   ============================================================================ */
+.bosp-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bosp-bg-warm);
+  border-top: 1px solid var(--bosp-border);
+  flex-shrink: 0;
+}
+
+.bosp-text-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid var(--bosp-border);
+  background: #FFFFFF;
+  color: var(--bosp-text-main);
+  font-family: var(--bosp-font-sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.bosp-text-input::placeholder {
+  color: #64748B;
+}
+
+.bosp-text-input:focus {
+  border-color: var(--bosp-primary);
+  box-shadow: 0 0 0 3px rgba(46, 100, 150, 0.12);
+}
+
+.bosp-text-input:disabled {
+  background: #F1F5F9;
+  color: var(--bosp-text-muted);
+  cursor: not-allowed;
+}
+
+.bosp-mic-btn,
+.bosp-send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.bosp-mic-btn {
+  background: #FFFFFF;
+  border: 1px solid var(--bosp-border);
+  color: var(--bosp-text-body);
+}
+
+.bosp-mic-btn:hover:not(:disabled) {
+  border-color: var(--bosp-primary);
+  color: var(--bosp-primary);
+}
+
+.bosp-mic-btn.is-listening {
+  background: #FEF2F2;
+  border-color: var(--bosp-danger);
+  color: var(--bosp-danger);
+}
+
+.bosp-send-btn {
+  background: var(--bosp-primary);
+  color: #FFFFFF;
+}
+
+.bosp-send-btn:hover:not(:disabled) {
+  background: var(--bosp-primary-hover);
+}
+
+.bosp-send-btn:disabled,
+.bosp-mic-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   RESPONSIVE MOBILE (MAKS 92VW & MAKS 80VH)
+   ============================================================================ */
+@media (max-width: 640px) {
+  .bosp-widget-root {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .bosp-fab-btn {
+    height: 48px;
+    padding: 5px 14px 5px 6px;
+    gap: 9px;
+  }
+
+  .bosp-fab-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .bosp-fab-title {
+    font-size: 12.5px;
+  }
+
+  .bosp-fab-sub {
+    font-size: 10.5px;
+  }
+
+  .bosp-popup {
+    width: 92vw;
+    height: 74vh;
+    max-height: 84vh;
+    bottom: 0;
+    right: 0;
+    border-radius: 18px;
+  }
+
+  .bosp-orb-stage {
+    height: 154px;
+  }
+
+  .bosp-orb-sphere {
+    width: 92px;
+    height: 92px;
+  }
+
+  .bosp-sw {
+    --r: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bosp-fab-eye,
+  .bosp-star,
+  .bosp-sw,
+  .bosp-typing-cursor {
+    animation: none !important;
+  }
+
+  .bosp-popup,
+  .bosp-reply-card,
+  .bosp-fab-btn,
+  .bosp-orb-eye {
+    transition-duration: 0.05s !important;
+  }
+}

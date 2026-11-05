@@ -552,7 +552,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
 
                   <div>
                     <span className="text-xs sm:text-sm font-semibold text-[#FFFFFF]/85 tabular-nums block mb-1">
-                      {currentStudentCount.toLocaleString('id-ID')} Siswa &times; {formatRupiah(currentPerStudentEstimate)} / tahun
+                      {currentStudentCount.toLocaleString('id-ID')} Siswa &times; {formatRupiah(currentPerStudentEstimate)} / siswa
                     </span>
                     <div className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold text-[#FFFFFF] tracking-tight tabular-nums leading-none break-words">
                       {formatRupiah(Math.round(currentTotalBosp * animProgress))}
@@ -574,17 +574,8 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                   </div>
                 </div>
 
-                {/* Right 5 Cols: Pencairan Tahap 1 & Tahap 2 (Tanpa Duplikasi) */}
-                <div className="lg:col-span-5 rounded-2xl bg-[#FFFFFF] text-[#1E293B] p-4 sm:p-5 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#C9DFDC]/70 pb-2.5">
-                    <span className="text-xs sm:text-sm font-extrabold text-[#1E293B]">
-                      Pencairan Dana (2 Tahap)
-                    </span>
-                    <span className="text-[11px] font-semibold text-[#64748B]">
-                      50% per semester
-                    </span>
-                  </div>
-
+                {/* Right 5 Cols: Pencairan Tahap 1 & Tahap 2 */}
+                <div className="lg:col-span-5 rounded-2xl bg-[#FFFFFF] text-[#1E293B] p-4 sm:p-5 shadow-xs flex flex-col justify-center">
                   <div className="space-y-2.5">
                     {/* Tahap 1 */}
                     <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC]/80">

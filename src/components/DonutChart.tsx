@@ -340,11 +340,6 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
                     <span className="text-xs sm:text-sm font-extrabold text-[#1E293B] block">
                       {formatRupiah(Math.round(comp.amount * animProgress))}
                     </span>
-                    {comp.regulationRule && (
-                      <span className="text-[11px] font-medium text-[#64748B] block mt-0.5">
-                        {comp.regulationRule}
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>

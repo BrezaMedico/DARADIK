@@ -500,10 +500,8 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 15,
     amount: 22680000,
     color: '#2E6496',
-    regulationRule: 'Minimal 10%',
-    complianceStatus: 'Sesuai Juknis (≥ 10%)',
     description:
-      'Pengadaan buku teks utama Kurikulum Nasional, modul praktikum kejuruan SIJA (Cloud & Linux), serta langganan literasi perpustakaan digital 90 siswa.',
+      'Buku teks utama Kurikulum Nasional, modul praktikum kejuruan, dan literasi perpustakaan.',
   },
   {
     id: 'comp-global-2',
@@ -511,10 +509,8 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 18,
     amount: 27216000,
     color: '#4B83B1',
-    regulationRule: 'Maksimal 20%',
-    complianceStatus: 'Sesuai Juknis (≤ 20%)',
     description:
-      'Perbaikan sanitasi & air bersih asrama siswa, peremajaan 30 set meja kursi lab komputer, serta pemasangan kipas angin & exhaust fan ruang server.',
+      'Pemeliharaan ruang kelas, perbaikan sanitasi asrama, dan perawatan lab komputer.',
   },
   {
     id: 'comp-global-3',
@@ -522,10 +518,8 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 32,
     amount: 48384000,
     color: '#66A3BF',
-    regulationRule: 'Maksimal 40% (Sekolah Swasta)',
-    complianceStatus: 'Sesuai Batas Swasta (≤ 40%)',
     description:
-      'Honorarium bulanan guru produktif TI non-ASN dan tenaga kependidikan terdaftar Dapodik sesuai ketentuan maksimal 40% bagi sekolah swasta.',
+      'Honorarium bulanan pendidik kejuruan non-ASN dan tenaga kependidikan terdaftar.',
   },
   {
     id: 'comp-global-4',
@@ -533,10 +527,8 @@ export const BAZMA_GLOBAL_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 35,
     amount: 52920000,
     color: '#8CBCCF',
-    regulationRule: 'Sesuai kebutuhan dan ketentuan',
-    complianceStatus: 'Sesuai RKAS Sekolah',
     description:
-      'Langganan internet dedicated fiber optik 100 Mbps (12 bulan), perangkat switch gigabit & proyektor lab, pelaksanaan ANBK/UKK, PPDB bebas pungutan, dan pembinaan ekskul.',
+      'Langganan daya & internet dedicated, penyelenggaraan ANBK, dan operasional KBM.',
   },
 ];
 
@@ -547,10 +539,8 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 25,
     amount: 18900000,
     color: '#2E6496',
-    regulationRule: 'Pemenuhan Buku Semester Awal',
-    complianceStatus: 'Terealisasi Tahap 1',
     description:
-      'Distribusi 90 paket modul ajar kejuruan SIJA dan buku referensi wajib Kurikulum Nasional pada semester awal tanpa pungutan biaya.',
+      'Modul ajar kejuruan SIJA dan buku paket siswa semester awal.',
   },
   {
     id: 'comp-t1-2',
@@ -558,10 +548,8 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 30,
     amount: 22680000,
     color: '#4B83B1',
-    regulationRule: 'Batas Swasta ≤ 40%',
-    complianceStatus: 'Terealisasi Tahap 1',
     description:
-      'Pembayaran honor guru kejuruan dan tenaga administrasi sekolah swasta selama 6 bulan pertama (Januari s.d. Juni 2026).',
+      'Honorarium guru kejuruan dan staf administrasi periode Januari–Juni.',
   },
   {
     id: 'comp-t1-3',
@@ -569,10 +557,8 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 18,
     amount: 13608000,
     color: '#66A3BF',
-    regulationRule: 'Operasional Layanan Wajib',
-    complianceStatus: 'Terealisasi Tahap 1',
     description:
-      'Pembayaran akses internet dedicated fiber optik 100 Mbps untuk lab komputer, listrik sekolah, dan air bersih semester pertama.',
+      'Akses internet dedicated fiber optik, listrik, dan air bersih semester 1.',
   },
   {
     id: 'comp-t1-4',
@@ -580,10 +566,8 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 15,
     amount: 11340000,
     color: '#8CBCCF',
-    regulationRule: 'Sarpras & Multimedia',
-    complianceStatus: 'Terealisasi Tahap 1',
     description:
-      'Perbaikan 4 bilik sanitasi, pompa air, 6 wastafel cuci tangan asrama, serta instalasi proyektor interaktif Lab SIJA 1 & 2.',
+      'Perbaikan sanitasi asrama dan pemeliharaan proyektor lab komputer.',
   },
   {
     id: 'comp-t1-5',
@@ -591,10 +575,8 @@ export const BAZMA_TAHAP1_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 12,
     amount: 9072000,
     color: '#A7D0DC',
-    regulationRule: 'Wajib Gratis Tanpa Pungutan',
-    complianceStatus: 'Terealisasi Tahap 1',
     description:
-      'Seleksi penerimaan siswa baru berasrama tanpa biaya pendaftaran, bahan habis pakai praktikum, dan kegiatan kesiswaan semester 1.',
+      'Operasional PPDB bebas biaya, bahan praktik, dan kegiatan kesiswaan.',
   },
 ];
 
@@ -605,10 +587,8 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 34,
     amount: 25704000,
     color: '#2E6496',
-    regulationRule: 'Batas Swasta ≤ 40%',
-    complianceStatus: 'Terealisasi Tahap 2',
     description:
-      'Pembayaran honorarium guru produktif TI dan tenaga kependidikan semester akhir (Juli s.d. Desember 2026).',
+      'Honorarium guru kejuruan dan tenaga kependidikan periode Juli–Desember.',
   },
   {
     id: 'comp-t2-2',
@@ -616,10 +596,8 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 22,
     amount: 16632000,
     color: '#4B83B1',
-    regulationRule: 'Asesmen & Praktik Kejuruan',
-    complianceStatus: 'Terealisasi Tahap 2',
     description:
-      'Pengadaan 3 unit Managed Switch Gigabit 24-Port, 4 Access Point WiFi-6, serta penyelenggaraan ANBK dan Uji Kompetensi Keahlian.',
+      'Perangkat jaringan lab, pelaksanaan ANBK, dan Uji Kompetensi Keahlian.',
   },
   {
     id: 'comp-t2-3',
@@ -627,10 +605,8 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 21,
     amount: 15876000,
     color: '#66A3BF',
-    regulationRule: 'Pemeliharaan Sarpras ≤ 20% Tahunan',
-    complianceStatus: 'Terealisasi Tahap 2',
     description:
-      'Pengadaan 30 set meja kursi komputer ergonomis serta pemasangan 12 unit kipas angin dinding & exhaust fan di Lab SIJA.',
+      'Meja kursi komputer ergonomis dan pemeliharaan pendingin ruang server.',
   },
   {
     id: 'comp-t2-4',
@@ -638,10 +614,8 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 14,
     amount: 10584000,
     color: '#8CBCCF',
-    regulationRule: 'Operasional Layanan Wajib',
-    complianceStatus: 'Terealisasi Tahap 2',
     description:
-      'Pembayaran tagihan internet dedicated fiber optik 100 Mbps dan langganan daya listrik selama Juli s.d. Desember 2026.',
+      'Tagihan internet fiber optik dan daya listrik periode Juli–Desember.',
   },
   {
     id: 'comp-t2-5',
@@ -649,10 +623,8 @@ export const BAZMA_TAHAP2_COMPOSITIONS_2026: BudgetComposition[] = [
     percentage: 9,
     amount: 6804000,
     color: '#A7D0DC',
-    regulationRule: 'Peningkatan Mutu & Literasi',
-    complianceStatus: 'Terealisasi Tahap 2',
     description:
-      'Penambahan referensi buku perpustakaan semester ganjil, pelatihan kompetensi guru kejuruan, dan pembinaan lomba koding siswa.',
+      'Referensi buku perpustakaan dan pelatihan kompetensi guru kejuruan.',
   },
 ];
 
@@ -987,9 +959,7 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
         percentage: 15,
         amount: 21600000,
         color: '#2E6496',
-        regulationRule: 'Minimal 10%',
-        complianceStatus: 'Sesuai Juknis (≥ 10%)',
-        description: 'Modul kurikulum merdeka kejuruan, buku perpustakaan, dan bahan praktik siswa.',
+        description: 'Buku kejuruan dan bahan praktik siswa.',
       },
       {
         id: 'comp-2025-2',
@@ -997,9 +967,7 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
         percentage: 18,
         amount: 25920000,
         color: '#4B83B1',
-        regulationRule: 'Maksimal 20%',
-        complianceStatus: 'Sesuai Juknis (≤ 20%)',
-        description: 'Perbaikan pompa sanitasi asrama, pengecatan 3 ruang kelas, dan pemeliharaan jaringan.',
+        description: 'Perbaikan sanitasi asrama dan perawatan ruang kelas.',
       },
       {
         id: 'comp-2025-3',
@@ -1007,9 +975,7 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
         percentage: 32,
         amount: 46080000,
         color: '#66A3BF',
-        regulationRule: 'Maksimal 40% (Sekolah Swasta)',
-        complianceStatus: 'Sesuai Batas Swasta (≤ 40%)',
-        description: 'Pembayaran honorarium guru produktif TI non-ASN dan tenaga kependidikan.',
+        description: 'Honorarium guru produktif dan tenaga kependidikan.',
       },
       {
         id: 'comp-2025-4',
@@ -1017,9 +983,7 @@ export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
         percentage: 35,
         amount: 50400000,
         color: '#8CBCCF',
-        regulationRule: 'Sesuai kebutuhan dan ketentuan',
-        complianceStatus: 'Sesuai RKAS Sekolah',
-        description: '10 unit workstation PC praktikum, router core mikrotik, dan internet dedicated 100 Mbps selama 12 bulan.',
+        description: 'Workstation lab komputer dan dedicated internet.',
       },
     ],
     items: BAZMA_BOSP_ITEMS_2025,
@@ -1224,9 +1188,7 @@ export function buildSchoolCompositions(
       percentage: perpustakaanPct,
       amount: amtPerpus,
       color: '#2E6496',
-      regulationRule: 'Minimal 10%',
-      complianceStatus: `Sesuai Juknis (${perpustakaanPct}% ≥ 10%)`,
-      description: `Pengadaan buku teks utama Kurikulum Nasional, buku pengayaan, modul pembelajaran ${educationLevel}, dan layanan literasi perpustakaan di ${kabupaten}.`,
+      description: 'Pengadaan buku teks utama, modul ajar, dan literasi perpustakaan.',
     },
     {
       id: `global-sarpras-${seq}`,
@@ -1234,9 +1196,7 @@ export function buildSchoolCompositions(
       percentage: sarprasPct,
       amount: amtSarpras,
       color: '#4B83B1',
-      regulationRule: 'Maksimal 20%',
-      complianceStatus: `Sesuai Juknis (${sarprasPct}% ≤ 20%)`,
-      description: `Pemeliharaan ringan ruang kelas, perbaikan sanitasi/toilet siswa, meubelair meja kursi, serta ${labOrClassDesc} satuan pendidikan.`,
+      description: 'Pemeliharaan ruang kelas, perbaikan sanitasi toilet, dan meubelair.',
     },
     {
       id: `global-honor-${seq}`,
@@ -1247,18 +1207,7 @@ export function buildSchoolCompositions(
       percentage: honorPct,
       amount: amtHonor,
       color: '#66A3BF',
-      regulationRule:
-        schoolType === 'Swasta'
-          ? 'Maksimal 40% (Sekolah Swasta)'
-          : 'Maksimal 20% (Sekolah Negeri)',
-      complianceStatus:
-        schoolType === 'Swasta'
-          ? `Sesuai Batas Swasta (${honorPct}% ≤ 40%)`
-          : `Sesuai Batas Negeri (${honorPct}% ≤ 20%)`,
-      description:
-        schoolType === 'Swasta'
-          ? 'Pembayaran honorarium bulanan guru non-ASN dan tenaga kependidikan terdaftar Dapodik sesuai plafon maksimal 40% bagi sekolah swasta.'
-          : 'Pembayaran honorarium guru non-ASN dan tenaga administrasi terdaftar Dapodik sesuai plafon maksimal 20% bagi sekolah negeri.',
+      description: 'Honorarium bulanan pendidik dan tenaga kependidikan non-ASN.',
     },
     {
       id: `global-lainnya-${seq}`,
@@ -1269,9 +1218,7 @@ export function buildSchoolCompositions(
       percentage: lainnyaPct,
       amount: amtLainnya,
       color: '#8CBCCF',
-      regulationRule: 'Sesuai kebutuhan dan ketentuan',
-      complianceStatus: 'Sesuai RKAS Sekolah',
-      description: `Pelaksanaan kegiatan pembelajaran & ekstrakurikuler, asesmen nasional (ANBK) & evaluasi, langganan listrik/air/internet sekolah, PPDB/SPMB bebas pungutan, dan pengembangan profesi guru.`,
+      description: 'Langganan daya & jasa, asesmen ANBK, dan operasional KBM.',
     },
   ];
 
@@ -1298,9 +1245,7 @@ export function buildSchoolCompositions(
       percentage: t1PerpusPct,
       amount: t1Amt1,
       color: '#2E6496',
-      regulationRule: 'Fokus Buku Semester Awal',
-      complianceStatus: 'Terealisasi Tahap 1',
-      description: `Pemenuhan buku paket siswa, modul pembelajaran ${educationLevel}, dan koleksi perpustakaan pada semester awal (Januari–Juni).`,
+      description: 'Pemenuhan buku paket siswa dan modul ajar semester awal.',
     },
     {
       id: `t1-honor-${seq}`,
@@ -1308,10 +1253,7 @@ export function buildSchoolCompositions(
       percentage: t1HonorPct,
       amount: t1Amt2,
       color: '#4B83B1',
-      regulationRule:
-        schoolType === 'Swasta' ? 'Batas Swasta ≤ 40%' : 'Batas Negeri ≤ 20%',
-      complianceStatus: 'Terealisasi Tahap 1',
-      description: `Pembayaran honor bulanan pendidik dan tenaga kependidikan selama 6 bulan pertama pada sekolah ${schoolType.toLowerCase()}.`,
+      description: 'Honor bulanan pendidik dan tenaga kependidikan periode Januari–Juni.',
     },
     {
       id: `t1-daya-${seq}`,
@@ -1319,9 +1261,7 @@ export function buildSchoolCompositions(
       percentage: t1DayaJasaPct,
       amount: t1Amt3,
       color: '#66A3BF',
-      regulationRule: 'Layanan Daya & Jasa',
-      complianceStatus: 'Terealisasi Tahap 1',
-      description: `Pembayaran tagihan listrik, air bersih, dan langganan bandwidth internet sekolah wilayah ${kabupaten} selama Januari–Juni.`,
+      description: 'Tagihan listrik, air bersih, dan langganan internet sekolah semester 1.',
     },
     {
       id: `t1-ppdb-${seq}`,
@@ -1329,9 +1269,7 @@ export function buildSchoolCompositions(
       percentage: t1PpdbPembelajaranPct,
       amount: t1Amt4,
       color: '#8CBCCF',
-      regulationRule: 'Wajib Bebas Pungutan',
-      complianceStatus: 'Terealisasi Tahap 1',
-      description: `Pembiayaan penuh panitia PPDB/SPMB tanpa memungut biaya dari calon peserta didik baru serta pembinaan ekstrakurikuler semester genap.`,
+      description: 'Operasional PPDB/SPMB bebas biaya dan kegiatan kesiswaan.',
     },
     {
       id: `t1-sarpras-${seq}`,
@@ -1339,9 +1277,7 @@ export function buildSchoolCompositions(
       percentage: t1SarprasPct,
       amount: t1Amt5,
       color: '#A7D0DC',
-      regulationRule: 'Pemeliharaan Sarpras',
-      complianceStatus: 'Terealisasi Tahap 1',
-      description: `Perbaikan fasilitas toilet/wastafel siswa, pengadaan proyektor kelas, serta alat tulis administrasi kegiatan sekolah.`,
+      description: 'Perbaikan sanitasi toilet dan sarana multimedia ruang kelas.',
     },
   ];
 
@@ -1369,10 +1305,7 @@ export function buildSchoolCompositions(
       percentage: t2HonorPct,
       amount: t2Amt1,
       color: '#2E6496',
-      regulationRule:
-        schoolType === 'Swasta' ? 'Batas Swasta ≤ 40%' : 'Batas Negeri ≤ 20%',
-      complianceStatus: 'Terealisasi Tahap 2',
-      description: `Pembayaran honorarium guru dan tenaga kependidikan semester akhir (Juli–Desember) sesuai ketentuan sekolah ${schoolType.toLowerCase()}.`,
+      description: 'Honorarium pendidik dan tenaga kependidikan periode Juli–Desember.',
     },
     {
       id: `t2-asesmen-${seq}`,
@@ -1383,12 +1316,7 @@ export function buildSchoolCompositions(
       percentage: t2AsesmenPraktikPct,
       amount: t2Amt2,
       color: '#4B83B1',
-      regulationRule: 'Asesmen & Pembelajaran',
-      complianceStatus: 'Terealisasi Tahap 2',
-      description:
-        educationLevel === 'SMK'
-          ? 'Bahan praktik kejuruan siswa, pemeliharaan alat bengkel/lab, pelaksanaan Asesmen Nasional (ANBK), dan Uji Kompetensi Keahlian.'
-          : 'Penyelenggaraan Asesmen Nasional Berbasis Komputer (ANBK), ujian akhir semester, cetak rapor, dan bahan praktikum laboratorium IPA/komputer.',
+      description: 'Bahan praktik kejuruan, asesmen ANBK, dan evaluasi pembelajaran.',
     },
     {
       id: `t2-sarpras-${seq}`,
@@ -1396,9 +1324,7 @@ export function buildSchoolCompositions(
       percentage: t2SarprasPct,
       amount: t2Amt3,
       color: '#66A3BF',
-      regulationRule: 'Sarpras ≤ 20% Tahunan',
-      complianceStatus: 'Terealisasi Tahap 2',
-      description: `Penggantian meja kursi belajar yang rusak, pengecatan ringan ruang kelas, serta pemasangan kipas angin/ventilasi ruangan.`,
+      description: 'Penggantian meubelair belajar dan perbaikan ringan ruang kelas.',
     },
     {
       id: `t2-daya-${seq}`,
@@ -1406,9 +1332,7 @@ export function buildSchoolCompositions(
       percentage: t2DayaJasaPct,
       amount: t2Amt4,
       color: '#8CBCCF',
-      regulationRule: 'Layanan Daya & Jasa',
-      complianceStatus: 'Terealisasi Tahap 2',
-      description: `Pembayaran tagihan listrik, air, langganan internet sekolah, dan pelaporan buku kas umum ARKAS semester kedua.`,
+      description: 'Tagihan listrik, air, dan langganan internet sekolah semester 2.',
     },
     {
       id: `t2-gtk-${seq}`,
@@ -1416,9 +1340,7 @@ export function buildSchoolCompositions(
       percentage: t2ProfesiGtkPct,
       amount: t2Amt5,
       color: '#A7D0DC',
-      regulationRule: 'Mutu Guru & Literasi',
-      complianceStatus: 'Terealisasi Tahap 2',
-      description: `Pelatihan kompetensi guru, kegiatan komunitas belajar, penambahan referensi perpustakaan, dan lomba akademik siswa.`,
+      description: 'Pelatihan guru, peningkatan literasi, dan kegiatan siswa.',
     },
   ];
 
