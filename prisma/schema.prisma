@@ -1,0 +1,114 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model SchoolSd {
+  id                 String   @id
+  name               String
+  npsn               String   @unique
+  studentCount       Int      @default(120) @map("student_count")
+  totalBosp          BigInt   @default(108000000) @map("total_bosp")
+  perStudentEstimate BigInt   @default(900000) @map("per_student_estimate")
+  kabupaten          String
+  kecamatan          String
+  provinsi           String
+  address            String?
+  status             String?  @default("Terverifikasi Dapodik & BOSP 2026")
+  schoolType         String?  @default("Negeri") @map("school_type")
+  dataPayload        Json?    @map("data_payload")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("schools_sd")
+}
+
+model SchoolSmp {
+  id                 String   @id
+  name               String
+  npsn               String   @unique
+  studentCount       Int      @default(200) @map("student_count")
+  totalBosp          BigInt   @default(220000000) @map("total_bosp")
+  perStudentEstimate BigInt   @default(1100000) @map("per_student_estimate")
+  kabupaten          String
+  kecamatan          String
+  provinsi           String
+  address            String?
+  status             String?  @default("Terverifikasi Dapodik & BOSP 2026")
+  schoolType         String?  @default("Negeri") @map("school_type")
+  dataPayload        Json?    @map("data_payload")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("schools_smp")
+}
+
+model SchoolSma {
+  id                 String   @id
+  name               String
+  npsn               String   @unique
+  studentCount       Int      @default(350) @map("student_count")
+  totalBosp          BigInt   @default(525000000) @map("total_bosp")
+  perStudentEstimate BigInt   @default(1500000) @map("per_student_estimate")
+  kabupaten          String
+  kecamatan          String
+  provinsi           String
+  address            String?
+  status             String?  @default("Terverifikasi Dapodik & BOSP 2026")
+  schoolType         String?  @default("Negeri") @map("school_type")
+  dataPayload        Json?    @map("data_payload")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("schools_sma")
+}
+
+model SchoolSmk {
+  id                 String   @id
+  name               String
+  npsn               String   @unique
+  studentCount       Int      @default(92) @map("student_count")
+  totalBosp          BigInt   @default(151200000) @map("total_bosp")
+  perStudentEstimate BigInt   @default(1680000) @map("per_student_estimate")
+  kabupaten          String
+  kecamatan          String
+  provinsi           String
+  address            String?
+  status             String?  @default("Terverifikasi Dapodik & BOSP 2026")
+  schoolType         String?  @default("Swasta") @map("school_type")
+  dataPayload        Json?    @map("data_payload")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("schools_smk")
+}
+
+model AnonymousReport {
+  id                  String   @id @default(uuid())
+  ticketCode          String   @unique @map("ticket_code")
+  schoolId            String   @map("school_id")
+  schoolName          String   @map("school_name")
+  schoolNpsn          String   @map("school_npsn")
+  kabupaten           String
+  kecamatan           String
+  category            String
+  requesterRole       String   @map("requester_role")
+  notesEncrypted      String   @map("notes_encrypted")
+  encryptionIv        String?  @map("encryption_iv")
+  encryptionSalt      String?  @map("encryption_salt")
+  encryptionAlgorithm String?  @default("AES-GCM-256 / PBKDF2") @map("encryption_algorithm")
+  status              String   @default("LAPORAN_TERKIRIM")
+  attachmentCount     Int      @default(0) @map("attachment_count")
+  attachmentsJson     Json?    @map("attachments_json")
+  letterDocument      Json?    @map("letter_document")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("anonymous_reports")
+}
+

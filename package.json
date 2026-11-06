@@ -7,7 +7,11 @@
     "dev": "vite",
     "server": "node server/server.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:pull": "prisma db pull",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
@@ -24,11 +28,13 @@
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@prisma/client": "^6.19.3",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "prisma": "^6.19.3",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"
