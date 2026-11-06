@@ -387,23 +387,17 @@ export async function saveAnonymousReport(
   const reportId = data.id || generateUUID();
 
   const initialReviewDoc: AdminReviewDocument = data.letterDocument || {
-    inspection_status: 'DITELAAH_DINAS',
+    inspection_status: 'LAPORAN_TERKIRIM',
     verified_by: 'Tim Verifikator BOSP Dinas Pendidikan & Inspektorat',
     admin_notes:
       'Laporan telah teregistrasi dalam sistem pengawasan terpadu. Tim penelaah dinas sedang memverifikasi Berita Acara Pemeriksaan BOSP.',
-    official_action: 'VERIFIKASI_BERKAS',
+    official_action: 'TERKIRIM_TERENKRIPSI',
     timeline: [
       {
-        stage: 'TERKIRIM_TERENKRIPSI',
+        stage: 'LAPORAN_TERKIRIM',
         time: timestamp,
         actor: 'Sistem Protokol Sandi DARADIK',
         note: 'Laporan terenkripsi diterima tanpa merekam IP/identitas pelapor.',
-      },
-      {
-        stage: 'DITELAAH_DINAS',
-        time: timestamp,
-        actor: 'Pengawas Pembina & Inspektorat Daerah',
-        note: 'Laporan masuk antrean telaah verifikasi SPJ dana BOSP.',
       },
     ],
     chat_messages: [
@@ -429,7 +423,7 @@ export async function saveAnonymousReport(
     requester_role: data.requesterRole,
     notes_encrypted: data.notes,
     encryption_algorithm: 'AES-GCM-256 / PBKDF2',
-    status: data.status || 'DITELAAH_DINAS',
+    status: data.status || 'LAPORAN_TERKIRIM',
     attachment_count: data.attachmentCount || 0,
     attachments_json: data.attachments || [],
     letter_document: JSON.stringify(initialReviewDoc),

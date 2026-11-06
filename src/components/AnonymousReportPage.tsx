@@ -820,7 +820,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
         name: a.name,
         sizeFormatted: a.sizeFormatted,
       })),
-      status: 'TERKIRIM_TERENKRIPSI',
+      status: 'LAPORAN_TERKIRIM',
     });
 
     // Jalankan animasi enkripsi secara santai & halus
