@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Calculator,
   Lock,
+  Clock,
 } from 'lucide-react';
 import { SCHOOLS_DATABASE, SchoolData } from '../data/schoolsData';
 import { saveAnonymousReport } from '../lib/supabase';
@@ -822,17 +823,18 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       status: 'TERKIRIM_TERENKRIPSI',
     });
 
-    // Jalankan animasi persegi 4 berbalik arah jarum jam & teks acak -> bintang (*) secara santai & halus
+    // Jalankan animasi enkripsi secara santai & halus
     setTimeout(() => {
       setIsEncrypting(false);
-      const nowFormatted =
-        new Date().toLocaleString('id-ID', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }) + ' WIB';
+      const now = new Date();
+      const dayStr = now.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const hourStr = String(now.getHours()).padStart(2, '0');
+      const minStr = String(now.getMinutes()).padStart(2, '0');
+      const nowFormatted = `${dayStr} • ${hourStr}:${minStr} WIB`;
 
       setSubmissionSuccess({
         ticketCode: ticket,
@@ -898,15 +900,15 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
          ===================================================================== */}
       {submissionSuccess ? (
         <div className="max-w-2xl mx-auto space-y-6 animate-view-enter">
-          {/* 1. Header Ucapan Terima Kasih */}
+          {/* 1. Header Bukti Penerimaan */}
           <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center space-y-3 shadow-xs">
-            <div className="w-14 h-14 rounded-full bg-[#EBF7EE] text-[#2E7D32] flex items-center justify-center mx-auto shadow-2xs">
+            <div className="w-14 h-14 rounded-full bg-[#EBF7EE] text-[#16A34A] flex items-center justify-center mx-auto shadow-2xs">
               <CheckCircle2 className="w-8 h-8 stroke-[2.2]" />
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#2E7D32]">
-                Laporan Berhasil Terkirim & Tersimpan
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#16A34A]">
+                Laporan Berhasil Dicatat & Terenkripsi
               </span>
               <h2 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B]">
                 Terima Kasih Telah Melapor!
@@ -914,19 +916,19 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
             </div>
 
             <p className="daradik-lead text-xs sm:text-sm text-[#475569] max-w-lg mx-auto leading-relaxed">
-              Terima kasih banyak atas keberanian dan kepedulian Anda. Laporan Anda sangat berharga dalam menjaga transparansi anggaran pendidikan dan melindungi hak seluruh murid.
+              Laporan Anda telah berhasil masuk ke sistem transparansi secara anonim. Simpan kode tiket pelacakan Anda di bawah ini untuk memantau perkembangan penanganan secara berkala.
             </p>
           </div>
 
-          {/* 2. Resi Lacak Kargo Card */}
-          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
-            {/* Resi Header */}
+          {/* 2. Kartu Rincian Resi Tiket & Waktu (Versi Sederhana & Rapi) */}
+          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 space-y-5 shadow-xs">
+            {/* Header Kode Tiket & Salin */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E4E0D8]">
-              <div>
+              <div className="space-y-0.5">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">
-                  NO. RESI PELACAKAN (TIKET WHISTLEBLOWING)
+                  Nomor Tiket Pelacakan Whistleblowing
                 </span>
-                <div className="font-mono text-xl sm:text-2xl font-extrabold text-[#2E6496] tracking-wide tabular-nums mt-0.5">
+                <div className="font-mono text-2xl sm:text-3xl font-extrabold text-[#2E6496] tracking-tight tabular-nums">
                   {submissionSuccess.ticketCode}
                 </div>
               </div>
@@ -938,106 +940,66 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
               >
                 {isCopied ? (
                   <>
-                    <Check className="w-4 h-4 text-[#2E7D32]" />
-                    <span className="text-[#2E7D32]">Tersalin ke Clipboard!</span>
+                    <Check className="w-4 h-4 text-[#16A34A]" />
+                    <span className="text-[#16A34A]">Tersalin ke Clipboard!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 text-[#2E6496]" />
-                    <span>Salin Kode Resi</span>
+                    <span>Salin Kode Tiket</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Cargo Tracking Progress Stepper */}
-            <div className="space-y-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">
-                STATUS PERJALANAN LAPORAN (SISTEM LACAK KARGO)
+            {/* Grid Informasi Rapi & Penempatan Waktu yang Presisi */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs">
+              <div className="space-y-1">
+                <span className="text-[11px] text-[#64748B] block font-medium">
+                  Sekolah Terlapor:
+                </span>
+                <span className="font-bold text-[#1E293B] block truncate flex items-center gap-1.5" title={submissionSuccess.schoolName}>
+                  <Building2 className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                  <span className="truncate">{submissionSuccess.schoolName}</span>
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[11px] text-[#64748B] block font-medium">
+                  Kategori Dugaan:
+                </span>
+                <span className="font-bold text-[#1E293B] block truncate" title={submissionSuccess.category}>
+                  {submissionSuccess.category}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[11px] text-[#64748B] block font-medium">
+                  Waktu Penerimaan:
+                </span>
+                <div className="flex items-center gap-1.5 text-[#1E293B] font-semibold">
+                  <Clock className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                  <span className="font-mono tabular-nums text-[#2E6496]">
+                    {submissionSuccess.timestamp}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Awal yang Sederhana & Tenang */}
+            <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] flex items-center justify-between text-xs gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0" />
+                <span className="text-[#1E293B] font-bold">
+                  Status Saat Ini: Laporan Terkirim & Terenkripsi
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md font-semibold shrink-0">
+                Tahap 1 dari 5
               </span>
-
-              <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E4E0D8]">
-                {/* Step 1: Terkirim */}
-                <div className="relative flex items-start gap-3">
-                  <span className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#2E7D32] text-white flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF]">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                  </span>
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-2">
-                      <span>Laporan Diterima & Terenkripsi</span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#EBF7EE] text-[#2E7D32]">
-                        Selesai
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      {submissionSuccess.timestamp} • Tersimpan aman di basis data
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 2: Verifikasi Dokumen */}
-                <div className="relative flex items-start gap-3">
-                  <span className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#2E6496] text-white flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF] animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-white" />
-                  </span>
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-2">
-                      <span>Verifikasi Berkas Inspektorat</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#EBF3F8] text-[#2E6496]">
-                        Dalam Antrean
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      Menunggu telaah auditor independen Dinas Pendidikan
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 3: Investigasi Lapangan */}
-                <div className="relative flex items-start gap-3 opacity-60">
-                  <span className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#E4E0D8] text-[#64748B] flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF]">
-                    3
-                  </span>
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-[#1E293B]">
-                      Klarifikasi & Pemeriksaan Sekolah
-                    </div>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      Pencocokan realisasi SPJ BOSP dengan keterangan pelapor
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 4: Rekomendasi Sanksi */}
-                <div className="relative flex items-start gap-3 opacity-60">
-                  <span className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#E4E0D8] text-[#64748B] flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF]">
-                    4
-                  </span>
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-[#1E293B]">
-                      Putusan Tindak Lanjut & Rekomendasi
-                    </div>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      Penerbitan surat teguran dan instruksi pengembalian pungutan
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Ringkasan Data Kiriman */}
-            <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="text-[#64748B] block text-[11px]">Sekolah Tujuan:</span>
-                <span className="font-bold text-[#1E293B]">{submissionSuccess.schoolName}</span>
-              </div>
-              <div>
-                <span className="text-[#64748B] block text-[11px]">Jenis Pungutan:</span>
-                <span className="font-bold text-[#1E293B]">{submissionSuccess.category}</span>
-              </div>
-            </div>
-
-            {/* Tombol Lacak */}
+            {/* Tombol Aksi */}
             <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
               <button
                 type="button"
