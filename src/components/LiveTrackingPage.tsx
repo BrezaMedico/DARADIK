@@ -726,7 +726,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       {/* Container Bersih Sederhana Max-W-3XL */}
       <div className="max-w-3xl mx-auto space-y-6 sm:space-y-7">
         {/* Navigasi Atas */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={onBackToHome}
@@ -736,33 +736,19 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
             <span>Kembali ke Beranda</span>
           </button>
 
-          <div className="flex items-center gap-2">
-            {onOpenDinasPortal && (
-              <button
-                type="button"
-                onClick={onOpenDinasPortal}
-                className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-[#EBF3F8] hover:bg-[#DCEBF4] border border-[#2E6496]/20 text-xs font-semibold text-[#2E6496] cursor-pointer transition-colors flex items-center gap-1.5"
-                title="Buka Portal Pengawas Dinas Pendidikan"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#2E6496]" />
-                <span>Portal Pengawas Dinas</span>
-              </button>
-            )}
-
-            {activeTicket && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTicket('');
-                  setTicketInput('');
-                  setCurrentReportData(null);
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
-              >
-                Lacak Tiket Lain
-              </button>
-            )}
-          </div>
+          {activeTicket && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTicket('');
+                setTicketInput('');
+                setCurrentReportData(null);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
+            >
+              Lacak Tiket Lain
+            </button>
+          )}
         </div>
 
         {/* Form Pencarian Tiket (Sederhana & Bersih) */}

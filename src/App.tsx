@@ -59,12 +59,21 @@ export function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
     if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname.toLowerCase();
       const params = new URLSearchParams(window.location.search);
       const npsnParam = params.get('npsn');
       const viewParam = params.get('view');
       const dinasParam = params.get('dinas');
+      const adminParam = params.get('admin');
 
-      if (viewParam === 'dinas' || dinasParam === 'true') {
+      if (
+        pathname === '/admin' ||
+        pathname === '/admin/' ||
+        window.location.hash === '#admin' ||
+        adminParam === 'true' ||
+        viewParam === 'dinas' ||
+        dinasParam === 'true'
+      ) {
         setCurrentView('dinas-dashboard');
       } else if (npsnParam) {
         const matched = SCHOOLS_DATABASE.find(
@@ -151,6 +160,22 @@ export function App() {
     }, 4000);
   }, []);
 
+  // URL & Browser History Sync untuk /admin
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const pathname = window.location.pathname.toLowerCase();
+      if (pathname === '/admin' || pathname === '/admin/' || window.location.hash === '#admin') {
+        setCurrentView('dinas-dashboard');
+      } else if (pathname === '/' || pathname === '') {
+        setCurrentView('landing');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const navigateTo = useCallback(
     (view: AppView) => {
       setCurrentView((prev) => {
@@ -159,6 +184,18 @@ export function App() {
         }
         return view;
       });
+
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname.toLowerCase();
+        if (view === 'dinas-dashboard') {
+          if (currentPath !== '/admin') {
+            window.history.pushState(null, '', '/admin');
+          }
+        } else if (currentPath === '/admin' || currentPath === '/admin/') {
+          window.history.pushState(null, '', '/');
+        }
+      }
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     []
@@ -167,6 +204,12 @@ export function App() {
   const handleGoBack = useCallback(() => {
     setViewHistory([]);
     setCurrentView('landing');
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname.toLowerCase();
+      if (currentPath === '/admin' || currentPath === '/admin/') {
+        window.history.pushState(null, '', '/');
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -311,21 +354,6 @@ export function App() {
               <span>Lacak Lapor</span>
             </button>
 
-            {/* Nav Item: Portal Dinas */}
-            <button
-              type="button"
-              onClick={() => navigateTo('dinas-dashboard')}
-              className={`nav-link-interactive px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'dinas-dashboard'
-                  ? 'text-[#2E6496] bg-[#C9DFDC]/55'
-                  : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
-              }`}
-              title="Portal Pengawas & Auditor Dinas Pendidikan"
-            >
-              <ShieldCheck className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
-              <span>Portal Dinas</span>
-            </button>
-
             {/* Primary CTA Button: Lapor */}
             <button
               type="button"
@@ -463,7 +491,6 @@ export function App() {
               onBackToHome={() => navigateTo('landing')}
               onBackToSchoolProfile={() => navigateTo('school-profile')}
               onOpenAnonymousReport={handleOpenReportFromHeader}
-              onOpenDinasPortal={() => navigateTo('dinas-dashboard')}
               onShowToast={showToast}
             />
           </div>
@@ -605,16 +632,6 @@ export function App() {
                     >
                       <Flag className="w-3.5 h-3.5" />
                       <span>Kirim Laporan Anonim</span>
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => navigateTo('dinas-dashboard')}
-                      className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:text-[#245385] transition-colors text-left cursor-pointer"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Portal Pengawas Dinas</span>
                     </button>
                   </li>
                 </ul>
