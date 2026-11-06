@@ -195,19 +195,6 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
     }
   };
 
-  // Preset sample texts
-  const handleLoadSample = (sampleType: 'kipas' | 'kaos') => {
-    if (sampleType === 'kipas') {
-      const s = `Bapak/ibu wali murid, karena ruang kelas panas, disepakati iuran Rp 50.000 per siswa untuk beli kipas angin dinding kelas. Mohon ditransfer paling lambat hari Jumat ke rekening bendahara.`;
-      setPastedText(s);
-      handleAnalyzeDirectText(s);
-    } else {
-      const s = `Selamat siang bapak/ibu wali murid. Untuk pembuatan kaos kelas dan seragam angkatan, diwajibkan membayar uang kas Rp 150.000 per anak sebelum tanggal 15.`;
-      setPastedText(s);
-      handleAnalyzeDirectText(s);
-    }
-  };
-
   // Reset view
   const handleResetScan = () => {
     setOcrScanResult(null);
@@ -388,39 +375,21 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               </div>
 
               <textarea
-                rows={3}
+                rows={4}
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Tempel pesan dari guru di sini (misal: 'Mohon transfer iuran kipas angin Rp 50.000 paling lambat hari Jumat...')"
-                className="w-full p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] text-xs sm:text-sm text-[#1E293B] placeholder-[#94A3B8] focus:outline-none focus:border-[#2E6496] leading-relaxed resize-none"
+                placeholder="Tempelkan pesan atau pengumuman iuran dari grup chat di sini untuk memeriksa keselarasan dengan data BOSP..."
+                className="w-full p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] text-xs sm:text-sm text-[#1E293B] placeholder-[#94A3B8] focus:outline-none focus:border-[#2E6496] leading-relaxed resize-none"
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-1.5 text-[11px] text-[#64748B]">
-                  <span>Contoh:</span>
-                  <button
-                    type="button"
-                    onClick={() => handleLoadSample('kipas')}
-                    className="px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] hover:bg-[#EBF3F8] font-medium cursor-pointer transition-colors"
-                  >
-                    Kipas Angin (Rp 50rb)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleLoadSample('kaos')}
-                    className="px-2.5 py-1 rounded-md bg-[#FFFFFF] border border-[#C9DFDC] text-[#475569] hover:bg-[#FAF8F5] font-medium cursor-pointer transition-colors"
-                  >
-                    Kaos Kelas (Rp 150rb)
-                  </button>
-                </div>
-
+              <div className="flex items-center justify-end pt-1">
                 <button
                   type="button"
                   disabled={!pastedText.trim()}
                   onClick={() => handleAnalyzeDirectText()}
-                  className="school-btn-primary px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-40"
+                  className="school-btn-primary px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-40"
                 >
-                  <span>Periksa Teks</span>
+                  <span>Periksa Teks Pesan</span>
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </div>

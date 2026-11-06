@@ -163,8 +163,7 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
     if (parsedDoc?.verdict_type) {
       setSelectedVerdict(parsedDoc.verdict_type);
     } else {
-      const lastDigit = parseInt(report.ticket_code.replace(/\D/g, '').slice(-1) || '0', 10);
-      setSelectedVerdict(lastDigit % 2 === 0 ? 'TERBUKTI' : 'TIDAK_TERBUKTI');
+      setSelectedVerdict('TERBUKTI');
     }
 
     if (parsedDoc?.admin_notes) {

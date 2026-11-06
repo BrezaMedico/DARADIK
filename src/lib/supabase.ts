@@ -532,9 +532,9 @@ export async function fetchAllAnonymousReportsFromSupabase(): Promise<
       .from('anonymous_reports')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(100);
 
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       return data.map((item) => ({
         ...(item as AnonymousReportRecord),
         notes: (item as AnonymousReportRecord).notes_encrypted,
@@ -544,8 +544,7 @@ export async function fetchAllAnonymousReportsFromSupabase(): Promise<
     console.warn('[Supabase fetchAllReports error]', err);
   }
 
-  const localList = getSavedReportsFromStorage();
-  return localList as unknown as AnonymousReportRecord[];
+  return [];
 }
 
 /**
@@ -669,7 +668,16 @@ export function getSavedReportsFromStorage(): Record<string, unknown>[] {
   try {
     if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem('daradik_saved_reports');
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Hapus data uji coba / tester yang tidak valid
+    return parsed.filter((r) => {
+      const code = String(r.ticket_code || '');
+      const notes = String(r.notes || r.notes_encrypted || '').toLowerCase();
+      const isTest = /^(test|testing|coba|percobaan|uji coba|dummy|asdf)/i.test(notes.trim());
+      return code.startsWith('CHK-') && !isTest;
+    });
   } catch {
     return [];
   }

@@ -1390,47 +1390,6 @@ export interface WaScenarioData {
   primaryButtonLabel: string;
 }
 
-export const WA_SCENARIOS: Record<'scenario-a' | 'scenario-b', WaScenarioData> = {
-  'scenario-a': {
-    id: 'scenario-a',
-    buttonLabel: 'Contoh Screenshot 1: Iuran Kipas & Pendingin Lab SIJA (Tumpang Tindih)',
-    shortTitle: 'Skenario A — Tumpang Tindih BOSP',
-    fileName: 'Screenshot_Grup_WaliMurid_SMK_BAZMA.jpg',
-    groupName: 'Paguyuban Wali Murid SMK TI BAZMA Angkatan X',
-    timestamp: 'Hari ini, 08:14 WIB',
-    statusType: 'danger',
-    statusHeader: 'STATUS AI: TERDETEKSI INDIKASI TUMPANG TINDIH',
-    ocrQuote:
-      'Assalamualaikum Bapak/Ibu wali santri SMK TI BAZMA, sesuai rapat paguyuban, dimohon transfer iuran kipas angin dan pendingin lab komputer sebesar Rp 50.000/siswa paling lambat Jumat ini ke rek bendahara ya...',
-    bospFact:
-      'SMK TI BAZMA SUDAH menganggarkan dan mencairkan Rp 14.500.000 pada BOSP Tahap 2 (12 Oktober 2026) untuk pembelian Kipas Angin Dinding & Exhaust Lab Komputer (RKAS-02.04.11).',
-    reportCategoryPrefill:
-      'Iuran Kipas Angin Lab (Tumpang Tindih dengan Dana BOSP Rp 14.500.000)',
-    attachmentLabel: '1 Foto Screenshot WA (Tersensor Otomatis)',
-    primaryButtonLabel: 'Kirim Laporan Anonim Sekarang',
-  },
-  'scenario-b': {
-    id: 'scenario-b',
-    buttonLabel: 'Contoh Screenshot 2: Kas Acara Outing & Kaos Angkatan (Non-BOSP)',
-    shortTitle: 'Skenario B — Tidak Ada di RKAS BOSP',
-    fileName: 'Screenshot_Grup_KaosAngkatan.jpg',
-    groupName: 'Paguyuban Wali Murid SMK TI BAZMA Angkatan X',
-    timestamp: 'Kemarin, 19:20 WIB',
-    statusType: 'safe',
-    statusHeader: 'STATUS AI: TIDAK ADA DI PENGAJUAN BOSP',
-    ocrQuote:
-      'Bapak/Ibu wali murid, untuk kaos seragam jalan santai angkatan dan kas santri, ada usulan iuran sukarela Rp 35.000...',
-    bospFact:
-      'Item ini tidak ditemukan dalam daftar pengajuan anggaran BOSP SMK TI BAZMA tahun berjalan (Tidak tumpang tindih dengan dana BOSP).',
-    legalReminder:
-      'Pengingat Regulasi: Berdasarkan Permendikbud No. 75 Tahun 2016, kegiatan non-BOSP dilarang bersifat wajib atau mengikat. Jika penarikan ini bersifat memaksa, Anda tetap berhak melaporkannya.',
-    reportCategoryPrefill:
-      'Laporan Pungutan Mengikat di Luar RKAS (Kaos Angkatan Rp 35.000/siswa)',
-    attachmentLabel: '1 Foto Screenshot WA (Tersensor Otomatis)',
-    primaryButtonLabel: 'Tetap Laporkan Pungutan Ini',
-  },
-};
-
 export interface KamusBospItem {
   title: string;
   detail: string;

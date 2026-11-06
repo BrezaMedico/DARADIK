@@ -318,7 +318,14 @@ function getStoredTrackedHistory(): TrackedReportItem[] {
     const raw = fromCookie || fromStorage;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => {
+          const code = String(item.ticketCode || '');
+          const notes = String(item.notes || '').toLowerCase();
+          const isTest = /^(test|testing|coba|percobaan|uji coba|dummy|asdf)/i.test(notes.trim());
+          return code.startsWith('CHK-') && !isTest;
+        });
+      }
     }
   } catch {
     // fallback
@@ -538,9 +545,8 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     setIsLoadingReport(true);
     const cleaned = code.trim().toUpperCase();
 
-    // Tentukan ragam putusan: angka genap = TERBUKTI (merah), ganjil = TIDAK_TERBUKTI (hijau aman)
-    const lastDigit = parseInt(cleaned.replace(/\D/g, '').slice(-1) || '0', 10);
-    setVerdictType(lastDigit % 2 === 0 ? 'TERBUKTI' : 'TIDAK_TERBUKTI');
+    // Reset default putusan (hanya berubah jika diatur resmi oleh dinas)
+    setVerdictType('TIDAK_TERBUKTI');
 
     try {
       const remote = await fetchAnonymousReportByTicket(cleaned);
@@ -640,20 +646,8 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       setCurrentStageStep(calculatedStep);
       saveTrackedItemToHistory(updatedFound);
     } else {
-      const nowIso = new Date().toISOString();
-      const fallbackItem: TrackedReportItem = {
-        ticketCode: cleaned,
-        schoolName: school.name || 'SMK TI BAZMA',
-        schoolNpsn: school.npsn || '70029710',
-        category: reportCategory || 'Dugaan Pungutan',
-        date: nowIso,
-        createdAtRaw: nowIso,
-        status: 'LAPORAN_TERKIRIM',
-        notes: reporterNote,
-      };
-      setCurrentReportData(fallbackItem);
-      setCurrentStageStep(1);
-      saveTrackedItemToHistory(fallbackItem);
+      setCurrentReportData(null);
+      setTicketError(`Nomor tiket ${cleaned} tidak ditemukan dalam basis data resmi. Pastikan kode tiket yang Anda masukkan sudah benar.`);
     }
 
     setIsLoadingReport(false);
