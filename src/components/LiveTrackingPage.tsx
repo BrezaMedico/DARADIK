@@ -21,7 +21,6 @@ import {
   supabase,
   getSavedReportsFromStorage,
   fetchAnonymousReportByTicket,
-  fetchAllAnonymousReportsFromSupabase,
   AdminReviewDocument,
 } from '../lib/supabase';
 
@@ -342,11 +341,8 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   const [copiedTicket, setCopiedTicket] = useState<boolean>(false);
   const [isLoadingReport, setIsLoadingReport] = useState<boolean>(false);
 
-  // 2. State Riwayat & Daftar Supabase
+  // 2. State Riwayat Cookie Pengguna (Hanya tampil di perangkat masing-masing)
   const [historyList, setHistoryList] = useState<TrackedReportItem[]>([]);
-  const [supabaseReportsList, setSupabaseReportsList] = useState<
-    TrackedReportItem[]
-  >([]);
 
   // 3. State Data Laporan Aktif
   const [currentReportData, setCurrentReportData] =
@@ -360,9 +356,9 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   // TIDAK_TERBUKTI = Hijau (aman & sesuai ketentuan komite)
   const [verdictType, setVerdictType] = useState<'TERBUKTI' | 'TIDAK_TERBUKTI'>('TERBUKTI');
 
-  // Load Riwayat & Supabase Reports saat Mount
+  // Load Riwayat Cookie Pengguna saat Mount
   useEffect(() => {
-    loadLocalAndSupabaseData();
+    loadLocalCookieData();
   }, [ticketCode]);
 
   // Realtime Supabase Subscription: mendengarkan pembaruan status laporan secara langsung
@@ -417,7 +413,8 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     };
   }, [activeTicket]);
 
-  const loadLocalAndSupabaseData = async () => {
+  // Memuat data riwayat murni dari Cookie dan LocalStorage perangkat masing-masing
+  const loadLocalCookieData = () => {
     const cookieHistory = getStoredTrackedHistory();
     const savedReports = getSavedReportsFromStorage();
 
@@ -447,39 +444,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
     const localItems = Array.from(mergedMap.values());
     setHistoryList(localItems);
-
-    try {
-      const spReports = await fetchAllAnonymousReportsFromSupabase();
-      if (spReports && spReports.length > 0) {
-        const formatted: TrackedReportItem[] = spReports.map((r) => {
-          let parsedDoc: AdminReviewDocument | null = null;
-          if (r.letter_document) {
-            try {
-              parsedDoc =
-                typeof r.letter_document === 'string'
-                  ? JSON.parse(r.letter_document)
-                  : r.letter_document;
-            } catch {
-              // ignore
-            }
-          }
-          return {
-            ticketCode: r.ticket_code,
-            schoolName: r.school_name,
-            schoolNpsn: r.school_npsn,
-            category: r.category,
-            date: r.created_at,
-            createdAtRaw: r.created_at,
-            status: r.status || 'LAPORAN_TERKIRIM',
-            notes: r.notes || r.notes_encrypted || '',
-            letterDocument: parsedDoc,
-          };
-        });
-        setSupabaseReportsList(formatted);
-      }
-    } catch (err) {
-      console.warn('[Supabase Live Tracking]', err);
-    }
 
     if (ticketCode) {
       setTicketInput(ticketCode);
@@ -778,44 +742,42 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {(supabaseReportsList.length > 0 ? supabaseReportsList : historyList)
-                .slice(0, 6)
-                .map((item) => (
-                  <div
-                    key={item.ticketCode}
-                    className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] hover:border-[#2E6496]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md">
-                          {item.ticketCode}
-                        </span>
-                        <span className="text-[#64748B] text-[11px] font-mono tabular-nums">
-                          {formatReportDateTime(item.date).dateFormatted}
-                        </span>
-                      </div>
-                      <div className="font-bold text-[#1E293B] text-xs sm:text-sm">
-                        {item.schoolName}
-                      </div>
-                      <div className="text-[11px] text-[#475569]">
-                        {item.category}
-                      </div>
+              {historyList.slice(0, 6).map((item) => (
+                <div
+                  key={item.ticketCode}
+                  className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] hover:border-[#2E6496]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md">
+                        {item.ticketCode}
+                      </span>
+                      <span className="text-[#64748B] text-[11px] font-mono tabular-nums">
+                        {formatReportDateTime(item.date).dateFormatted}
+                      </span>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTicket(item)}
-                      className="px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-all cursor-pointer shadow-2xs self-start sm:self-auto"
-                    >
-                      Buka Lacak
-                    </button>
+                    <div className="font-bold text-[#1E293B] text-xs sm:text-sm">
+                      {item.schoolName}
+                    </div>
+                    <div className="text-[11px] text-[#475569]">
+                      {item.category}
+                    </div>
                   </div>
-                ))}
 
-              {supabaseReportsList.length === 0 && historyList.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTicket(item)}
+                    className="px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-all cursor-pointer shadow-2xs self-start sm:self-auto"
+                  >
+                    Buka Lacak
+                  </button>
+                </div>
+              ))}
+
+              {historyList.length === 0 && (
                 <div className="p-8 text-center space-y-2">
                   <p className="text-xs text-[#64748B]">
-                    Belum ada riwayat pelaporan di perangkat ini.
+                    Belum ada riwayat pelaporan pada cookie perangkat ini.
                   </p>
                   {onOpenAnonymousReport && (
                     <button

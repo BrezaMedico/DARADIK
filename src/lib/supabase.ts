@@ -442,7 +442,7 @@ export async function saveAnonymousReport(
     notes: data.notes,
   };
 
-  // 1. Simpan salinan lokal ke LocalStorage agar selalu instan
+  // 1. Simpan salinan lokal ke LocalStorage & Cookie perangkat pelapor
   try {
     if (typeof localStorage !== 'undefined') {
       const existingStr = localStorage.getItem('daradik_saved_reports');
@@ -455,11 +455,36 @@ export async function saveAnonymousReport(
       ];
       localStorage.setItem('daradik_saved_reports', JSON.stringify(updated));
     }
+
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(
+        new RegExp('(^| )daradik_tracked_tickets=([^;]+)')
+      );
+      const existingCookie = match ? JSON.parse(decodeURIComponent(match[2])) : [];
+      const updatedCookie = [
+        {
+          ticketCode: data.ticketCode,
+          schoolName: data.schoolName,
+          schoolNpsn: data.schoolNpsn,
+          category: data.category,
+          date: timestamp,
+          createdAtRaw: timestamp,
+          status: data.status || 'LAPORAN_TERKIRIM',
+          notes: data.notes,
+        },
+        ...existingCookie.filter((i: { ticketCode?: string }) => i.ticketCode !== data.ticketCode),
+      ].slice(0, 10);
+      const expDate = new Date();
+      expDate.setTime(expDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+      document.cookie = `daradik_tracked_tickets=${encodeURIComponent(
+        JSON.stringify(updatedCookie)
+      )};expires=${expDate.toUTCString()};path=/;SameSite=Lax`;
+    }
   } catch (err) {
-    console.warn('[LocalStorage] Gagal menyimpan salinan laporan:', err);
+    console.warn('[LocalStorage/Cookie] Gagal menyimpan salinan laporan:', err);
   }
 
-  // 2. Simpan ke tabel Supabase 'anonymous_reports'
+  // 2. Simpan ke tabel Supabase 'anonymous_reports' agar dapat diperiksa oleh dinas kependidikan
   try {
     const { error } = await supabase
       .from('anonymous_reports')
