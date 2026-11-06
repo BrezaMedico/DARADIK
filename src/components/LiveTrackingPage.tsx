@@ -16,7 +16,6 @@ import {
   Trash2,
   ArrowRight,
   ShieldCheck,
-  Sparkles,
   Scale,
   FileCheck,
   FileText,
@@ -24,16 +23,19 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  FileBadge2,
+  BadgeCheck,
+  Sparkles,
 } from 'lucide-react';
 import { SchoolData, SMK_TI_BAZMA } from '../data/schoolsData';
 import {
+  supabase,
   getSavedReportsFromStorage,
   fetchAnonymousReportByTicket,
   fetchAllAnonymousReportsFromSupabase,
   updateReportByDinas,
   AnonymousReportRecord,
   AdminReviewDocument,
-  InspectionChatMessage,
 } from '../lib/supabase';
 
 interface ChatMessage {
@@ -54,6 +56,92 @@ export interface TrackedReportItem {
   notes?: string;
   attachments?: { name: string; sizeFormatted: string }[];
   letterDocument?: AdminReviewDocument | null;
+}
+
+export interface TrackingStage {
+  step: number;
+  key: string;
+  label: string;
+  sublabel: string;
+  description: string;
+}
+
+export const TRACKING_STAGES: TrackingStage[] = [
+  {
+    step: 1,
+    key: 'LAPORAN_TERKIRIM',
+    label: 'Laporan Terkirim',
+    sublabel: 'Terenkripsi',
+    description: 'Laporan warga diterima secara aman melalui protokol sandi tanpa rekaman identitas.',
+  },
+  {
+    step: 2,
+    key: 'MENUNGGU_VERIFIKASI',
+    label: 'Menunggu Verifikasi',
+    sublabel: 'Antrean Dinas',
+    description: 'Laporan masuk antrean pengawasan BOSP Dinas Pendidikan & Inspektorat Daerah.',
+  },
+  {
+    step: 3,
+    key: 'VERIFIKASI_LAPORAN',
+    label: 'Verifikasi Laporan',
+    sublabel: 'Telaah Bukti',
+    description: 'Auditor meneliti kesesuaian bukti pungutan dengan SPJ dan petunjuk teknis BOSP.',
+  },
+  {
+    step: 4,
+    key: 'PEMERIKSAAN_LAPANGAN',
+    label: 'Pemeriksaan Lapangan',
+    sublabel: 'Sidak & Klarifikasi',
+    description: 'Tim pengawas memanggil pihak sekolah atau melakukan sidak verifikasi langsung.',
+  },
+  {
+    step: 5,
+    key: 'TINDAK_LANJUT_SELESAI',
+    label: 'Tindak Lanjut Selesai',
+    sublabel: 'Selesai & Tuntas',
+    description: 'Pungutan dinyatakan tidak sah dan dana wajib dikembalikan penuh ke orang tua murid.',
+  },
+];
+
+export function getStageNumber(status: string): number {
+  const norm = (status || '').trim().toUpperCase();
+  switch (norm) {
+    case 'TINDAK_LANJUT_SELESAI':
+    case 'SELESAI':
+    case 'SELESAI_DIKLARIFIKASI':
+      return 5;
+    case 'PEMERIKSAAN_LAPANGAN':
+    case 'KLARIFIKASI_SEKOLAH':
+    case 'AUDIT_LAPANGAN':
+      return 4;
+    case 'VERIFIKASI_LAPORAN':
+    case 'DITELAAH_DINAS':
+      return 3;
+    case 'MENUNGGU_VERIFIKASI':
+      return 2;
+    case 'LAPORAN_TERKIRIM':
+    case 'TERKIRIM_TERENKRIPSI':
+    default:
+      return 1;
+  }
+}
+
+export function getDefaultDinasResponse(stageNum: number, schoolName: string): string {
+  switch (stageNum) {
+    case 1:
+      return `Laporan dugaan pungutan di ${schoolName} telah diterima melalui saluran aman DARADIK. Sistem telah menerbitkan kode registrasi dan menyalurkannya ke dashboard Dinas Pendidikan.`;
+    case 2:
+      return `Laporan untuk ${schoolName} saat ini masuk dalam antrean telaah pengawas pembina wilayah. Petugas sedang mengumpulkan riwayat penyaluran dana BOSP tahun berjalan.`;
+    case 3:
+      return `Tim Verifikator BOSP Dinas Pendidikan sedang memverifikasi berkas laporan bersama bukti kuitansi yang dilampirkan. Tim membandingkan dengan Berita Acara Pemeriksaan BOSP sekolah terlapor.`;
+    case 4:
+      return `Tim Auditor Investigasi Inspektorat Daerah telah menerbitkan Surat Tugas Resmi untuk memanggil Kepala Sekolah dan Komite ${schoolName}. Pemeriksaan rekening penampung dan klarifikasi SPJ sedang berlangsung.`;
+    case 5:
+      return `Pemeriksaan selesai. Berdasarkan hasil audit tim gabungan Dinas Pendidikan dan Inspektorat, pemungutan dana dinyatakan melanggar Permendikbudristek No. 63/2022. Pihak sekolah telah diinstruksikan mengembalikan 100% dana kepada wali murid dalam waktu 7 hari kerja.`;
+    default:
+      return `Laporan sedang diproses sesuai prosedur pengawasan BOSP.`;
+  }
 }
 
 interface LiveTrackingPageProps {
@@ -134,32 +222,89 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   // 2. State Riwayat & Daftar Supabase
   const [historyList, setHistoryList] = useState<TrackedReportItem[]>([]);
   const [supabaseReportsList, setSupabaseReportsList] = useState<TrackedReportItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'local' | 'supabase'>('supabase');
+  const [activeTab, setActiveTab] = useState<'supabase' | 'local'>('supabase');
 
   // 3. State Data Laporan Aktif
   const [currentReportData, setCurrentReportData] = useState<TrackedReportItem | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<string>('DITELAAH_DINAS');
+  const [currentStatus, setCurrentStatus] = useState<string>('MENUNGGU_VERIFIKASI');
 
   // 4. State Chat 2 Arah
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [replyInput, setReplyInput] = useState<string>('');
   const [replyError, setReplyError] = useState<string | null>(null);
 
-  // 5. State Panel Petugas / Admin Dinas Pendidikan (Verifikator Resmi)
+  // 5. State Panel Dinas Pendidikan (Pengatur Status Realtime)
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState<boolean>(true);
-  const [selectedAdminStatus, setSelectedAdminStatus] = useState<string>('KLARIFIKASI_SEKOLAH');
+  const [selectedAdminStatus, setSelectedAdminStatus] = useState<string>('VERIFIKASI_LAPORAN');
   const [adminOfficerName, setAdminOfficerName] = useState<string>(
     'Tim Verifikator BOSP Dinas Pendidikan & Inspektorat'
   );
-  const [adminOfficialNote, setAdminOfficialNote] = useState<string>(
-    'Pengawas Pembina telah memanggil Kepala Sekolah dan Komite. Dilakukan penelaahan silang terhadap dokumen SPJ BOSP dan rekening resmi sekolah.'
-  );
+  const [adminOfficialNote, setAdminOfficialNote] = useState<string>('');
   const [isSubmittingAdminReview, setIsSubmittingAdminReview] = useState<boolean>(false);
 
   // Load Riwayat & Supabase Reports saat Mount
   useEffect(() => {
     loadLocalAndSupabaseData();
   }, [ticketCode]);
+
+  // Realtime Supabase Subscription
+  useEffect(() => {
+    if (!activeTicket) return;
+
+    // Supabase Realtime Listener untuk tiket yang sedang aktif
+    const channel = supabase
+      .channel(`realtime-tracking-${activeTicket}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'anonymous_reports',
+          filter: `ticket_code=eq.${activeTicket.trim().toUpperCase()}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            const row = payload.new as Record<string, unknown>;
+            const newStatus = String(row.status || 'MENUNGGU_VERIFIKASI');
+            setCurrentStatus(newStatus);
+            setSelectedAdminStatus(newStatus);
+
+            let parsedDoc: AdminReviewDocument | null = null;
+            if (row.letter_document) {
+              try {
+                parsedDoc =
+                  typeof row.letter_document === 'string'
+                    ? JSON.parse(row.letter_document)
+                    : (row.letter_document as AdminReviewDocument);
+              } catch {
+                // ignore
+              }
+            }
+
+            setCurrentReportData((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: newStatus,
+                    letterDocument: parsedDoc,
+                  }
+                : null
+            );
+
+            if (parsedDoc?.chat_messages && parsedDoc.chat_messages.length > 0) {
+              setMessages(parsedDoc.chat_messages);
+            }
+
+            onShowToast(`Status laporan diperbarui secara realtime: ${newStatus}`);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeTicket]);
 
   const loadLocalAndSupabaseData = async () => {
     const cookieHistory = getStoredTrackedHistory();
@@ -183,7 +328,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 year: 'numeric',
               })
             : 'Baru saja',
-          status: String(r.status || 'DITELAAH_DINAS'),
+          status: String(r.status || 'MENUNGGU_VERIFIKASI'),
           notes: String(r.notes || ''),
         });
       }
@@ -227,7 +372,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                   year: 'numeric',
                 })
               : 'Hari ini',
-            status: r.status || 'DITELAAH_DINAS',
+            status: r.status || 'MENUNGGU_VERIFIKASI',
             notes: r.notes || r.notes_encrypted || '',
             letterDocument: parsedDoc,
           };
@@ -238,7 +383,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       console.warn('[Supabase Live Tracking]', err);
     }
 
-    // Jika ada ticketCode aktif dari prop, muat data; jika kosong, reset
     if (ticketCode) {
       setTicketInput(ticketCode);
       setActiveTicket(ticketCode);
@@ -250,13 +394,12 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     }
   };
 
-  // Resolusi data tiket secara komprehensif (Supabase -> Local -> Fallback)
+  // Resolusi data tiket secara komprehensif
   const resolveTicketData = async (code: string, fallbackList?: TrackedReportItem[]) => {
     setIsLoadingReport(true);
     const cleaned = code.trim().toUpperCase();
 
     try {
-      // 1. Coba ambil dari database Supabase
       const remote = await fetchAnonymousReportByTicket(cleaned);
       if (remote) {
         let parsedDoc: AdminReviewDocument | null = null;
@@ -295,7 +438,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 year: 'numeric',
               })
             : 'Baru saja',
-          status: remote.status || 'DITELAAH_DINAS',
+          status: remote.status || 'MENUNGGU_VERIFIKASI',
           notes: remote.notes || remote.notes_encrypted || '',
           attachments: parsedAttachments,
           letterDocument: parsedDoc,
@@ -304,6 +447,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
         setCurrentReportData(resolvedItem);
         setCurrentStatus(resolvedItem.status);
         setSelectedAdminStatus(resolvedItem.status);
+        setAdminOfficialNote(
+          parsedDoc?.admin_notes ||
+            getDefaultDinasResponse(getStageNumber(resolvedItem.status), resolvedItem.schoolName)
+        );
         buildChatStream(resolvedItem, parsedDoc);
         saveTrackedItemToHistory(resolvedItem);
         setIsLoadingReport(false);
@@ -313,18 +460,20 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       console.warn('[Resolve Ticket Remote]', err);
     }
 
-    // 2. Coba cari di memori lokal
     const currentList = fallbackList || historyList;
     const found = currentList.find((i) => i.ticketCode.toUpperCase() === cleaned);
 
     if (found) {
       setCurrentReportData(found);
-      setCurrentStatus(found.status || 'DITELAAH_DINAS');
-      setSelectedAdminStatus(found.status || 'DITELAAH_DINAS');
+      setCurrentStatus(found.status || 'MENUNGGU_VERIFIKASI');
+      setSelectedAdminStatus(found.status || 'MENUNGGU_VERIFIKASI');
+      setAdminOfficialNote(
+        found.letterDocument?.admin_notes ||
+          getDefaultDinasResponse(getStageNumber(found.status), found.schoolName)
+      );
       buildChatStream(found, found.letterDocument);
       saveTrackedItemToHistory(found);
     } else {
-      // 3. Fallback baru
       const fallbackItem: TrackedReportItem = {
         ticketCode: cleaned,
         schoolName: school.name || 'SMK TI BAZMA',
@@ -335,12 +484,15 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           month: 'short',
           year: 'numeric',
         }),
-        status: 'DITELAAH_DINAS',
+        status: 'MENUNGGU_VERIFIKASI',
         notes: reporterNote,
       };
       setCurrentReportData(fallbackItem);
-      setCurrentStatus('DITELAAH_DINAS');
-      setSelectedAdminStatus('DITELAAH_DINAS');
+      setCurrentStatus('MENUNGGU_VERIFIKASI');
+      setSelectedAdminStatus('MENUNGGU_VERIFIKASI');
+      setAdminOfficialNote(
+        getDefaultDinasResponse(getStageNumber('MENUNGGU_VERIFIKASI'), fallbackItem.schoolName)
+      );
       buildChatStream(fallbackItem);
       saveTrackedItemToHistory(fallbackItem);
     }
@@ -352,7 +504,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     item: TrackedReportItem,
     doc?: AdminReviewDocument | null
   ) => {
-    // Jika ada percakapan tersimpan di dokumen telaah Supabase
     if (doc?.chat_messages && doc.chat_messages.length > 0) {
       setMessages(doc.chat_messages);
       return;
@@ -360,26 +511,26 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
     const msgs: ChatMessage[] = [];
 
-    // Catatan awal pelapor
     if (item.notes && item.notes.trim()) {
       msgs.push({
         id: 'msg-initial-note',
         sender: 'reporter',
         senderLabel: 'Catatan Pelapor (Terenkripsi)',
-        timestamp: `${item.date}, Pengiriman`,
+        timestamp: `${item.date}, Waktu Kirim`,
         text: item.notes.trim(),
       });
     }
 
-    // Tanggapan awal sistem / dinas
+    const stageNum = getStageNumber(item.status);
+    const officialText =
+      doc?.admin_notes || getDefaultDinasResponse(stageNum, item.schoolName);
+
     msgs.push({
       id: 'msg-dinas-initial',
       sender: 'dinas',
       senderLabel: doc?.verified_by || 'Tim Verifikator Inspektorat & Dinas Pendidikan',
       timestamp: 'Waktu Telaah',
-      text:
-        doc?.admin_notes ||
-        `Laporan untuk ${item.schoolName} telah teregistrasi dalam sistem pengawasan dana BOSP. Pengawas pembina sedang memverifikasi Berita Acara Pemeriksaan bersama inspektorat daerah.`,
+      text: officialText,
     });
 
     setMessages(msgs);
@@ -396,7 +547,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     }
 
     if (!cleaned.startsWith('CHK-') && cleaned.length < 8) {
-      setTicketError('Format tiket tidak sesuai. Contoh resmi: CHK-2026-8849-BGR');
+      setTicketError('Format tiket tidak sesuai. Contoh: CHK-2026-8849-BGR');
       return;
     }
 
@@ -468,21 +619,27 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     onShowToast('Pesan balasan anonim Anda telah ditambahkan.');
   };
 
-  // Simpan Tindak Lanjut Resmi Dinas Pendidikan ke Supabase Database
+  // Simpan Tindak Lanjut Resmi Dinas Pendidikan ke Supabase Database secara Realtime
   const handleSaveAdminReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeTicket) return;
 
     setIsSubmittingAdminReview(true);
+    const finalNote =
+      adminOfficialNote.trim() ||
+      getDefaultDinasResponse(
+        getStageNumber(selectedAdminStatus),
+        currentReportData?.schoolName || 'Sekolah Terlapor'
+      );
+
     try {
       await updateReportByDinas(
         activeTicket,
         selectedAdminStatus,
-        adminOfficialNote,
+        finalNote,
         adminOfficerName
       );
 
-      // Mutakhirkan state lokal secara instan
       setCurrentStatus(selectedAdminStatus);
 
       const now = new Date();
@@ -494,7 +651,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
         sender: 'dinas',
         senderLabel: adminOfficerName,
         timestamp: `Hari ini, ${hours}:${mins} WIB`,
-        text: adminOfficialNote,
+        text: finalNote,
       };
 
       setMessages((prev) => [...prev, dinasMessage]);
@@ -503,129 +660,39 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
         setCurrentReportData({
           ...currentReportData,
           status: selectedAdminStatus,
+          letterDocument: {
+            inspection_status: selectedAdminStatus,
+            verified_by: adminOfficerName,
+            admin_notes: finalNote,
+          },
         });
       }
 
-      // Refresh list agar sinkron
-      fetchAllAnonymousReportsFromSupabase().then((spList) => {
-        if (spList) {
-          setSupabaseReportsList(
-            spList.map((r) => ({
-              ticketCode: r.ticket_code,
-              schoolName: r.school_name,
-              schoolNpsn: r.school_npsn,
-              category: r.category,
-              date: new Date(r.created_at).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              }),
-              status: r.status,
-              notes: r.notes || r.notes_encrypted || '',
-            }))
-          );
-        }
-      });
-
       onShowToast(
-        'Tanggapan & status pemeriksaan resmi Dinas Pendidikan berhasil disimpan ke database Supabase!'
+        'Status pemeriksaan dan tanggapan resmi Dinas Pendidikan berhasil diperbarui di database!'
       );
     } catch (err) {
       console.error('[Admin Review Save Error]', err);
-      onShowToast('Gagal menyimpan ke Supabase. Periksa jaringan.');
+      onShowToast('Gagal menyimpan ke database Supabase.');
     } finally {
       setIsSubmittingAdminReview(false);
     }
   };
 
-  // Pemetaan tahapan untuk visualisasi Stepper
-  const isStageComplete = (stageNum: number): boolean => {
-    if (stageNum === 1) return true; // Step 1 selalu selesai jika tiket terbit
-    if (stageNum === 2) {
-      return (
-        currentStatus === 'DITELAAH_DINAS' ||
-        currentStatus === 'KLARIFIKASI_SEKOLAH' ||
-        currentStatus === 'AUDIT_LAPANGAN' ||
-        currentStatus === 'SELESAI' ||
-        currentStatus === 'SELESAI_DIKLARIFIKASI'
-      );
-    }
-    if (stageNum === 3) {
-      return (
-        currentStatus === 'KLARIFIKASI_SEKOLAH' ||
-        currentStatus === 'AUDIT_LAPANGAN' ||
-        currentStatus === 'SELESAI' ||
-        currentStatus === 'SELESAI_DIKLARIFIKASI'
-      );
-    }
-    if (stageNum === 4) {
-      return (
-        currentStatus === 'SELESAI' || currentStatus === 'SELESAI_DIKLARIFIKASI'
-      );
-    }
-    return false;
-  };
-
-  const isStageActive = (stageNum: number): boolean => {
-    if (stageNum === 4 && isStageComplete(4)) return true;
-    if (
-      stageNum === 3 &&
-      (currentStatus === 'KLARIFIKASI_SEKOLAH' || currentStatus === 'AUDIT_LAPANGAN')
-    ) {
-      return true;
-    }
-    if (stageNum === 2 && currentStatus === 'DITELAAH_DINAS') return true;
-    if (stageNum === 1 && currentStatus === 'TERKIRIM_TERENKRIPSI') return true;
-    return false;
-  };
-
-  const getStatusBadgeMeta = (status: string) => {
-    switch (status) {
-      case 'SELESAI':
-      case 'SELESAI_DIKLARIFIKASI':
-        return {
-          bg: 'bg-[#EBF7EE]',
-          text: 'text-[#2E7D32]',
-          border: 'border-[#2E7D32]/30',
-          label: 'Selesai & Pengembalian Dana',
-        };
-      case 'KLARIFIKASI_SEKOLAH':
-        return {
-          bg: 'bg-[#FFF8E6]',
-          text: 'text-[#D97706]',
-          border: 'border-[#D97706]/30',
-          label: 'Klarifikasi Sekolah & BAP',
-        };
-      case 'AUDIT_LAPANGAN':
-        return {
-          bg: 'bg-[#F3E8FF]',
-          text: 'text-[#7E22CE]',
-          border: 'border-[#7E22CE]/30',
-          label: 'Audit Investigasi Lapangan',
-        };
-      case 'DITELAAH_DINAS':
-      default:
-        return {
-          bg: 'bg-[#EBF3F8]',
-          text: 'text-[#2E6496]',
-          border: 'border-[#2E6496]/30',
-          label: 'Penelaahan Dinas Pendidikan',
-        };
-    }
-  };
-
-  const statusMeta = getStatusBadgeMeta(currentStatus);
+  const currentStageNumber = getStageNumber(currentStatus);
+  const activeStageInfo =
+    TRACKING_STAGES.find((s) => s.step === currentStageNumber) || TRACKING_STAGES[0];
 
   return (
     <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8 animate-view-enter">
-      {/* Container Konsisten Max-W-3XL */}
+      {/* Container Bersih & Rapi Max-W-3XL */}
       <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
         {/* 1. Navigasi Atas */}
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={onBackToHome}
-            className="px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-all flex items-center gap-2 cursor-pointer active:translate-y-[1px]"
+            className="px-4 py-2 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-all flex items-center gap-2 cursor-pointer active:translate-y-[1px]"
           >
             <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
             <span>Kembali ke Beranda</span>
@@ -639,28 +706,28 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 setTicketInput('');
                 setCurrentReportData(null);
               }}
-              className="px-3.5 py-1.5 rounded-full bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
+              className="px-3.5 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
             >
               Lacak Tiket Lain
             </button>
           )}
         </div>
 
-        {/* 2. Form Pencarian Tiket (Selalu Rapi & Sederhana di Atas) */}
-        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+        {/* 2. Header Pencarian Tiket (Sederhana, Bersih, Anti-Slop) */}
+        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
           <div className="space-y-1">
-            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496]">
-              STATUS PELAPORAN ANONIM // DATABASE RESMI
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#2E6496] block">
+              STATUS PELAPORAN REALTIME // SISTEM RESMI DINAS PENDIDIKAN
             </span>
             <h1 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
-              Lacak Progres Laporan
+              Lacak Status Penanganan Laporan
             </h1>
             <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-              Masukkan kode tiket untuk memantau status pemeriksaan dokumen dan telaah Berita Acara BOSP oleh Dinas Pendidikan dan Inspektorat Daerah.
+              Pantau tahapan pemeriksaan dokumen, klarifikasi pihak sekolah, hingga tindak lanjut pengembalian dana secara langsung.
             </p>
           </div>
 
-          <form onSubmit={handleCheckTicket} className="space-y-3 pt-2">
+          <form onSubmit={handleCheckTicket} className="space-y-3 pt-1">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -672,14 +739,14 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     setTicketError(null);
                   }}
                   placeholder="Contoh: CHK-2026-8849-BGR"
-                  className="w-full pl-10 pr-3.5 py-3 text-xs sm:text-sm font-mono font-bold bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] uppercase placeholder:text-[#94A3B8] placeholder:font-normal placeholder:capitalize focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
+                  className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] uppercase placeholder:text-[#94A3B8] placeholder:font-normal placeholder:capitalize focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoadingReport}
-                className="px-6 py-3 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-2xs active:translate-y-[1px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-2xs active:translate-y-[1px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isLoadingReport ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -703,7 +770,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
         {/* ===================================================================
             KONDISI A: DEFAULT KOSONG (Belum Ada Tiket yang Dicari)
-            Tampilkan Segmentasi Tab: Laporan Supabase & Riwayat Perangkat
+            Tampilkan Daftar Laporan Supabase & Riwayat Perangkat
            =================================================================== */}
         {!activeTicket ? (
           <div className="space-y-4 animate-view-enter">
@@ -719,7 +786,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 }`}
               >
                 <Building2 className="w-3.5 h-3.5" />
-                <span>Laporan Masuk ke Dinas ({supabaseReportsList.length})</span>
+                <span>Laporan Masuk Dinas ({supabaseReportsList.length})</span>
               </button>
 
               <button
@@ -732,13 +799,13 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                <span>Riwayat di Perangkat ({historyList.length})</span>
+                <span>Riwayat di Perangkat Ini ({historyList.length})</span>
               </button>
             </div>
 
             {/* TAB SUPABASE LIVE REPORTS */}
             {activeTab === 'supabase' && (
-              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-[#2E6496]" />
@@ -747,14 +814,15 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     </h2>
                   </div>
                   <span className="text-[11px] font-mono text-[#2E7D32] bg-[#EBF7EE] px-2 py-0.5 rounded-md font-semibold">
-                    Live Supabase
+                    Realtime Synced
                   </span>
                 </div>
 
                 <div className="space-y-2.5">
                   {supabaseReportsList.length > 0 ? (
                     supabaseReportsList.map((item) => {
-                      const itemMeta = getStatusBadgeMeta(item.status);
+                      const stNum = getStageNumber(item.status);
+                      const stInfo = TRACKING_STAGES.find((s) => s.step === stNum);
                       return (
                         <div
                           key={item.ticketCode}
@@ -766,9 +834,15 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                                 {item.ticketCode}
                               </span>
                               <span
-                                className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${itemMeta.bg} ${itemMeta.text}`}
+                                className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                                  stNum === 5
+                                    ? 'bg-[#EBF7EE] text-[#2E7D32]'
+                                    : stNum >= 3
+                                    ? 'bg-[#FFF8E6] text-[#D97706]'
+                                    : 'bg-[#EBF3F8] text-[#2E6496]'
+                                }`}
                               >
-                                {itemMeta.label}
+                                {stInfo?.label || item.status}
                               </span>
                               <span className="text-[#64748B] text-[11px]">
                                 • {item.date}
@@ -787,7 +861,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                             onClick={() => handleSelectTicket(item)}
                             className="px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-all cursor-pointer shadow-2xs self-start sm:self-auto active:translate-y-[1px]"
                           >
-                            Buka Lacak & Audit
+                            Buka Lacak & Periksa
                           </button>
                         </div>
                       );
@@ -803,7 +877,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
             {/* TAB LOCAL COOKIE HISTORY */}
             {activeTab === 'local' && (
-              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
                   <div className="flex items-center gap-2">
                     <History className="w-4 h-4 text-[#2E6496]" />
@@ -827,45 +901,40 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
                 <div className="space-y-2.5">
                   {historyList.length > 0 ? (
-                    historyList.map((item) => {
-                      const itemMeta = getStatusBadgeMeta(item.status);
-                      return (
-                        <div
-                          key={item.ticketCode}
-                          className="p-3.5 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] hover:border-[#2E6496]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md">
-                                {item.ticketCode}
-                              </span>
-                              <span
-                                className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${itemMeta.bg} ${itemMeta.text}`}
-                              >
-                                {itemMeta.label}
-                              </span>
-                              <span className="text-[#64748B] text-[11px]">
-                                • {item.date}
-                              </span>
-                            </div>
-                            <div className="font-bold text-[#1E293B] text-xs sm:text-sm">
-                              {item.schoolName}
-                            </div>
-                            <div className="text-[11px] text-[#475569]">
-                              {item.category}
-                            </div>
+                    historyList.map((item) => (
+                      <div
+                        key={item.ticketCode}
+                        className="p-3.5 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] hover:border-[#2E6496]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md">
+                              {item.ticketCode}
+                            </span>
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#EBF3F8] text-[#2E6496]">
+                              {item.status}
+                            </span>
+                            <span className="text-[#64748B] text-[11px]">
+                              • {item.date}
+                            </span>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleSelectTicket(item)}
-                            className="px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-all cursor-pointer shadow-2xs self-start sm:self-auto active:translate-y-[1px]"
-                          >
-                            Buka Lacak
-                          </button>
+                          <div className="font-bold text-[#1E293B] text-xs sm:text-sm">
+                            {item.schoolName}
+                          </div>
+                          <div className="text-[11px] text-[#475569]">
+                            {item.category}
+                          </div>
                         </div>
-                      );
-                    })
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectTicket(item)}
+                          className="px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-all cursor-pointer shadow-2xs self-start sm:self-auto active:translate-y-[1px]"
+                        >
+                          Buka Lacak
+                        </button>
+                      </div>
+                    ))
                   ) : (
                     <div className="p-8 text-center space-y-2">
                       <p className="text-xs text-[#64748B]">
@@ -888,16 +957,17 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           </div>
         ) : (
           /* ===================================================================
-              KONDISI B: TIKET AKTIF DITEMUKAN (Tampilan Lacak + Panel Audit Dinas)
+              KONDISI B: TIKET AKTIF DITEMUKAN
+              STATUS REALTIME + ANIMASI CENTANG 1, 2, 3, 4, 5 + BALASAN DINAS
              =================================================================== */
-          <div className="space-y-6 sm:space-y-8 animate-view-enter">
-            {/* Kartu Status Laporan (Resi Lacak Kargo) */}
-            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
-              {/* Header Tiket & Salin */}
+          <div className="space-y-6 animate-view-enter">
+            {/* 1. KARTU INFORMASI TIKET */}
+            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-7 shadow-xs space-y-5">
+              {/* Header Tiket */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E0D8]">
                 <div>
                   <span className="text-[11px] font-mono uppercase tracking-wider text-[#2E6496] font-bold block mb-1">
-                    TIKET TERVERIFIKASI // TERKONEKSI DATABASE SUPABASE
+                    TIKET PELAPORAN RESMI // STATUS REALTIME
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xl sm:text-2xl font-extrabold text-[#1E293B] tracking-tight">
@@ -920,15 +990,21 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   <span
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${statusMeta.bg} ${statusMeta.text} border ${statusMeta.border}`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                      currentStageNumber === 5
+                        ? 'bg-[#EBF7EE] text-[#2E7D32] border border-[#2E7D32]/30'
+                        : currentStageNumber >= 3
+                        ? 'bg-[#FFF8E6] text-[#D97706] border border-[#D97706]/30'
+                        : 'bg-[#EBF3F8] text-[#2E6496] border border-[#2E6496]/30'
+                    }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
-                    <span>{statusMeta.label}</span>
+                    <span>{activeStageInfo.label}</span>
                   </span>
                 </div>
               </div>
 
-              {/* Rincian Ringkas */}
+              {/* Rincian Ringkas Sekolah Terlapor */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs">
                 <div>
                   <span className="text-[11px] text-[#64748B] block">Sekolah Terlapor:</span>
@@ -936,7 +1012,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     type="button"
                     onClick={onBackToSchoolProfile}
                     className="font-bold text-[#2E6496] hover:underline flex items-center gap-1 truncate max-w-full text-left cursor-pointer"
-                    title="Lihat Profil Dana BOSP Sekolah"
                   >
                     <Building2 className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">
@@ -945,7 +1020,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                   </button>
                 </div>
                 <div>
-                  <span className="text-[11px] text-[#64748B] block">Jenis Pengaduan:</span>
+                  <span className="text-[11px] text-[#64748B] block">Kategori Pungutan:</span>
                   <span className="font-bold text-[#1E293B] block truncate">
                     {currentReportData?.category || reportCategory}
                   </span>
@@ -960,10 +1035,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
               {/* Berkas Bukti Terlampir jika ada */}
               {currentReportData?.attachments && currentReportData.attachments.length > 0 && (
-                <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] space-y-2">
+                <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] space-y-1.5">
                   <span className="text-[11px] font-bold text-[#1E293B] uppercase tracking-wider flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5 text-[#2E6496]" />
-                    <span>Dokumen Bukti Terlampir ({currentReportData.attachments.length})</span>
+                    <span>Berkas Bukti ({currentReportData.attachments.length})</span>
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {currentReportData.attachments.map((att, idx) => (
@@ -980,143 +1055,317 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 </div>
               )}
 
-              {/* Stepper Progres Penanganan Real-Time */}
+              {/* ===============================================================
+                  2. ANIMASI CENTANG 1, 2, 3, 4, 5 (STEPPER PROGRESS REALTIME)
+                 =============================================================== */}
               <div className="pt-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
-                    Tahapan Penanganan Resmi
+                    Progres Penanganan Dinas Pendidikan
                   </h3>
-                  <span className="text-[11px] text-[#64748B]">
-                    Sinkron otomatis dengan keputusan auditor
+                  <span className="text-[11px] text-[#64748B] font-mono">
+                    Tahap {currentStageNumber} dari 5
                   </span>
                 </div>
 
-                <div className="relative pl-6 space-y-5 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] before:bg-[#C9DFDC]">
-                  {/* Step 4: Selesai */}
-                  <div
-                    className={`relative ${
-                      isStageComplete(4) ? 'opacity-100' : 'opacity-45'
-                    }`}
-                  >
-                    <span
-                      className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF] ${
-                        isStageComplete(4)
-                          ? 'bg-[#2E7D32] text-white'
-                          : 'bg-[#E4E0D8] text-[#64748B]'
-                      }`}
-                    >
-                      {isStageComplete(4) ? <Check className="w-3 h-3" /> : '4'}
-                    </span>
-                    <div>
-                      <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-2">
-                        <span>Selesai & Pengembalian Dana</span>
-                        {isStageActive(4) && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#EBF7EE] text-[#2E7D32]">
-                            Tuntas
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">
-                        Pungutan dinyatakan melanggar aturan dan dana wajib dikembalikan penuh ke orang tua murid.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Step 3: Tindak Lanjut Sekolah & Audit Lapangan */}
-                  <div
-                    className={`relative ${
-                      isStageComplete(3) ? 'opacity-100' : 'opacity-45'
-                    }`}
-                  >
-                    <span
-                      className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF] ${
-                        isStageComplete(3)
-                          ? 'bg-[#2E6496] text-white'
-                          : 'bg-[#E4E0D8] text-[#64748B]'
-                      }`}
-                    >
-                      {isStageComplete(3) ? <Check className="w-3 h-3" /> : '3'}
-                    </span>
-                    <div>
-                      <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-2">
-                        <span>Pemeriksaan Lapangan & Klarifikasi Sekolah</span>
-                        {isStageActive(3) && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#EBF3F8] text-[#2E6496] animate-pulse">
-                            Sedang Berjalan
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">
-                        Kepala Sekolah dan Bendahara dipanggil secara resmi untuk klarifikasi SPJ dan rekening penampung.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Step 2: Telaah Berkas */}
-                  <div
-                    className={`relative ${
-                      isStageComplete(2) ? 'opacity-100' : 'opacity-45'
-                    }`}
-                  >
-                    <span
-                      className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF] ${
-                        isStageComplete(2)
-                          ? 'bg-[#2E7D32] text-white'
-                          : 'bg-[#E4E0D8] text-[#64748B]'
-                      }`}
-                    >
-                      <Check className="w-3 h-3" />
-                    </span>
-                    <div>
-                      <div className="text-xs sm:text-sm font-bold text-[#1E293B] flex items-center gap-2">
-                        <span>Verifikasi Berkas Administrasi BOSP (Dinas Pendidikan)</span>
-                        {isStageActive(2) && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#EBF3F8] text-[#2E6496] animate-pulse">
-                            Sedang Berjalan
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">
-                        Dokumen bukti kuitansi dan alokasi BOS sekolah diverifikasi sesuai petunjuk teknis.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Step 1: Laporan Diterima */}
+                {/* Stepper Bar Horisontal (Desktop) / Vertikal (Mobile) */}
+                <div className="p-4 sm:p-5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8]">
                   <div className="relative">
-                    <span className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-[#2E7D32] text-white flex items-center justify-center text-[10px] ring-4 ring-[#FFFFFF]">
-                      <Check className="w-3 h-3" />
-                    </span>
-                    <div>
-                      <div className="text-xs sm:text-sm font-bold text-[#1E293B]">
-                        Laporan Terenkripsi Diterima di Supabase
-                      </div>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">
-                        Data disimpan dengan protokol sandi AES-GCM-256 tanpa merekam identitas pelapor.
-                      </p>
+                    {/* Garis Penghubung Latar Belakang */}
+                    <div className="hidden sm:block absolute top-4 left-6 right-6 h-0.5 bg-[#E4E0D8] -z-0" />
+                    {/* Garis Penghubung Aktif */}
+                    <div
+                      className="hidden sm:block absolute top-4 left-6 h-0.5 bg-[#2E7D32] transition-all duration-500 ease-out -z-0"
+                      style={{
+                        width: `${Math.max(0, Math.min(100, ((currentStageNumber - 1) / 4) * 100))}%`,
+                      }}
+                    />
+
+                    {/* Titik-Titik Tahapan */}
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 sm:gap-2 relative z-10">
+                      {TRACKING_STAGES.map((st) => {
+                        const isDone = st.step < currentStageNumber || currentStageNumber === 5;
+                        const isCurrent = st.step === currentStageNumber && currentStageNumber !== 5;
+                        const isUpcoming = st.step > currentStageNumber;
+
+                        return (
+                          <div
+                            key={st.step}
+                            className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2"
+                          >
+                            {/* Lingkaran Centang Animasi 1 2 3 4 5 */}
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300 transform ${
+                                isDone
+                                  ? 'bg-[#2E7D32] text-white border-2 border-[#2E7D32] shadow-2xs scale-100 ring-2 ring-[#2E7D32]/20'
+                                  : isCurrent
+                                  ? 'bg-[#2E6496] text-white border-2 border-[#2E6496] shadow-xs ring-4 ring-[#2E6496]/20 scale-105 animate-pulse'
+                                  : 'bg-[#FFFFFF] text-[#94A3B8] border-2 border-[#CBD5E1]'
+                              }`}
+                            >
+                              {isDone ? (
+                                <Check className="w-4 h-4 text-white stroke-[3] animate-scale-in" />
+                              ) : (
+                                <span className="font-mono">{st.step}</span>
+                              )}
+                            </div>
+
+                            {/* Label Tahapan */}
+                            <div className="space-y-0.5">
+                              <div
+                                className={`text-xs font-bold leading-tight ${
+                                  isDone
+                                    ? 'text-[#2E7D32]'
+                                    : isCurrent
+                                    ? 'text-[#2E6496]'
+                                    : 'text-[#64748B]'
+                                }`}
+                              >
+                                {st.label}
+                              </div>
+                              <p className="text-[10px] text-[#94A3B8] hidden sm:block">
+                                {st.sublabel}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
+                </div>
+
+                {/* Keterangan Tahap Aktif */}
+                <div className="p-3 rounded-xl bg-[#EBF3F8]/60 border border-[#C9DFDC] text-xs text-[#1E293B] flex items-start gap-2">
+                  <BadgeCheck className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-[#2E6496] mr-1">
+                      Status Saat Ini: {activeStageInfo.label}.
+                    </span>
+                    <span className="text-[#475569]">{activeStageInfo.description}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Komunikasi 2 Arah Anonim */}
-            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+            {/* ===============================================================
+                3. BALASAN RESMI DARI DINAS PENDIDIKAN DI BAWAHNYA
+               =============================================================== */}
+            <div className="bg-[#FFFFFF] border-2 border-[#2E6496]/30 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#EBF3F8] text-[#2E6496] flex items-center justify-center font-bold">
+                    <FileBadge2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-sturdy-heading text-sm sm:text-base font-extrabold text-[#1E293B]">
+                      Balasan & Berita Acara Dinas Pendidikan
+                    </h3>
+                    <span className="text-[11px] text-[#64748B]">
+                      Tanggapan Resmi Pengawas Pembina & Inspektorat Daerah
+                    </span>
+                  </div>
+                </div>
+
+                <span className="px-2.5 py-1 rounded-md bg-[#EBF7EE] text-[#2E7D32] border border-[#2E7D32]/30 text-[11px] font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Resmi Diverifikasi</span>
+                </span>
+              </div>
+
+              {/* Isi Balasan Resmi */}
+              <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] space-y-3">
+                <div className="flex items-center justify-between text-[11px] text-[#64748B] border-b border-[#E4E0D8] pb-2">
+                  <span className="font-bold text-[#1E293B]">
+                    {currentReportData?.letterDocument?.verified_by ||
+                      adminOfficerName}
+                  </span>
+                  <span>{currentReportData?.date || 'Hari ini'}</span>
+                </div>
+
+                <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed font-medium">
+                  {currentReportData?.letterDocument?.admin_notes ||
+                    adminOfficialNote ||
+                    getDefaultDinasResponse(
+                      currentStageNumber,
+                      currentReportData?.schoolName || 'Sekolah Terlapor'
+                    )}
+                </p>
+
+                <div className="pt-2 flex items-center justify-between text-[11px] text-[#64748B] border-t border-[#E4E0D8]">
+                  <span>Status: <b>{activeStageInfo.label}</b></span>
+                  <span className="font-mono text-[#2E6496]">No. Reg: {activeTicket}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ===============================================================
+                4. PANEL PENGATUR STATUS DINAS PENDIDIKAN (REALTIME CONTROL)
+               =============================================================== */}
+            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-[#2E6496]" />
+                    <h3 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
+                      Panel Verifikator Dinas Pendidikan
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-[#64748B]">
+                    Pilih status tahapan dan tuliskan balasan resmi yang tersimpan langsung ke basis data Supabase secara realtime.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAdminPanelOpen((prev) => !prev)}
+                  className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBF3F8] border border-[#E4E0D8] text-xs font-bold text-[#2E6496] flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>{isAdminPanelOpen ? 'Tutup Panel' : 'Atur Status'}</span>
+                  {isAdminPanelOpen ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+
+              {isAdminPanelOpen && (
+                <form onSubmit={handleSaveAdminReview} className="space-y-4 pt-1">
+                  {/* Pilihan 5 Status yang Diminta User */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#1E293B] block">
+                      Pilih Tahapan Penanganan:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
+                      {TRACKING_STAGES.map((st) => (
+                        <button
+                          key={st.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedAdminStatus(st.key);
+                            setAdminOfficialNote(
+                              getDefaultDinasResponse(
+                                st.step,
+                                currentReportData?.schoolName || 'Sekolah Terlapor'
+                              )
+                            );
+                          }}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            selectedAdminStatus === st.key
+                              ? 'bg-[#EBF3F8] border-[#2E6496] shadow-2xs ring-1 ring-[#2E6496]'
+                              : 'bg-[#FAF8F5] border-[#E4E0D8] hover:border-[#2E6496]/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                selectedAdminStatus === st.key
+                                  ? 'bg-[#2E6496] text-white'
+                                  : 'bg-[#E4E0D8] text-[#64748B]'
+                              }`}
+                            >
+                              {st.step}
+                            </span>
+                            <span className="font-bold text-[#1E293B] truncate">
+                              {st.label}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pejabat Penelaah */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[#1E293B] block">
+                      Pejabat / Tim Penelaah:
+                    </label>
+                    <select
+                      value={adminOfficerName}
+                      onChange={(e) => setAdminOfficerName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20"
+                    >
+                      <option value="Tim Verifikator BOSP Dinas Pendidikan & Inspektorat">
+                        Tim Verifikator BOSP Dinas Pendidikan & Inspektorat
+                      </option>
+                      <option value="Pengawas Pembina Wilayah Dinas Pendidikan">
+                        Pengawas Pembina Wilayah Dinas Pendidikan
+                      </option>
+                      <option value="Auditor Investigasi Inspektorat Daerah">
+                        Auditor Investigasi Inspektorat Daerah
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* Catatan Balasan Resmi */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#1E293B] block">
+                        Teks Balasan Resmi Dinas Pendidikan:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAdminOfficialNote(
+                            getDefaultDinasResponse(
+                              getStageNumber(selectedAdminStatus),
+                              currentReportData?.schoolName || 'Sekolah Terlapor'
+                            )
+                          )
+                        }
+                        className="text-[10px] text-[#2E6496] hover:underline cursor-pointer"
+                      >
+                        Gunakan Template Standar Tahap Ini
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={3}
+                      value={adminOfficialNote}
+                      onChange={(e) => setAdminOfficialNote(e.target.value)}
+                      placeholder="Tuliskan balasan resmi atau berita acara..."
+                      className="w-full p-3 text-xs bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Tombol Simpan ke Supabase */}
+                  <button
+                    type="submit"
+                    disabled={isSubmittingAdminReview}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-2xs active:translate-y-[1px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingAdminReview ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Perbarui Status & Simpan Balasan Dinas ke Database</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* ===============================================================
+                5. KOMUNIKASI 2 ARAH ANONIM (CHAT PELAPOR & VERIFIKATOR)
+               =============================================================== */}
+            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-[#2E6496]" />
                   <h3 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
-                    Tanggapan Resmi & Komunikasi 2 Arah Anonim
+                    Riwayat Percakapan & Tanggapan Pelapor
                   </h3>
                 </div>
                 <span className="text-[11px] text-[#2E7D32] font-semibold flex items-center gap-1">
                   <Lock className="w-3 h-3" />
-                  Identitas Terlindungi
+                  Identitas Dilindungi Sandi
                 </span>
               </div>
 
               {/* Chat Stream */}
-              <div className="space-y-3 max-h-80 overflow-y-auto p-1">
+              <div className="space-y-3 max-h-72 overflow-y-auto p-1">
                 {messages.map((msg) => {
                   const isDinas = msg.sender === 'dinas';
                   return (
@@ -1147,7 +1396,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 })}
               </div>
 
-              {/* Reply Form (Pelapor) */}
+              {/* Reply Form */}
               <form
                 onSubmit={handleSendReply}
                 className="pt-2 border-t border-[#E4E0D8] space-y-2"
@@ -1160,7 +1409,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                       setReplyInput(e.target.value);
                       setReplyError(null);
                     }}
-                    placeholder="Tulis balasan anonim kepada tim verifikator..."
+                    placeholder="Tulis balasan anonim tambahan kepada tim verifikator..."
                     className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
                   />
                   <button
@@ -1179,171 +1428,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                   </div>
                 )}
               </form>
-            </div>
-
-            {/* ===================================================================
-                PANEL PENGAWASAN & TELAAH DINAS PENDIDIKAN
-                (Simulasi & Aksi Admin Dinas Langsung ke Database Supabase)
-               =================================================================== */}
-            <div className="bg-[#FFFFFF] border-2 border-[#2E6496]/40 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <Scale className="w-4 h-4 text-[#2E6496]" />
-                    <h3 className="font-sturdy-heading text-sm sm:text-base font-extrabold text-[#1E293B]">
-                      Portal Verifikator Dinas Pendidikan & Inspektorat
-                    </h3>
-                  </div>
-                  <p className="text-[11px] text-[#64748B]">
-                    Fitur pemeriksaan resmi: telusuri bukti, perbarui tahapan audit, dan kirimkan telaah ke database Supabase.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsAdminPanelOpen((prev) => !prev)}
-                  className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBF3F8] border border-[#E4E0D8] text-xs font-bold text-[#2E6496] flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <span>{isAdminPanelOpen ? 'Sembunyikan' : 'Buka Formulir'}</span>
-                  {isAdminPanelOpen ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </div>
-
-              {isAdminPanelOpen && (
-                <form onSubmit={handleSaveAdminReview} className="space-y-4 pt-1">
-                  {/* Pilihan Tahapan Status */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#1E293B] block">
-                      Keputusan Tahapan Penanganan:
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      {[
-                        {
-                          val: 'DITELAAH_DINAS',
-                          label: '🟡 2. Verifikasi Berkas SPJ',
-                          desc: 'Dokumen telaah diproses oleh staf pengawas BOSP',
-                        },
-                        {
-                          val: 'KLARIFIKASI_SEKOLAH',
-                          label: '🟠 3. Panggil Pihak Sekolah',
-                          desc: 'Penerbitan Surat Panggilan Klarifikasi BAP',
-                        },
-                        {
-                          val: 'AUDIT_LAPANGAN',
-                          label: '🟣 3. Audit Lapangan Inspektorat',
-                          desc: 'Pemeriksaan lapangan dan audit rekening penampung',
-                        },
-                        {
-                          val: 'SELESAI',
-                          label: '🟢 4. Pengembalian Dana (Selesai)',
-                          desc: 'Pungutan dibatalkan dan dana dikembalikan 100%',
-                        },
-                      ].map((opt) => (
-                        <button
-                          key={opt.val}
-                          type="button"
-                          onClick={() => setSelectedAdminStatus(opt.val)}
-                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                            selectedAdminStatus === opt.val
-                              ? 'bg-[#EBF3F8] border-[#2E6496] shadow-2xs ring-1 ring-[#2E6496]'
-                              : 'bg-[#FAF8F5] border-[#E4E0D8] hover:border-[#2E6496]/40'
-                          }`}
-                        >
-                          <div className="font-bold text-[#1E293B]">{opt.label}</div>
-                          <div className="text-[11px] text-[#64748B] mt-0.5">{opt.desc}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Identitas Petugas Penelaah */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[#1E293B] block">
-                      Pejabat / Tim Penelaah:
-                    </label>
-                    <select
-                      value={adminOfficerName}
-                      onChange={(e) => setAdminOfficerName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20"
-                    >
-                      <option value="Tim Verifikator BOSP Dinas Pendidikan & Inspektorat">
-                        Tim Verifikator BOSP Dinas Pendidikan & Inspektorat
-                      </option>
-                      <option value="Pengawas Pembina Wilayah Dinas Pendidikan">
-                        Pengawas Pembina Wilayah Dinas Pendidikan
-                      </option>
-                      <option value="Auditor Investigasi Inspektorat Daerah">
-                        Auditor Investigasi Inspektorat Daerah
-                      </option>
-                      <option value="Kepala Bidang Pembinaan Sekolah (Kabid)">
-                        Kepala Bidang Pembinaan Sekolah (Kabid)
-                      </option>
-                    </select>
-                  </div>
-
-                  {/* Catatan / Tanggapan Resmi */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-[#1E293B] block">
-                        Catatan Hasil Telaah & Instruksi Resmi:
-                      </label>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAdminOfficialNote(
-                              'Pengawas Pembina telah memanggil Kepala Sekolah dan Komite. Pungutan dinyatakan tidak memiliki dasar hukum sesuai Kepmendikbudristek 63/2022 dan dana wajib dikembalikan kepada seluruh siswa paling lambat 7 hari kerja.'
-                            )
-                          }
-                          className="text-[10px] text-[#2E6496] hover:underline cursor-pointer"
-                        >
-                          Template Pengembalian
-                        </button>
-                        <span className="text-[10px] text-[#CBD5E1]">•</span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAdminOfficialNote(
-                              'Tim auditor sedang melakukan pemeriksaan silang terhadap rekening penampung sekolah dan kwitansi pembelian modul yang dilaporkan.'
-                            )
-                          }
-                          className="text-[10px] text-[#2E6496] hover:underline cursor-pointer"
-                        >
-                          Template Audit
-                        </button>
-                      </div>
-                    </div>
-
-                    <textarea
-                      rows={3}
-                      value={adminOfficialNote}
-                      onChange={(e) => setAdminOfficialNote(e.target.value)}
-                      placeholder="Tuliskan catatan hasil pemeriksaan atau instruksi dinas..."
-                      className="w-full p-3 text-xs bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 leading-relaxed"
-                    />
-                  </div>
-
-                  {/* Tombol Simpan ke Supabase */}
-                  <button
-                    type="submit"
-                    disabled={isSubmittingAdminReview}
-                    className="w-full py-3 px-4 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-2xs active:translate-y-[1px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingAdminReview ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Simpan Hasil Pemeriksaan ke Database Supabase</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
             </div>
           </div>
         )}
