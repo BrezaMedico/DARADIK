@@ -23,6 +23,7 @@ import {
   getSavedReportsFromStorage,
   fetchAnonymousReportByTicket,
   AdminReviewDocument,
+  InspectionLog,
 } from '../lib/supabase';
 
 export interface TrackedReportItem {
@@ -137,109 +138,87 @@ export function getStageNumber(status: string): number {
 }
 
 /**
- * Menghitung tahap status laporan berdasarkan data tersimpan di database
- * dan waktu yang telah berlalu secara realtime di latar belakang.
- * Setiap tahapan berjalan selama 2 menit (120 detik):
- * - Tahap 1 (Laporan Terkirim): 0 - 2 menit (< 120 detik)
- * - Tahap 2 (Menunggu Verifikasi): 2 - 4 menit (120 - 239 detik)
- * - Tahap 3 (Verifikasi Laporan): 4 - 6 menit (240 - 359 detik)
- * - Tahap 4 (Pemeriksaan Lapangan): 6 - 8 menit (360 - 479 detik)
- * - Tahap 5 (Tindak Lanjut Selesai): 8+ menit (>= 480 detik)
+ * Mengambil tahap status laporan murni berdasarkan konfirmasi status di database (resmi dari admin dinas).
  */
-export function calculateRealtimeStage(
-  status?: string,
-  createdAt?: string,
-  currentMs: number = Date.now()
-): number {
-  const norm = (status || '').trim().toUpperCase();
-  const dbStep = getStageNumber(norm);
-
-  if (createdAt) {
-    const createdTime = new Date(createdAt).getTime();
-    if (!isNaN(createdTime)) {
-      const elapsedSeconds = Math.max(0, Math.floor((currentMs - createdTime) / 1000));
-      // Tepat 2 menit (120 detik) per tahap, namun menghormati kemajuan status resmi dari dinas
-      const stageFromTime = Math.min(5, Math.floor(elapsedSeconds / 120) + 1);
-      return Math.max(dbStep, stageFromTime);
-    }
-  }
-
-  return dbStep;
+export function calculateRealtimeStage(status?: string): number {
+  return getStageNumber(status || 'LAPORAN_TERKIRIM');
 }
 
 /**
- * Menghitung waktu setiap tahapan pada timeline secara rapi, presisi,
- * dan bebas error (tanpa NaN dan tanpa tata letak aneh).
- * Menggunakan jeda 2 menit per tahapan secara proporsional.
+ * Menghitung status dan catatan waktu setiap tahapan pada timeline secara rapi dan presisi.
+ * Menghormati waktu verifikasi nyata yang dicatat oleh admin dinas.
  */
 export function getStageTimestamp(
   stageStep: number,
   currentStep: number,
   baseCreatedAt?: string,
-  currentMs: number = Date.now()
+  timelineLogs?: InspectionLog[]
 ): {
   isDone: boolean;
   isCurrent: boolean;
   timeText: string;
-  badgeText?: string;
-  remainingSeconds?: number;
+  badgeText: string;
 } {
   const isDone = stageStep < currentStep || (stageStep === 5 && currentStep === 5);
   const isCurrent = stageStep === currentStep && currentStep !== 5;
 
-  let baseMs = currentMs;
+  let baseDateFormatted = 'Menunggu';
   if (baseCreatedAt) {
-    const parsed = new Date(baseCreatedAt).getTime();
-    if (!isNaN(parsed)) {
-      baseMs = parsed;
+    const d = new Date(baseCreatedAt);
+    if (!isNaN(d.getTime())) {
+      const dayStr = d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const hourStr = String(d.getHours()).padStart(2, '0');
+      const minStr = String(d.getMinutes()).padStart(2, '0');
+      baseDateFormatted = `${dayStr} • ${hourStr}:${minStr} WIB`;
     }
   }
 
-  // Offset 2 menit per tahapan: Tahap 1 (0m), 2 (2m), 3 (4m), 4 (6m), 5 (8m)
-  const offsetsMinutes = [0, 2, 4, 6, 8];
-  const offsetMs = (offsetsMinutes[stageStep - 1] || 0) * 60 * 1000;
-  const stageTime = new Date(baseMs + offsetMs);
-
-  const dayStr = stageTime.toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-  const hourStr = String(stageTime.getHours()).padStart(2, '0');
-  const minStr = String(stageTime.getMinutes()).padStart(2, '0');
-  const timeFormatted = `${dayStr} • ${hourStr}:${minStr} WIB`;
-
+  // Jika tahap ini belum tercapai (menunggu tindakan admin dinas)
   if (stageStep > currentStep) {
     return {
       isDone: false,
       isCurrent: false,
-      timeText: `Estimasi ${hourStr}:${minStr} WIB`,
-      badgeText: 'Menunggu Antrean',
+      timeText: 'Menunggu proses dinas',
+      badgeText: 'Menunggu Verifikasi Admin',
     };
   }
 
-  if (isCurrent) {
-    const elapsedSeconds = Math.max(0, Math.floor((currentMs - baseMs) / 1000));
-    const nextMilestoneSeconds = stageStep * 120;
-    const remainingSeconds = Math.max(0, nextMilestoneSeconds - elapsedSeconds);
-    const remMin = Math.floor(remainingSeconds / 60);
-    const remSec = remainingSeconds % 60;
-    const remText = `${remMin}:${String(remSec).padStart(2, '0')}`;
+  // Cari apakah ada catatan log audit dari dinas untuk tahap ini
+  const stageKey = TRACKING_STAGES[stageStep - 1]?.key;
+  const matchedLog = timelineLogs?.find((l) => l.stage === stageKey);
+  let timeText = baseDateFormatted;
+  if (matchedLog?.time) {
+    const ld = new Date(matchedLog.time);
+    if (!isNaN(ld.getTime())) {
+      const dayStr = ld.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      const hourStr = String(ld.getHours()).padStart(2, '0');
+      const minStr = String(ld.getMinutes()).padStart(2, '0');
+      timeText = `${dayStr} • ${hourStr}:${minStr} WIB`;
+    }
+  }
 
+  if (isCurrent) {
     return {
       isDone: false,
       isCurrent: true,
-      timeText: `${timeFormatted} (Sisa ${remText})`,
-      badgeText: 'Sedang Berjalan',
-      remainingSeconds,
+      timeText,
+      badgeText: stageStep === 1 ? 'Laporan Diterima' : 'Dalam Proses Telaah',
     };
   }
 
   return {
     isDone: true,
     isCurrent: false,
-    timeText: timeFormatted,
-    badgeText: 'Selesai',
+    timeText,
+    badgeText: 'Selesai Diverifikasi',
   };
 }
 
@@ -380,58 +359,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   // TERBUKTI = Merah (ada pelanggaran & instruksi pengembalian dana)
   // TIDAK_TERBUKTI = Hijau (aman & sesuai ketentuan komite)
   const [verdictType, setVerdictType] = useState<'TERBUKTI' | 'TIDAK_TERBUKTI'>('TERBUKTI');
-
-  // 6. Realtime Clock Ticker (Detak 1 detik untuk kalkulasi mundur & transisi 2-menitan yang presisi)
-  const [nowMs, setNowMs] = useState<number>(() => Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Memantau kemajuan tahap secara realtime setiap detik berdasarkan waktu pembuatan laporan
-  useEffect(() => {
-    if (!currentReportData) return;
-
-    const createdAt = currentReportData.createdAtRaw || currentReportData.date;
-    const newStage = calculateRealtimeStage(
-      currentReportData.status,
-      createdAt,
-      nowMs
-    );
-
-    if (newStage !== currentStageStep) {
-      setCurrentStageStep(newStage);
-
-      const newStageKey =
-        TRACKING_STAGES[newStage - 1]?.key || 'LAPORAN_TERKIRIM';
-
-      setCurrentReportData((prev) =>
-        prev ? { ...prev, status: newStageKey } : null
-      );
-
-      // Sinkronkan status baru ke database Supabase
-      if (activeTicket) {
-        supabase
-          .from('anonymous_reports')
-          .update({
-            status: newStageKey,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('ticket_code', activeTicket.trim().toUpperCase())
-          .then(() => {})
-          .catch(() => {});
-      }
-
-      // Perbarui salinan lokal di cookie dan localStorage
-      saveTrackedItemToHistory({
-        ...currentReportData,
-        status: newStageKey,
-      });
-    }
-  }, [nowMs, currentReportData?.ticketCode, currentReportData?.createdAtRaw, currentStageStep, activeTicket]);
 
   // Load Riwayat Cookie Pengguna saat Mount
   useEffect(() => {
@@ -579,27 +506,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           }
         }
 
-        // Hitung tahap aktual dari database dan waktu yang berjalan di latar belakang (2 menit per tahap)
-        const calculatedStep = calculateRealtimeStage(
-          remote.status,
-          remote.created_at,
-          Date.now()
-        );
+        // Ambil tahap status resmi yang tersimpan di basis data
+        const calculatedStep = getStageNumber(remote.status);
         const resolvedStatus =
           TRACKING_STAGES[calculatedStep - 1]?.key || remote.status || 'LAPORAN_TERKIRIM';
-
-        // Jika status telah berjalan lebih jauh di latar belakang, sinkronkan ke database Supabase
-        if (calculatedStep !== getStageNumber(remote.status)) {
-          supabase
-            .from('anonymous_reports')
-            .update({
-              status: resolvedStatus,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('ticket_code', cleaned)
-            .then(() => {})
-            .catch(() => {});
-        }
 
         const resolvedItem: TrackedReportItem = {
           ticketCode: remote.ticket_code,
@@ -630,17 +540,12 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     );
 
     if (found) {
-      const calculatedStep = calculateRealtimeStage(
-        found.status,
-        found.createdAtRaw || found.date,
-        Date.now()
-      );
+      const calculatedStep = getStageNumber(found.status);
       const resolvedStatus =
         TRACKING_STAGES[calculatedStep - 1]?.key || found.status || 'LAPORAN_TERKIRIM';
       const updatedFound: TrackedReportItem = {
         ...found,
         status: resolvedStatus,
-        createdAtRaw: found.createdAtRaw || found.date,
       };
       setCurrentReportData(updatedFound);
       setCurrentStageStep(calculatedStep);
@@ -1024,7 +929,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                       st.step,
                       currentStageStep,
                       currentReportData?.createdAtRaw || currentReportData?.date,
-                      nowMs
+                      currentReportData?.letterDocument?.timeline
                     );
                     const isLastStep = idx === TRACKING_STAGES.length - 1;
 
