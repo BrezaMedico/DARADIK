@@ -101,103 +101,206 @@ export function hydrateSupabaseRowToSchoolData(
   };
 }
 
-/**
- * Mengambil data sekolah dari Supabase Database.
- * Jika tabel belum ada atau koneksi gagal, mengembalikan null secara graceful
- * sehingga aplikasi langsung beralih ke data terverifikasi lokal.
- */
-export async function fetchSchoolFromSupabase(
-  schoolId: string = 'smk-ti-bazma'
-): Promise<SchoolData | null> {
-  try {
-    const { data, error } = await supabase
-      .from('schools')
-      .select('*')
-      .or(`id.eq.${schoolId},npsn.eq.${schoolId}`)
-      .maybeSingle();
+export type JenjangType = 'SD' | 'SMP' | 'SMA' | 'SMK';
 
-    if (error || !data) {
-      return null;
-    }
+export function getJenjangTableName(jenjang?: string): string {
+  const normalized = (jenjang || '').trim().toUpperCase();
+  if (normalized === 'SD') return 'schools_sd';
+  if (normalized === 'SMP') return 'schools_smp';
+  if (normalized === 'SMA') return 'schools_sma';
+  if (normalized === 'SMK') return 'schools_smk';
+  return 'schools';
+}
 
-    return hydrateSupabaseRowToSchoolData(data as Record<string, unknown>);
-  } catch (err) {
-    console.warn('[Supabase] Gagal mengambil data sekolah dari database:', err);
-    return null;
-  }
+export function detectJenjangFromIdOrName(schoolIdOrName: string): JenjangType | null {
+  const lower = schoolIdOrName.toLowerCase();
+  if (
+    lower.startsWith('sd-') ||
+    lower.startsWith('sdn-') ||
+    lower.startsWith('sds-') ||
+    lower.includes('sd ') ||
+    lower.includes('sdn ')
+  )
+    return 'SD';
+  if (
+    lower.startsWith('smp-') ||
+    lower.startsWith('smpn-') ||
+    lower.startsWith('smps-') ||
+    lower.includes('smp ') ||
+    lower.includes('smpn ')
+  )
+    return 'SMP';
+  if (
+    lower.startsWith('sma-') ||
+    lower.startsWith('sman-') ||
+    lower.startsWith('smas-') ||
+    lower.includes('sma ') ||
+    lower.includes('sman ')
+  )
+    return 'SMA';
+  if (
+    lower.startsWith('smk-') ||
+    lower.startsWith('smkn-') ||
+    lower.startsWith('smks-') ||
+    lower.includes('smk ') ||
+    lower.includes('smkn ')
+  )
+    return 'SMK';
+  return null;
 }
 
 /**
- * Mengambil seluruh daftar sekolah dari Supabase jika tabel tersedia
+ * Mengambil data sekolah dari Supabase Database.
+ * Mengecek tabel terpisah per jenjang (schools_sd, schools_smp, schools_sma, schools_smk)
+ * dengan fallback halus ke tabel schools dan data lokal.
  */
-export async function fetchAllSchoolsFromSupabase(): Promise<SchoolData[] | null> {
+export async function fetchSchoolFromSupabase(
+  schoolId: string = 'smk-ti-bazma',
+  jenjangHint?: string
+): Promise<SchoolData | null> {
+  const detected = (jenjangHint as JenjangType) || detectJenjangFromIdOrName(schoolId);
+  const targetTables = detected
+    ? [getJenjangTableName(detected), 'schools']
+    : ['schools_smk', 'schools_sma', 'schools_smp', 'schools_sd', 'schools'];
+
+  for (const tbl of targetTables) {
+    try {
+      const { data, error } = await supabase
+        .from(tbl)
+        .select('*')
+        .or(`id.eq.${schoolId},npsn.eq.${schoolId}`)
+        .maybeSingle();
+
+      if (!error && data) {
+        return hydrateSupabaseRowToSchoolData(data as Record<string, unknown>);
+      }
+    } catch {
+      // lanjut ke tabel berikutnya jika tabel belum ada di database
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Mengambil seluruh daftar sekolah dari Supabase.
+ * Dapat difilter per jenjang tabel terpisah (schools_sd, schools_smp, schools_sma, schools_smk)
+ */
+export async function fetchAllSchoolsFromSupabase(
+  jenjang?: JenjangType
+): Promise<SchoolData[] | null> {
+  const targetTable = jenjang ? getJenjangTableName(jenjang) : 'schools';
+
   try {
     const { data, error } = await supabase
-      .from('schools')
+      .from(targetTable)
       .select('*')
       .order('updated_at', { ascending: false })
       .limit(200);
 
-    if (error || !data || data.length === 0) {
-      return null;
+    if (!error && data && data.length > 0) {
+      return data.map((row: Record<string, unknown>) =>
+        hydrateSupabaseRowToSchoolData(row)
+      );
     }
-
-    return data.map((row: Record<string, unknown>) =>
-      hydrateSupabaseRowToSchoolData(row)
-    );
   } catch {
-    return null;
+    // fallback
   }
+
+  // Jika tabel jenjang spesifik belum dibuat, coba fallback ke 'schools'
+  if (targetTable !== 'schools') {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(200);
+
+      if (!error && data && data.length > 0) {
+        return data.map((row: Record<string, unknown>) =>
+          hydrateSupabaseRowToSchoolData(row)
+        );
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return null;
 }
 
 /**
  * Menyimpan atau memperbarui data sekolah ke database Supabase
+ * Disimpan ke tabel spesifik jenjang (schools_sd, schools_smp, schools_sma, schools_smk)
+ * serta disinkronkan ke tabel 'schools' utama.
  */
 export async function syncSchoolToSupabase(school: SchoolData): Promise<boolean> {
-  try {
-    const { error } = await supabase.from('schools').upsert({
+  const jenjang = school.jenjang || school.educationLevel || 'SMK';
+  const jenjangTable = getJenjangTableName(jenjang);
+
+  const payload = {
+    id: school.id,
+    name: school.name,
+    npsn: school.npsn,
+    student_count: school.studentCount,
+    total_bosp: school.totalBosp,
+    per_student_estimate: school.perStudentEstimate,
+    kabupaten: school.kabupaten,
+    kecamatan: school.kecamatan,
+    provinsi: school.provinsi,
+    address: school.address,
+    status: school.status,
+    school_type: school.schoolType || 'Negeri',
+    data_payload: {
       id: school.id,
       name: school.name,
       npsn: school.npsn,
-      student_count: school.studentCount,
-      total_bosp: school.totalBosp,
-      per_student_estimate: school.perStudentEstimate,
+      sampleNisn: school.sampleNisn,
+      principalName: school.principalName,
+      treasurerName: school.treasurerName,
+      provinsi: school.provinsi,
       kabupaten: school.kabupaten,
       kecamatan: school.kecamatan,
-      provinsi: school.provinsi,
       address: school.address,
       status: school.status,
-      data_payload: {
-        id: school.id,
-        name: school.name,
-        npsn: school.npsn,
-        sampleNisn: school.sampleNisn,
-        principalName: school.principalName,
-        treasurerName: school.treasurerName,
-        provinsi: school.provinsi,
-        kabupaten: school.kabupaten,
-        kecamatan: school.kecamatan,
-        address: school.address,
-        status: school.status,
-        studentCount: school.studentCount,
-        perStudentEstimate: school.perStudentEstimate,
-        totalBosp: school.totalBosp,
-        tahap1: school.tahap1,
-        tahap2: school.tahap2,
-        compositions: school.compositions,
-      },
-      updated_at: new Date().toISOString(),
-    });
+      schoolType: school.schoolType,
+      educationLevel: school.educationLevel,
+      jenjang: school.jenjang,
+      maxHonorariumLimit: school.maxHonorariumLimit,
+      regionCostZone: school.regionCostZone,
+      studentCount: school.studentCount,
+      perStudentEstimate: school.perStudentEstimate,
+      totalBosp: school.totalBosp,
+      tahap1: school.tahap1,
+      tahap2: school.tahap2,
+      compositions: school.compositions,
+    },
+    updated_at: new Date().toISOString(),
+  };
 
-    if (error) {
-      console.warn('[Supabase Sync]', error.message);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.warn('[Supabase Sync Error]', err);
-    return false;
+  let saved = false;
+
+  // 1. Simpan ke tabel spesifik jenjang (schools_sd / schools_smp / schools_sma / schools_smk)
+  try {
+    const { error: errJenjang } = await supabase
+      .from(jenjangTable)
+      .upsert(payload, { onConflict: 'id' });
+    if (!errJenjang) saved = true;
+  } catch {
+    // jika tabel belum ada di database, lanjut ke tabel utama
   }
+
+  // 2. Simpan juga ke tabel 'schools' utama
+  try {
+    const { error: errMain } = await supabase
+      .from('schools')
+      .upsert(payload, { onConflict: 'id' });
+    if (!errMain) saved = true;
+  } catch {
+    // ignore
+  }
+
+  return saved;
 }
 
 export function generateUUID(): string {

@@ -1,8 +1,11 @@
 /**
- * Script Sinkronisasi Penuh Database Sekolah ke Supabase
- * Memasukkan seluruh data sekolah (4.112 sekolah terstruktur di 514 Kab/Kota se-Indonesia)
- * dengan perhitungan BOSP rapih, konsisten (student_count * per_student_estimate = total_bosp),
- * dan format kolom data_payload terstruktur lengkap.
+ * Script Sinkronisasi Database Sekolah ke Supabase Berdasarkan Jenjang (SD, SMP, SMA, SMK)
+ * Memisahkan data per jenjang ke tabel masing-masing:
+ * - schools_sd (1.028 SD Negeri & Swasta)
+ * - schools_smp (1.028 SMP Negeri & Swasta)
+ * - schools_sma (1.028 SMA Negeri & Swasta)
+ * - schools_smk (1.028 SMK Negeri & Swasta)
+ * Serta menyinkronkan ke tabel schools utama / view schools_all.
  */
 
 import { createServer } from 'vite';
@@ -52,107 +55,136 @@ function sendSupabaseRequest({ path, method = 'GET', body = null, headers = {} }
   });
 }
 
-async function runSeed() {
-  console.log('=== MEMULAI SINKRONISASI DATABASE SEKOLAH KE SUPABASE ===');
-  const viteServer = await createServer({ server: { middlewareMode: true } });
-  const mod = await viteServer.ssrLoadModule('/src/data/schoolsData.ts');
-  const allSchools = mod.SCHOOLS_DATABASE;
-  console.log(`Ditemukan ${allSchools.length} sekolah terstruktur untuk disinkronkan.`);
-
-  // 1. Bersihkan tabel sekolah lama agar tidak ada konflik constraint
-  console.log('Membersihkan tabel schools lama...');
-  try {
-    const delRes = await sendSupabaseRequest({
-      path: '/rest/v1/schools?id=neq.__none__',
-      method: 'DELETE',
-      headers: { Prefer: 'count=exact' },
-    });
-    console.log(`Pembersihan selesai: HTTP ${delRes.statusCode}`);
-  } catch (err) {
-    console.warn('Peringatan saat pembersihan:', err.message);
-  }
-
-  // 2. Siapkan batch data yang rapi dan terstruktur
-  const BATCH_SIZE = 80;
-  const totalBatches = Math.ceil(allSchools.length / BATCH_SIZE);
-  let totalInserted = 0;
-
-  for (let b = 0; b < totalBatches; b++) {
-    const slice = allSchools.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
-    const rows = slice.map((s) => ({
+function mapSchoolToRow(s) {
+  return {
+    id: s.id,
+    name: s.name,
+    npsn: s.npsn,
+    student_count: s.studentCount,
+    total_bosp: s.totalBosp,
+    per_student_estimate: s.perStudentEstimate,
+    kabupaten: s.kabupaten,
+    kecamatan: s.kecamatan,
+    provinsi: s.provinsi,
+    address: s.address,
+    status: s.status,
+    school_type: s.schoolType || 'Negeri',
+    data_payload: {
       id: s.id,
       name: s.name,
       npsn: s.npsn,
-      student_count: s.studentCount,
-      total_bosp: s.totalBosp,
-      per_student_estimate: s.perStudentEstimate,
+      sampleNisn: s.sampleNisn,
+      principalName: s.principalName,
+      treasurerName: s.treasurerName,
+      provinsi: s.provinsi,
       kabupaten: s.kabupaten,
       kecamatan: s.kecamatan,
-      provinsi: s.provinsi,
       address: s.address,
       status: s.status,
-      data_payload: {
-        id: s.id,
-        name: s.name,
-        npsn: s.npsn,
-        sampleNisn: s.sampleNisn,
-        principalName: s.principalName,
-        treasurerName: s.treasurerName,
-        provinsi: s.provinsi,
-        kabupaten: s.kabupaten,
-        kecamatan: s.kecamatan,
-        address: s.address,
-        status: s.status,
-        schoolType: s.schoolType,
-        educationLevel: s.educationLevel,
-        jenjang: s.jenjang,
-        maxHonorariumLimit: s.maxHonorariumLimit,
-        regionCostZone: s.regionCostZone,
-        studentCount: s.studentCount,
-        perStudentEstimate: s.perStudentEstimate,
-        totalBosp: s.totalBosp,
-        tahap1: s.tahap1,
-        tahap2: s.tahap2,
-        compositions: s.compositions,
-      },
-      updated_at: new Date().toISOString(),
-    }));
+      schoolType: s.schoolType,
+      educationLevel: s.educationLevel,
+      jenjang: s.jenjang,
+      maxHonorariumLimit: s.maxHonorariumLimit,
+      regionCostZone: s.regionCostZone,
+      studentCount: s.studentCount,
+      perStudentEstimate: s.perStudentEstimate,
+      totalBosp: s.totalBosp,
+      tahap1: s.tahap1,
+      tahap2: s.tahap2,
+      compositions: s.compositions,
+    },
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function seedTable(tableName, schools) {
+  console.log(`\nMenyinkronkan ${schools.length} sekolah ke tabel '${tableName}'...`);
+
+  // Cek apakah tabel ada
+  const checkRes = await sendSupabaseRequest({
+    path: `/rest/v1/${tableName}?limit=1`,
+    method: 'GET',
+  });
+
+  if (checkRes.statusCode === 404) {
+    console.warn(`[Info] Tabel '${tableName}' belum dibuat di Supabase.`);
+    console.warn(`Jalankan script 'supabase_schema.sql' di SQL Editor Supabase untuk membuat tabel.`);
+    return false;
+  }
+
+  // Bersihkan data lama di tabel spesifik
+  await sendSupabaseRequest({
+    path: `/rest/v1/${tableName}?id=neq.__none__`,
+    method: 'DELETE',
+  });
+
+  const BATCH_SIZE = 80;
+  const totalBatches = Math.ceil(schools.length / BATCH_SIZE);
+  let inserted = 0;
+
+  for (let b = 0; b < totalBatches; b++) {
+    const slice = schools.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
+    const rows = slice.map(mapSchoolToRow);
 
     let retries = 3;
     let ok = false;
     while (retries > 0 && !ok) {
       try {
         const res = await sendSupabaseRequest({
-          path: '/rest/v1/schools',
+          path: `/rest/v1/${tableName}`,
           method: 'POST',
           headers: { Prefer: 'return=minimal' },
           body: rows,
         });
 
         if (res.statusCode === 201) {
-          totalInserted += rows.length;
+          inserted += rows.length;
           ok = true;
           process.stdout.write(
-            `\rProgress: Batch ${b + 1}/${totalBatches} (${totalInserted}/${allSchools.length} sekolah tersimpan)`
+            `\r[${tableName}] Progress: Batch ${b + 1}/${totalBatches} (${inserted}/${schools.length} tersimpan)`
           );
         } else {
-          console.warn(`\nBatch ${b + 1} gagal (HTTP ${res.statusCode}): ${res.data}. Mencoba ulang...`);
           retries--;
-          await new Promise((r) => setTimeout(r, 1200));
+          await new Promise((r) => setTimeout(r, 1000));
         }
-      } catch (err) {
-        console.warn(`\nError batch ${b + 1}: ${err.message}. Mencoba ulang...`);
+      } catch {
         retries--;
-        await new Promise((r) => setTimeout(r, 1200));
+        await new Promise((r) => setTimeout(r, 1000));
       }
-    }
-
-    if (!ok) {
-      console.error(`\nGagal menyimpan batch ${b + 1} setelah 3 percobaan.`);
     }
   }
 
-  console.log(`\n=== SINKRONISASI SELESAI: ${totalInserted} SEKOLAH TERSIMPAN DI SUPABASE ===`);
+  console.log(`\n[${tableName}] Selesai: ${inserted} sekolah tersimpan.`);
+  return true;
+}
+
+async function runSeed() {
+  console.log('=== MEMULAI SINKRONISASI DATABASE PER JENJANG KE SUPABASE ===');
+  const viteServer = await createServer({ server: { middlewareMode: true } });
+  const mod = await viteServer.ssrLoadModule('/src/data/schoolsData.ts');
+  const allSchools = mod.SCHOOLS_DATABASE;
+
+  const sdSchools = allSchools.filter((s) => (s.jenjang || s.educationLevel) === 'SD');
+  const smpSchools = allSchools.filter((s) => (s.jenjang || s.educationLevel) === 'SMP');
+  const smaSchools = allSchools.filter((s) => (s.jenjang || s.educationLevel) === 'SMA');
+  const smkSchools = allSchools.filter((s) => (s.jenjang || s.educationLevel) === 'SMK');
+
+  console.log(`Rincian Data Terstruktur:`);
+  console.log(`- SD  (Negeri & Swasta): ${sdSchools.length} sekolah`);
+  console.log(`- SMP (Negeri & Swasta): ${smpSchools.length} sekolah`);
+  console.log(`- SMA (Negeri & Swasta): ${smaSchools.length} sekolah`);
+  console.log(`- SMK (Negeri & Swasta): ${smkSchools.length} sekolah`);
+
+  // Coba sinkronisasi ke tabel masing-masing
+  await seedTable('schools_sd', sdSchools);
+  await seedTable('schools_smp', smpSchools);
+  await seedTable('schools_sma', smaSchools);
+  await seedTable('schools_smk', smkSchools);
+
+  // Pastikan tabel schools utama juga tetap terisi
+  await seedTable('schools', allSchools);
+
+  console.log('\n=== SELURUH PROSES SINKRONISASI SELESAI ===');
   await viteServer.close();
 }
 
