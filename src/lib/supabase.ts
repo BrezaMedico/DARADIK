@@ -200,7 +200,43 @@ export async function syncSchoolToSupabase(school: SchoolData): Promise<boolean>
   }
 }
 
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+export interface InspectionLog {
+  stage: string;
+  time: string;
+  actor: string;
+  note: string;
+}
+
+export interface InspectionChatMessage {
+  id: string;
+  sender: 'dinas' | 'reporter';
+  senderLabel: string;
+  timestamp: string;
+  text: string;
+}
+
+export interface AdminReviewDocument {
+  inspection_status: string;
+  verified_by?: string;
+  admin_notes?: string;
+  official_action?: string;
+  timeline?: InspectionLog[];
+  chat_messages?: InspectionChatMessage[];
+}
+
 export interface AnonymousReportData {
+  id?: string;
   ticketCode: string;
   schoolId: string;
   schoolName: string;
@@ -214,16 +250,72 @@ export interface AnonymousReportData {
   attachments?: { name: string; sizeFormatted: string }[];
   status?: string;
   createdAt?: string;
+  letterDocument?: AdminReviewDocument | null;
+}
+
+export interface AnonymousReportRecord {
+  id: string;
+  ticket_code: string;
+  school_id: string;
+  school_name: string;
+  school_npsn: string;
+  kabupaten: string;
+  kecamatan: string;
+  category: string;
+  requester_role: string;
+  notes_encrypted: string;
+  notes?: string;
+  encryption_algorithm: string;
+  status: string;
+  attachment_count: number;
+  attachments_json: unknown;
+  letter_document: string | AdminReviewDocument | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
- * Menyimpan laporan pengaduan anonim ke database (Supabase & LocalStorage)
+ * Menyimpan laporan pengaduan anonim ke database Supabase dan salinan lokal
  */
 export async function saveAnonymousReport(
   data: AnonymousReportData
 ): Promise<boolean> {
   const timestamp = data.createdAt || new Date().toISOString();
-  const record = {
+  const reportId = data.id || generateUUID();
+
+  const initialReviewDoc: AdminReviewDocument = data.letterDocument || {
+    inspection_status: 'DITELAAH_DINAS',
+    verified_by: 'Tim Verifikator BOSP Dinas Pendidikan & Inspektorat',
+    admin_notes:
+      'Laporan telah teregistrasi dalam sistem pengawasan terpadu. Tim penelaah dinas sedang memverifikasi Berita Acara Pemeriksaan BOSP.',
+    official_action: 'VERIFIKASI_BERKAS',
+    timeline: [
+      {
+        stage: 'TERKIRIM_TERENKRIPSI',
+        time: timestamp,
+        actor: 'Sistem Protokol Sandi DARADIK',
+        note: 'Laporan terenkripsi diterima tanpa merekam IP/identitas pelapor.',
+      },
+      {
+        stage: 'DITELAAH_DINAS',
+        time: timestamp,
+        actor: 'Pengawas Pembina & Inspektorat Daerah',
+        note: 'Laporan masuk antrean telaah verifikasi SPJ dana BOSP.',
+      },
+    ],
+    chat_messages: [
+      {
+        id: `msg-sys-${Date.now()}`,
+        sender: 'dinas',
+        senderLabel: 'Tim Verifikator Inspektorat & Dinas Pendidikan',
+        timestamp: 'Hari ini, Otomatis',
+        text: 'Laporan Anda telah berhasil masuk ke basis data Pengawasan BOSP. Kami sedang menelaah data realisasi BOS sekolah terlapor.',
+      },
+    ],
+  };
+
+  const supabaseRecord = {
+    id: reportId,
     ticket_code: data.ticketCode,
     school_id: data.schoolId,
     school_name: data.schoolName,
@@ -232,52 +324,234 @@ export async function saveAnonymousReport(
     kecamatan: data.kecamatan,
     category: data.category,
     requester_role: data.requesterRole,
-    notes: data.notes,
-    attachment_count: data.attachmentCount,
-    attachments_json: JSON.stringify(data.attachments || []),
-    status: data.status || 'TERKIRIM_TERENKRIPSI',
+    notes_encrypted: data.notes,
+    encryption_algorithm: 'AES-GCM-256 / PBKDF2',
+    status: data.status || 'DITELAAH_DINAS',
+    attachment_count: data.attachmentCount || 0,
+    attachments_json: data.attachments || [],
+    letter_document: JSON.stringify(initialReviewDoc),
     created_at: timestamp,
+    updated_at: timestamp,
   };
 
-  // 1. Simpan salinan lokal ke LocalStorage agar selalu tersimpan dan dapat dilacak
+  const localRecord = {
+    ...supabaseRecord,
+    notes: data.notes,
+  };
+
+  // 1. Simpan salinan lokal ke LocalStorage agar selalu instan
   try {
-    const existingStr = localStorage.getItem('daradik_saved_reports');
-    const existing = existingStr ? JSON.parse(existingStr) : [];
-    const updated = [
-      record,
-      ...existing.filter(
-        (r: Record<string, unknown>) => r.ticket_code !== data.ticketCode
-      ),
-    ];
-    localStorage.setItem('daradik_saved_reports', JSON.stringify(updated));
+    if (typeof localStorage !== 'undefined') {
+      const existingStr = localStorage.getItem('daradik_saved_reports');
+      const existing = existingStr ? JSON.parse(existingStr) : [];
+      const updated = [
+        localRecord,
+        ...existing.filter(
+          (r: Record<string, unknown>) => r.ticket_code !== data.ticketCode
+        ),
+      ];
+      localStorage.setItem('daradik_saved_reports', JSON.stringify(updated));
+    }
   } catch (err) {
     console.warn('[LocalStorage] Gagal menyimpan salinan laporan:', err);
   }
 
-  // 2. Simpan ke database Supabase jika tabel tersedia
+  // 2. Simpan ke tabel Supabase 'anonymous_reports'
   try {
-    const { error } = await supabase.from('anonymous_reports').insert([record]);
+    const { error } = await supabase
+      .from('anonymous_reports')
+      .upsert(supabaseRecord, { onConflict: 'id' });
+
     if (error) {
-      // Coba fallback ke tabel 'reports'
-      const { error: errorFallback } = await supabase
-        .from('reports')
-        .insert([record]);
-      if (errorFallback) {
-        console.info(
-          '[Supabase] Laporan tersimpan aman di database lokal:',
-          errorFallback.message
-        );
-      }
+      console.warn('[Supabase Reports Error]', error.message);
+      return false;
     }
     return true;
   } catch (err) {
-    console.info('[Supabase] Menggunakan penyimpanan database lokal:', err);
-    return true;
+    console.warn('[Supabase Reports Exception]', err);
+    return false;
   }
+}
+
+/**
+ * Mengambil satu laporan berdasarkan nomor tiket dari Supabase atau fallback LocalStorage
+ */
+export async function fetchAnonymousReportByTicket(
+  ticketCode: string
+): Promise<AnonymousReportRecord | null> {
+  const cleanCode = ticketCode.trim().toUpperCase();
+  if (!cleanCode) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('anonymous_reports')
+      .select('*')
+      .eq('ticket_code', cleanCode)
+      .maybeSingle();
+
+    if (!error && data) {
+      return {
+        ...(data as AnonymousReportRecord),
+        notes: (data as AnonymousReportRecord).notes_encrypted,
+      };
+    }
+  } catch (err) {
+    console.warn('[Supabase fetchReport error]', err);
+  }
+
+  // Fallback ke penyimpanan lokal
+  const localList = getSavedReportsFromStorage();
+  const localFound = localList.find(
+    (r) => String(r.ticket_code || '').toUpperCase() === cleanCode
+  );
+  if (localFound) {
+    return localFound as unknown as AnonymousReportRecord;
+  }
+  return null;
+}
+
+/**
+ * Mengambil semua daftar laporan dari Supabase untuk keperluan telaah Dinas Pendidikan
+ */
+export async function fetchAllAnonymousReportsFromSupabase(): Promise<
+  AnonymousReportRecord[]
+> {
+  try {
+    const { data, error } = await supabase
+      .from('anonymous_reports')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (!error && data && data.length > 0) {
+      return data.map((item) => ({
+        ...(item as AnonymousReportRecord),
+        notes: (item as AnonymousReportRecord).notes_encrypted,
+      }));
+    }
+  } catch (err) {
+    console.warn('[Supabase fetchAllReports error]', err);
+  }
+
+  const localList = getSavedReportsFromStorage();
+  return localList as unknown as AnonymousReportRecord[];
+}
+
+/**
+ * Memperbarui status laporan dan memberikan tanggapan resmi seolah-olah admin dinas pendidikan memeriksa
+ */
+export async function updateReportByDinas(
+  ticketCode: string,
+  newStatus: string,
+  adminComment: string,
+  actorName: string = 'Pengawas Pembina Dinas Pendidikan'
+): Promise<boolean> {
+  const cleanCode = ticketCode.trim().toUpperCase();
+  const existing = await fetchAnonymousReportByTicket(cleanCode);
+  const now = new Date();
+  const nowFormatted = now.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  let parsedDoc: AdminReviewDocument = {
+    inspection_status: newStatus,
+    verified_by: actorName,
+    admin_notes: adminComment,
+    official_action: newStatus,
+    timeline: [],
+    chat_messages: [],
+  };
+
+  if (existing?.letter_document) {
+    try {
+      parsedDoc =
+        typeof existing.letter_document === 'string'
+          ? JSON.parse(existing.letter_document)
+          : existing.letter_document;
+    } catch {
+      // keep fallback
+    }
+  }
+
+  parsedDoc.inspection_status = newStatus;
+  parsedDoc.verified_by = actorName;
+  parsedDoc.admin_notes = adminComment;
+
+  const newLog: InspectionLog = {
+    stage: newStatus,
+    time: now.toISOString(),
+    actor: actorName,
+    note: adminComment || `Status laporan diperbarui ke tahap: ${newStatus}`,
+  };
+
+  parsedDoc.timeline = [...(parsedDoc.timeline || []), newLog];
+
+  if (adminComment && adminComment.trim()) {
+    const newChat: InspectionChatMessage = {
+      id: `dinas-reply-${Date.now()}`,
+      sender: 'dinas',
+      senderLabel: actorName,
+      timestamp: `Hari ini, ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} WIB`,
+      text: adminComment.trim(),
+    };
+    parsedDoc.chat_messages = [...(parsedDoc.chat_messages || []), newChat];
+  }
+
+  const docString = JSON.stringify(parsedDoc);
+  const updatedIso = now.toISOString();
+
+  // 1. Simpan ke Supabase
+  let supabaseOk = false;
+  try {
+    const { error } = await supabase
+      .from('anonymous_reports')
+      .update({
+        status: newStatus,
+        letter_document: docString,
+        updated_at: updatedIso,
+      })
+      .eq('ticket_code', cleanCode);
+
+    if (!error) {
+      supabaseOk = true;
+    } else {
+      console.warn('[Supabase updateReport error]', error.message);
+    }
+  } catch (err) {
+    console.warn('[Supabase updateReport exception]', err);
+  }
+
+  // 2. Simpan ke LocalStorage
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const localList = getSavedReportsFromStorage();
+      const updated = localList.map((item) => {
+        if (String(item.ticket_code || '').toUpperCase() === cleanCode) {
+          return {
+            ...item,
+            status: newStatus,
+            letter_document: docString,
+            updated_at: updatedIso,
+          };
+        }
+        return item;
+      });
+      localStorage.setItem('daradik_saved_reports', JSON.stringify(updated));
+    }
+  } catch {
+    // ignore
+  }
+
+  return supabaseOk;
 }
 
 export function getSavedReportsFromStorage(): Record<string, unknown>[] {
   try {
+    if (typeof localStorage === 'undefined') return [];
     const raw = localStorage.getItem('daradik_saved_reports');
     return raw ? JSON.parse(raw) : [];
   } catch {
