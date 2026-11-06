@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS public.schools_sma (
 ALTER TABLE public.schools_sma ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Schools SMA" ON public.schools_sma;
 CREATE POLICY "Public Read Schools SMA" ON public.schools_sma FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Public Modify Schools SMA" ON public.schools_sma FOR ALL USING (true);
+DROP POLICY IF EXISTS "Public Modify Schools SMA" ON public.schools_sma;
+CREATE POLICY "Public Modify Schools SMA" ON public.schools_sma FOR ALL USING (true);
 
 -- ------------------------------------------------------------------------------
 -- 4. TABEL SEKOLAH MENENGAH KEJURUAN (SMK NEGERI & SWASTA)
@@ -108,7 +109,8 @@ CREATE TABLE IF NOT EXISTS public.schools_smk (
 ALTER TABLE public.schools_smk ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Schools SMK" ON public.schools_smk;
 CREATE POLICY "Public Read Schools SMK" ON public.schools_smk FOR SELECT USING (true);
-DROP POLICY IF EXISTS "Public Modify Schools SMK" ON public.schools_smk FOR ALL USING (true);
+DROP POLICY IF EXISTS "Public Modify Schools SMK" ON public.schools_smk;
+CREATE POLICY "Public Modify Schools SMK" ON public.schools_smk FOR ALL USING (true);
 
 -- ------------------------------------------------------------------------------
 -- 5. VIEW GABUNGAN OTOMATIS (AGAR PENCARIAN GLOBAL TETAP RINGAN & CEPAT)
