@@ -15,6 +15,7 @@ import {
   RefreshCw,
   FileBadge2,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
 import { SchoolData, SMK_TI_BAZMA } from '../data/schoolsData';
 import {
@@ -150,18 +151,20 @@ export function calculateRealtimeStage(
   createdAt?: string,
   currentMs: number = Date.now()
 ): number {
+  const norm = (status || '').trim().toUpperCase();
+  const dbStep = getStageNumber(norm);
+
   if (createdAt) {
     const createdTime = new Date(createdAt).getTime();
     if (!isNaN(createdTime)) {
       const elapsedSeconds = Math.max(0, Math.floor((currentMs - createdTime) / 1000));
-      // Tepat 2 menit (120 detik) per tahap
+      // Tepat 2 menit (120 detik) per tahap, namun menghormati kemajuan status resmi dari dinas
       const stageFromTime = Math.min(5, Math.floor(elapsedSeconds / 120) + 1);
-      return stageFromTime;
+      return Math.max(dbStep, stageFromTime);
     }
   }
 
-  const norm = (status || '').trim().toUpperCase();
-  return getStageNumber(norm);
+  return dbStep;
 }
 
 /**
@@ -283,6 +286,7 @@ interface LiveTrackingPageProps {
   onBackToHome: () => void;
   onBackToSchoolProfile: () => void;
   onOpenAnonymousReport?: () => void;
+  onOpenDinasPortal?: () => void;
   onShowToast: (message: string) => void;
 }
 
@@ -345,6 +349,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   onBackToHome,
   onBackToSchoolProfile,
   onOpenAnonymousReport,
+  onOpenDinasPortal,
   onShowToast,
 }) => {
   // 1. State Input & Pencarian
@@ -459,6 +464,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
               }
             }
 
+            if (parsedDoc?.verdict_type === 'TERBUKTI' || parsedDoc?.verdict_type === 'TIDAK_TERBUKTI') {
+              setVerdictType(parsedDoc.verdict_type);
+            }
+
             setCurrentReportData((prev) =>
               prev
                 ? {
@@ -546,6 +555,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           } catch {
             // ignore
           }
+        }
+
+        if (parsedDoc?.verdict_type === 'TERBUKTI' || parsedDoc?.verdict_type === 'TIDAK_TERBUKTI') {
+          setVerdictType(parsedDoc.verdict_type);
         }
 
         let parsedAttachments: { name: string; sizeFormatted: string }[] = [];
@@ -713,7 +726,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       {/* Container Bersih Sederhana Max-W-3XL */}
       <div className="max-w-3xl mx-auto space-y-6 sm:space-y-7">
         {/* Navigasi Atas */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <button
             type="button"
             onClick={onBackToHome}
@@ -723,19 +736,33 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
             <span>Kembali ke Beranda</span>
           </button>
 
-          {activeTicket && (
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTicket('');
-                setTicketInput('');
-                setCurrentReportData(null);
-              }}
-              className="px-3.5 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
-            >
-              Lacak Tiket Lain
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {onOpenDinasPortal && (
+              <button
+                type="button"
+                onClick={onOpenDinasPortal}
+                className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-[#EBF3F8] hover:bg-[#DCEBF4] border border-[#2E6496]/20 text-xs font-semibold text-[#2E6496] cursor-pointer transition-colors flex items-center gap-1.5"
+                title="Buka Portal Pengawas Dinas Pendidikan"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#2E6496]" />
+                <span>Portal Pengawas Dinas</span>
+              </button>
+            )}
+
+            {activeTicket && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTicket('');
+                  setTicketInput('');
+                  setCurrentReportData(null);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
+              >
+                Lacak Tiket Lain
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Form Pencarian Tiket (Sederhana & Bersih) */}

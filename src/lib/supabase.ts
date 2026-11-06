@@ -322,6 +322,7 @@ export interface AdminReviewDocument {
   verified_by?: string;
   admin_notes?: string;
   official_action?: string;
+  verdict_type?: 'TERBUKTI' | 'TIDAK_TERBUKTI';
   timeline?: InspectionLog[];
   chat_messages?: InspectionChatMessage[];
 }
@@ -554,7 +555,8 @@ export async function updateReportByDinas(
   ticketCode: string,
   newStatus: string,
   adminComment: string,
-  actorName: string = 'Pengawas Pembina Dinas Pendidikan'
+  actorName: string = 'Pengawas Pembina Dinas Pendidikan',
+  verdictType?: 'TERBUKTI' | 'TIDAK_TERBUKTI'
 ): Promise<boolean> {
   const cleanCode = ticketCode.trim().toUpperCase();
   const existing = await fetchAnonymousReportByTicket(cleanCode);
@@ -572,6 +574,7 @@ export async function updateReportByDinas(
     verified_by: actorName,
     admin_notes: adminComment,
     official_action: newStatus,
+    verdict_type: verdictType,
     timeline: [],
     chat_messages: [],
   };
@@ -590,6 +593,9 @@ export async function updateReportByDinas(
   parsedDoc.inspection_status = newStatus;
   parsedDoc.verified_by = actorName;
   parsedDoc.admin_notes = adminComment;
+  if (verdictType) {
+    parsedDoc.verdict_type = verdictType;
+  }
 
   const newLog: InspectionLog = {
     stage: newStatus,

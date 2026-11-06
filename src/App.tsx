@@ -6,6 +6,7 @@ import {
   X,
   Flag,
   HelpCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -23,6 +24,7 @@ import {
 import { AnonymousReportPage } from './components/AnonymousReportPage';
 import { LiveTrackingPage } from './components/LiveTrackingPage';
 import { KamusBospPage } from './components/KamusBospPage';
+import { DinasDashboardPage } from './components/DinasDashboardPage';
 import { IntroSplashScreen } from './components/IntroSplashScreen';
 import { OnboardingTour } from './components/OnboardingTour';
 import {
@@ -35,7 +37,8 @@ export type AppView =
   | 'school-profile'
   | 'anonymous-report'
   | 'live-tracking'
-  | 'kamus-bosp';
+  | 'kamus-bosp'
+  | 'dinas-dashboard';
 
 export function App() {
   const [showIntro, setShowIntro] = useState<boolean>(true);
@@ -58,7 +61,12 @@ export function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const npsnParam = params.get('npsn');
-      if (npsnParam) {
+      const viewParam = params.get('view');
+      const dinasParam = params.get('dinas');
+
+      if (viewParam === 'dinas' || dinasParam === 'true') {
+        setCurrentView('dinas-dashboard');
+      } else if (npsnParam) {
         const matched = SCHOOLS_DATABASE.find(
           (s) => s.npsn.toLowerCase() === npsnParam.trim().toLowerCase()
         );
@@ -303,6 +311,21 @@ export function App() {
               <span>Lacak Lapor</span>
             </button>
 
+            {/* Nav Item: Portal Dinas */}
+            <button
+              type="button"
+              onClick={() => navigateTo('dinas-dashboard')}
+              className={`nav-link-interactive px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
+                currentView === 'dinas-dashboard'
+                  ? 'text-[#2E6496] bg-[#C9DFDC]/55'
+                  : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
+              }`}
+              title="Portal Pengawas & Auditor Dinas Pendidikan"
+            >
+              <ShieldCheck className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
+              <span>Portal Dinas</span>
+            </button>
+
             {/* Primary CTA Button: Lapor */}
             <button
               type="button"
@@ -440,6 +463,20 @@ export function App() {
               onBackToHome={() => navigateTo('landing')}
               onBackToSchoolProfile={() => navigateTo('school-profile')}
               onOpenAnonymousReport={handleOpenReportFromHeader}
+              onOpenDinasPortal={() => navigateTo('dinas-dashboard')}
+              onShowToast={showToast}
+            />
+          </div>
+        )}
+
+        {currentView === 'dinas-dashboard' && (
+          <div className="pt-20">
+            <DinasDashboardPage
+              onBackToHome={() => navigateTo('landing')}
+              onOpenLiveTracking={(ticketCode) => {
+                setActiveTicketCode(ticketCode);
+                navigateTo('live-tracking');
+              }}
               onShowToast={showToast}
             />
           </div>
@@ -568,6 +605,16 @@ export function App() {
                     >
                       <Flag className="w-3.5 h-3.5" />
                       <span>Kirim Laporan Anonim</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => navigateTo('dinas-dashboard')}
+                      className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:text-[#245385] transition-colors text-left cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Portal Pengawas Dinas</span>
                     </button>
                   </li>
                 </ul>
