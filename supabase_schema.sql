@@ -183,3 +183,15 @@ INSERT INTO public.schools_smk (
   'Terverifikasi Dapodik & BOSP 2026',
   'Swasta'
 ) ON CONFLICT (id) DO NOTHING;
+
+-- ------------------------------------------------------------------------------
+-- 8. PEMBERSIHAN TABEL 'schools' LAMA
+-- ------------------------------------------------------------------------------
+-- Menghapus tabel fisik lama yang menumpuk seluruh jenjang:
+DROP TABLE IF EXISTS public.schools CASCADE;
+
+-- Mengubah 'schools' menjadi VIEW virtual gabungan (tanpa menduplikasi data fisik)
+-- sehingga query pencarian global tetap berjalan ringan:
+CREATE OR REPLACE VIEW public.schools AS
+SELECT * FROM public.schools_all;
+
