@@ -1226,17 +1226,17 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                             key={s.id}
                             type="button"
                             onClick={() => handleSelectSchool(s)}
-                            className="w-full text-left px-3.5 py-2.5 hover:bg-[#EBF3F8] transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                            className="w-full text-left px-3.5 py-2.5 hover:bg-[#EBF3F8] transition-colors flex items-center justify-between gap-3 group cursor-pointer"
                           >
-                            <div>
-                              <div className="text-xs font-bold text-[#1E293B] group-hover:text-[#2E6496]">
-                                {s.name} ({s.jenjang})
-                              </div>
-                              <div className="text-[11px] text-[#64748B]">
-                                NPSN: {s.npsn} • {s.kecamatan}, {s.kabupaten}
-                              </div>
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-xs sm:text-sm font-bold text-[#1E293B] group-hover:text-[#2E6496] truncate" title={s.name}>
+                                {s.name}
+                              </p>
+                              <p className="font-mono text-[11px] text-[#64748B] tabular-nums mt-0.5">
+                                NPSN: {s.npsn}
+                              </p>
                             </div>
-                            <span className="text-xs text-[#2E6496] font-semibold opacity-0 group-hover:opacity-100 shrink-0">
+                            <span className="text-xs text-[#2E6496] font-semibold opacity-0 group-hover:opacity-100 shrink-0 transition-opacity">
                               Pilih
                             </span>
                           </button>

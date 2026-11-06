@@ -343,7 +343,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             className="w-full sm:w-auto px-4 py-2.5 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-bold text-[#1E293B] shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-            <span>Kembali ke Pencarian</span>
+            <span>Kembali ke Beranda</span>
           </button>
 
           <div className="w-full sm:w-auto flex items-center gap-2 justify-end">

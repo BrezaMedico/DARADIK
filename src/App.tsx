@@ -157,16 +157,8 @@ export function App() {
   );
 
   const handleGoBack = useCallback(() => {
-    setViewHistory((history) => {
-      if (history.length === 0) {
-        setCurrentView('landing');
-        return [];
-      }
-      const nextHistory = [...history];
-      const targetView = nextHistory.pop() || 'landing';
-      setCurrentView(targetView);
-      return nextHistory;
-    });
+    setViewHistory([]);
+    setCurrentView('landing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 

@@ -800,24 +800,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         key={s.id}
                         type="button"
                         onClick={() => handleSelectSchool(s)}
-                        className="w-full text-left px-3.5 py-2.5 hover:bg-[#C9DFDC]/35 transition-colors flex items-center justify-between gap-2"
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-[#C9DFDC]/35 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
                       >
-                        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-baseline gap-1 sm:gap-2 min-w-0">
-                          <span className="text-xs sm:text-sm font-bold text-[#1E293B]">
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="text-xs sm:text-sm font-bold text-[#1E293B] truncate" title={s.name}>
                             {s.name}
-                          </span>
-                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#475569] tabular-nums">
-                            <span className="px-1.5 py-0.5 rounded bg-[#EBF3F8] text-[#2E6496] font-bold text-[10px]">
-                              {s.jenjang} {s.schoolType}
-                            </span>
-                            <span>NPSN: {s.npsn}</span>
-                            <span>•</span>
-                            <span className="font-semibold text-[#2E6496]">
-                              {formatRupiah(s.perStudentEstimate)}/siswa
-                            </span>
-                          </div>
+                          </p>
+                          <p className="font-mono text-[11px] text-[#64748B] tabular-nums mt-0.5">
+                            NPSN: {s.npsn}
+                          </p>
                         </div>
-                        <span className="text-xs text-[#2E6496] font-semibold shrink-0">
+                        <span className="text-xs text-[#2E6496] font-semibold shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
                           Pilih →
                         </span>
                       </button>
@@ -839,9 +832,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     className="w-full py-3.5 px-6 rounded-lg daradik-cta-subtle btn-glass-sheen text-[#FFFFFF] font-bold text-sm sm:text-base active:translate-y-[1px] flex items-center justify-center gap-2.5 group cursor-pointer"
                   >
                     <span className="relative z-10">
-                      {chosenSchool
-                        ? `Cek Transparansi ${chosenSchool.name}`
-                        : 'Cek Transparansi Sekolah'}
+                      Cek Transparansi Sekolah
                     </span>
                     <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover:translate-x-1" />
                   </button>

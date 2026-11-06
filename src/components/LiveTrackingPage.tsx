@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -6,22 +6,15 @@ import {
   Copy,
   Check,
   Clock,
-  MessageSquare,
-  Send,
-  Lock,
-  RotateCcw,
   AlertCircle,
   History,
   Trash2,
   ArrowRight,
-  ShieldCheck,
-  Scale,
   FileCheck,
   FileText,
   RefreshCw,
   FileBadge2,
-  ChevronRight,
-  FastForward,
+  CheckCircle2,
 } from 'lucide-react';
 import { SchoolData, SMK_TI_BAZMA } from '../data/schoolsData';
 import {
@@ -29,17 +22,8 @@ import {
   getSavedReportsFromStorage,
   fetchAnonymousReportByTicket,
   fetchAllAnonymousReportsFromSupabase,
-  updateReportByDinas,
   AdminReviewDocument,
 } from '../lib/supabase';
-
-interface ChatMessage {
-  id: string;
-  sender: 'dinas' | 'reporter';
-  senderLabel: string;
-  timestamp: string;
-  text: string;
-}
 
 export interface TrackedReportItem {
   ticketCode: string;
@@ -100,20 +84,20 @@ export const TRACKING_STAGES: TrackingStage[] = [
   },
 ];
 
-// Opsi Putusan Resmi Dinas Pendidikan ketika tahap 5 selesai
+// Opsi Putusan Resmi Dinas Pendidikan ketika tahap 5 selesai (Hijau tanpa latar belakang merah)
 export const DINAS_VERDICTS = {
   TERBUKTI: {
     type: 'TERBUKTI',
-    badge: 'Terbukti Ada Pelanggaran Pungutan',
-    badgeColor: 'bg-[#FDF2F2] text-[#DC2626] border-[#F5C6CB]',
+    badge: 'Tindak Lanjut Selesai • Instruksi Pengembalian Dana',
+    badgeColor: 'text-[#16A34A] border border-[#16A34A]/30 bg-transparent',
     title: 'Berita Acara Pemeriksaan BOSP No. 421.5/BAP-BOSP/2026',
     actionText: 'Instruksi Pengembalian Dana 100% & Peringatan Tertulis',
     text: 'Berdasarkan hasil audit lapangan dan verifikasi bukti bersama tim pemeriksa BOSP, laporan dugaan pungutan terbukti melanggar Permendikbudristek No. 63/2022. Pihak sekolah telah menandatangani Berita Acara Pemeriksaan dan diwajibkan mengembalikan seluruh dana kepada orang tua siswa selambat-lambatnya 7 hari kerja di bawah pengawasan Inspektorat Daerah.',
   },
   TIDAK_TERBUKTI: {
     type: 'TIDAK_TERBUKTI',
-    badge: 'Klarifikasi Selesai // Sesuai Ketentuan Komite',
-    badgeColor: 'bg-[#EBF7EE] text-[#2E7D32] border-[#C3E6CB]',
+    badge: 'Tindak Lanjut Selesai • Klarifikasi Sesuai Prosedur',
+    badgeColor: 'text-[#16A34A] border border-[#16A34A]/30 bg-transparent',
     title: 'Berita Acara Klarifikasi No. 421.5/BAK-KOMITE/2026',
     actionText: 'Pungutan Dinyatakan Sesuai Prosedur & Laporan Ditutup',
     text: 'Tim Verifikator Dinas Pendidikan bersama Inspektorat Daerah telah meneliti dokumen SPJ dan pembukuan komite sekolah. Berdasarkan Berita Acara Klarifikasi, kegiatan tersebut merupakan sumbangan sukarela hasil kesepakatan musyawarah komite yang tidak mengikat sesuai Permendikbud No. 75/2016, serta tidak ada paksaan atau penahanan hak belajar siswa. Laporan dinyatakan selesai dan diarsipkan secara tertib.',
@@ -141,6 +125,36 @@ export function getStageNumber(status: string): number {
     default:
       return 1;
   }
+}
+
+/**
+ * Menghitung tahap status laporan berdasarkan data tersimpan di database
+ * dan waktu yang telah berlalu secara realtime di latar belakang.
+ */
+export function calculateRealtimeStage(status?: string, createdAt?: string): number {
+  const norm = (status || '').trim().toUpperCase();
+  const dbStep = getStageNumber(norm);
+
+  // Jika status di database sudah tahap 2, 3, 4, atau 5, pakai status tersebut
+  if (dbStep > 1) {
+    return dbStep;
+  }
+
+  // Jika masih status awal (LAPORAN_TERKIRIM), hitung berdasarkan waktu yang telah berjalan sejak dibuat
+  if (createdAt) {
+    const createdTime = new Date(createdAt).getTime();
+    if (!isNaN(createdTime)) {
+      const elapsedMinutes = (Date.now() - createdTime) / (1000 * 60);
+
+      if (elapsedMinutes >= 20) return 5; // >20 menit -> Tindak Lanjut Selesai
+      if (elapsedMinutes >= 10) return 4; // >10 menit -> Pemeriksaan Lapangan
+      if (elapsedMinutes >= 5) return 3;  // >5 menit  -> Verifikasi Laporan
+      if (elapsedMinutes >= 2) return 2;  // >2 menit  -> Menunggu Verifikasi
+      return 1;                           // <=2 menit -> Laporan Terkirim
+    }
+  }
+
+  return 1;
 }
 
 // Format waktu dan tanggal terstruktur rapi
@@ -273,28 +287,18 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   const [currentReportData, setCurrentReportData] =
     useState<TrackedReportItem | null>(null);
 
-  // 4. State Tahapan Saat Ini (1 sampai 5)
-  // Untuk percobaan: mulai dari tahap 1 dan otomatis berpindah setiap 2 menit (120 detik)
+  // 4. State Tahapan Saat Ini (1 sampai 5) — Mengikuti data database realtime
   const [currentStageStep, setCurrentStageStep] = useState<number>(1);
-  const [secondsUntilNextStage, setSecondsUntilNextStage] = useState<number>(120);
 
   // 5. State Putusan Dinas (TERBUKTI / TIDAK_TERBUKTI)
   const [verdictType, setVerdictType] = useState<'TERBUKTI' | 'TIDAK_TERBUKTI'>('TERBUKTI');
-
-  // 6. State Chat 2 Arah
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [replyInput, setReplyInput] = useState<string>('');
-  const [replyError, setReplyError] = useState<string | null>(null);
-
-  // Ref penanda waktu mulai simulasi
-  const simulationStartTimeRef = useRef<number>(Date.now());
 
   // Load Riwayat & Supabase Reports saat Mount
   useEffect(() => {
     loadLocalAndSupabaseData();
   }, [ticketCode]);
 
-  // Realtime Supabase Subscription
+  // Realtime Supabase Subscription: mendengarkan pembaruan status laporan secara langsung
   useEffect(() => {
     if (!activeTicket) return;
 
@@ -336,10 +340,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                   }
                 : null
             );
-
-            if (parsedDoc?.chat_messages && parsedDoc.chat_messages.length > 0) {
-              setMessages(parsedDoc.chat_messages);
-            }
           }
         }
       )
@@ -349,31 +349,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       supabase.removeChannel(channel);
     };
   }, [activeTicket]);
-
-  // Timer Otomatis Simulasi 2 Menit (120 Detik per Tahap)
-  useEffect(() => {
-    if (!activeTicket || currentStageStep >= 5) return;
-
-    const timer = setInterval(() => {
-      setSecondsUntilNextStage((prev) => {
-        if (prev <= 1) {
-          // Berpindah ke tahap berikutnya
-          setCurrentStageStep((curr) => {
-            const next = Math.min(5, curr + 1);
-            const nextStageObj = TRACKING_STAGES.find((s) => s.step === next);
-            if (nextStageObj) {
-              onShowToast(`Tahap penanganan diperbarui: ${nextStageObj.label}`);
-            }
-            return next;
-          });
-          return 120; // reset 2 menit lagi
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [activeTicket, currentStageStep]);
 
   const loadLocalAndSupabaseData = async () => {
     const cookieHistory = getStoredTrackedHistory();
@@ -450,15 +425,13 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     }
   };
 
-  // Resolusi data tiket pelaporan
+  // Resolusi data tiket pelaporan langsung dari database realtime
   const resolveTicketData = async (
     code: string,
     fallbackList?: TrackedReportItem[]
   ) => {
     setIsLoadingReport(true);
     const cleaned = code.trim().toUpperCase();
-    simulationStartTimeRef.current = Date.now();
-    setSecondsUntilNextStage(120);
 
     // Tentukan ragam putusan berdasarkan akhiran nomor tiket (ganjil/genap)
     const lastDigit = parseInt(cleaned.replace(/\D/g, '').slice(-1) || '0', 10);
@@ -491,6 +464,27 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           }
         }
 
+        // Hitung tahap aktual dari database dan waktu yang berjalan di latar belakang
+        const calculatedStep = calculateRealtimeStage(
+          remote.status,
+          remote.created_at
+        );
+        const resolvedStatus =
+          TRACKING_STAGES[calculatedStep - 1]?.key || remote.status || 'LAPORAN_TERKIRIM';
+
+        // Jika status telah berjalan lebih jauh di latar belakang, sinkronkan ke database Supabase
+        if (calculatedStep > getStageNumber(remote.status)) {
+          supabase
+            .from('anonymous_reports')
+            .update({
+              status: resolvedStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('ticket_code', cleaned)
+            .then(() => {})
+            .catch(() => {});
+        }
+
         const resolvedItem: TrackedReportItem = {
           ticketCode: remote.ticket_code,
           schoolName: remote.school_name || 'Sekolah Terpilih',
@@ -498,16 +492,14 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           category: remote.category || 'Pungutan Sekolah',
           date: remote.created_at || new Date().toISOString(),
           createdAtRaw: remote.created_at || new Date().toISOString(),
-          status: remote.status || 'LAPORAN_TERKIRIM',
+          status: resolvedStatus,
           notes: remote.notes || remote.notes_encrypted || '',
           attachments: parsedAttachments,
           letterDocument: parsedDoc,
         };
 
         setCurrentReportData(resolvedItem);
-        // Percobaan: selalu mulai dari tahap 1 saat dicek pertama kali
-        setCurrentStageStep(1);
-        buildChatStream(resolvedItem, parsedDoc);
+        setCurrentStageStep(calculatedStep);
         saveTrackedItemToHistory(resolvedItem);
         setIsLoadingReport(false);
         return;
@@ -522,9 +514,12 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     );
 
     if (found) {
+      const calculatedStep = calculateRealtimeStage(
+        found.status,
+        found.createdAtRaw || found.date
+      );
       setCurrentReportData(found);
-      setCurrentStageStep(1);
-      buildChatStream(found, found.letterDocument);
+      setCurrentStageStep(calculatedStep);
       saveTrackedItemToHistory(found);
     } else {
       const nowIso = new Date().toISOString();
@@ -540,43 +535,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
       };
       setCurrentReportData(fallbackItem);
       setCurrentStageStep(1);
-      buildChatStream(fallbackItem);
       saveTrackedItemToHistory(fallbackItem);
     }
 
     setIsLoadingReport(false);
-  };
-
-  const buildChatStream = (
-    item: TrackedReportItem,
-    doc?: AdminReviewDocument | null
-  ) => {
-    if (doc?.chat_messages && doc.chat_messages.length > 0) {
-      setMessages(doc.chat_messages);
-      return;
-    }
-
-    const msgs: ChatMessage[] = [];
-
-    if (item.notes && item.notes.trim()) {
-      msgs.push({
-        id: 'msg-initial-note',
-        sender: 'reporter',
-        senderLabel: 'Catatan Pelapor (Terenkripsi)',
-        timestamp: 'Waktu Kirim',
-        text: item.notes.trim(),
-      });
-    }
-
-    msgs.push({
-      id: 'msg-dinas-initial',
-      sender: 'dinas',
-      senderLabel: 'Tim Verifikator Inspektorat & Dinas Pendidikan',
-      timestamp: 'Sistem Terpadu',
-      text: `Laporan untuk ${item.schoolName} telah diterima melalui jalur aman. Petugas pemeriksa sedang menelaah data administrasi dan bukti yang dilampirkan.`,
-    });
-
-    setMessages(msgs);
   };
 
   // Submit Pencarian Tiket
@@ -633,48 +595,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     setCopiedTicket(true);
     onShowToast(`Kode tiket ${activeTicket} disalin.`);
     setTimeout(() => setCopiedTicket(false), 2000);
-  };
-
-  // Kirim Balasan Chat dari Pelapor (Anonim)
-  const handleSendReply = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = replyInput.trim();
-    if (!trimmed) {
-      setReplyError('Tuliskan pesan balasan terlebih dahulu.');
-      return;
-    }
-    setReplyError(null);
-
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const mins = String(now.getMinutes()).padStart(2, '0');
-
-    const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: 'reporter',
-      senderLabel: 'Anda (Pelapor Anonim)',
-      timestamp: `${hours}:${mins} WIB`,
-      text: trimmed,
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-    setReplyInput('');
-    onShowToast('Pesan balasan anonim Anda telah ditambahkan.');
-  };
-
-  // Tombol Simulasi Cepat: Langsung lompat ke tahap berikutnya (+2 Menit)
-  const handleFastForwardStage = () => {
-    if (currentStageStep < 5) {
-      const nextStep = currentStageStep + 1;
-      setCurrentStageStep(nextStep);
-      setSecondsUntilNextStage(120);
-      const stageObj = TRACKING_STAGES.find((s) => s.step === nextStep);
-      onShowToast(`Simulasi: Berpindah ke Tahap ${nextStep} (${stageObj?.label})`);
-    } else {
-      setCurrentStageStep(1);
-      setSecondsUntilNextStage(120);
-      onShowToast('Simulasi: Diulang kembali dari Tahap 1 (Laporan Terkirim)');
-    }
   };
 
   const activeStageInfo =
@@ -740,7 +660,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     setTicketError(null);
                   }}
                   placeholder="Contoh: CHK-2026-8849-BGR"
-                  className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] uppercase placeholder:text-[#94A3B8] placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
+                  className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] placeholder:text-[#94A3B8] font-mono focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
                 />
               </div>
 
@@ -872,7 +792,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                       title="Salin Kode Tiket"
                     >
                       {copiedTicket ? (
-                        <Check className="w-4 h-4 text-[#2E7D32]" />
+                        <Check className="w-4 h-4 text-[#16A34A]" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
@@ -880,21 +800,22 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                   </div>
                 </div>
 
-                {/* Status Badge: Tenang, Tidak Berkedip, Warna Jelas */}
+                {/* Status Badge: Tindak Lanjut Selesai = Hijau dengan Centang tanpa BG */}
                 <div className="self-start sm:self-auto">
                   <div
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-2 ${
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 ${
                       currentStageStep === 5
-                        ? verdictType === 'TERBUKTI'
-                          ? 'bg-[#FDF2F2] text-[#DC2626] border-[#F5C6CB]'
-                          : 'bg-[#EBF7EE] text-[#2E7D32] border-[#C3E6CB]'
+                        ? 'text-[#16A34A] border border-[#16A34A]/30 bg-transparent'
                         : currentStageStep >= 3
-                        ? 'bg-[#FFF8E6] text-[#D97706] border-[#FCE8B2]'
-                        : 'bg-[#EBF3F8] text-[#2E6496] border-[#C9DFDC]'
+                        ? 'bg-[#FFF8E6] text-[#D97706] border border-[#FCE8B2]'
+                        : 'bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC]'
                     }`}
                   >
-                    {/* Lingkaran Status Solid Tanpa Animasi Kedip */}
-                    <span className="w-2.5 h-2.5 rounded-full bg-current shrink-0" />
+                    {currentStageStep === 5 ? (
+                      <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
+                    ) : (
+                      <span className="w-2.5 h-2.5 rounded-full bg-current shrink-0" />
+                    )}
                     <span>{activeStageInfo.label}</span>
                   </div>
                 </div>
@@ -959,7 +880,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                           key={idx}
                           className="px-2.5 py-1 rounded-lg bg-[#FAF8F5] border border-[#E4E0D8] text-[11px] text-[#1E293B] flex items-center gap-1.5"
                         >
-                          <FileCheck className="w-3 h-3 text-[#2E7D32]" />
+                          <FileCheck className="w-3 h-3 text-[#16A34A]" />
                           <span className="font-medium truncate max-w-[200px]">
                             {att.name}
                           </span>
@@ -991,7 +912,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     <div className="hidden sm:block absolute top-4 left-6 right-6 h-0.5 bg-[#E4E0D8] -z-0" />
                     {/* Garis Penghubung Aktif Hijau Solid */}
                     <div
-                      className="hidden sm:block absolute top-4 left-6 h-0.5 bg-[#2E7D32] transition-all duration-500 ease-out -z-0"
+                      className="hidden sm:block absolute top-4 left-6 h-0.5 bg-[#16A34A] transition-all duration-500 ease-out -z-0"
                       style={{
                         width: `${Math.max(
                           0,
@@ -1017,7 +938,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300 ${
                                 isDone
-                                  ? 'bg-[#2E7D32] text-white border-2 border-[#2E7D32] shadow-2xs'
+                                  ? 'bg-[#16A34A] text-white border-2 border-[#16A34A] shadow-2xs'
                                   : isCurrent
                                   ? 'bg-[#2E6496] text-white border-2 border-[#2E6496] shadow-xs'
                                   : 'bg-[#FFFFFF] text-[#94A3B8] border-2 border-[#CBD5E1]'
@@ -1034,7 +955,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                               <div
                                 className={`text-xs font-bold leading-tight ${
                                   isDone
-                                    ? 'text-[#2E7D32]'
+                                    ? 'text-[#16A34A]'
                                     : isCurrent
                                     ? 'text-[#2E6496]'
                                     : 'text-[#64748B]'
@@ -1057,7 +978,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 (HANYA MUNCUL KETIKA TAHAP 5 / TINDAK LANJUT SELESAI)
                =============================================================== */}
             {currentStageStep === 5 ? (
-              <div className="bg-[#FFFFFF] border-2 border-[#2E6496]/40 rounded-2xl p-6 shadow-xs space-y-4 animate-view-enter">
+              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4 animate-view-enter">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E0D8]">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-[#EBF3F8] text-[#2E6496] flex items-center justify-center font-bold shrink-0">
@@ -1073,11 +994,12 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Badge Putusan */}
+                  {/* Badge Putusan Bersih Hijau dengan Centang */}
                   <span
-                    className={`px-3 py-1 rounded-lg text-xs font-bold border self-start sm:self-auto ${selectedVerdict.badgeColor}`}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 self-start sm:self-auto ${selectedVerdict.badgeColor}`}
                   >
-                    {selectedVerdict.badge}
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                    <span>{selectedVerdict.badge}</span>
                   </span>
                 </div>
 
@@ -1124,143 +1046,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 </span>
               </div>
             )}
-
-            {/* ===============================================================
-                4. KONTROL SIMULASI DUMMY 2 MENIT (UNTUK PENGUJIAN)
-               =============================================================== */}
-            <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#1E293B]">
-                    Mode Pengujian Otomatis
-                  </span>
-                  <span className="text-[10px] bg-[#EBF3F8] text-[#2E6496] px-1.5 py-0.2 rounded font-mono font-bold">
-                    Tiap 2 Menit
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#64748B]">
-                  {currentStageStep < 5
-                    ? `Berpindah otomatis ke tahap berikutnya dalam ${Math.floor(
-                        secondsUntilNextStage / 60
-                      )}:${String(secondsUntilNextStage % 60).padStart(2, '0')}`
-                    : 'Tahap akhir selesai. Surat putusan resmi telah diterbitkan.'}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Toggle Putusan untuk Pengujian Tahap 5 */}
-                {currentStageStep === 5 && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVerdictType((prev) =>
-                        prev === 'TERBUKTI' ? 'TIDAK_TERBUKTI' : 'TERBUKTI'
-                      )
-                    }
-                    className="px-3 py-1.5 rounded-lg bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#C9DFDC] text-[11px] font-bold text-[#2E6496] transition-all cursor-pointer"
-                  >
-                    Ganti Ragam Putusan ({verdictType === 'TERBUKTI' ? 'Terbukti' : 'Tidak Terbukti'})
-                  </button>
-                )}
-
-                {/* Tombol Percepat */}
-                <button
-                  type="button"
-                  onClick={handleFastForwardStage}
-                  className="px-3 py-1.5 rounded-lg bg-[#2E6496] hover:bg-[#245385] text-white text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs active:translate-y-[1px]"
-                >
-                  <FastForward className="w-3.5 h-3.5" />
-                  <span>
-                    {currentStageStep < 5
-                      ? 'Lompat ke Tahap Berikutnya'
-                      : 'Ulang dari Tahap 1'}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* ===============================================================
-                5. KOMUNIKASI 2 ARAH ANONIM (CHAT RINGKAS PELAPOR)
-               =============================================================== */}
-            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#2E6496]" />
-                  <h3 className="font-sturdy-heading text-sm font-bold text-[#1E293B]">
-                    Tanggapan & Balasan Pelapor
-                  </h3>
-                </div>
-                <span className="text-[11px] text-[#2E7D32] font-semibold flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  Jalur Aman Terenkripsi
-                </span>
-              </div>
-
-              {/* Chat Stream */}
-              <div className="space-y-3 max-h-64 overflow-y-auto p-1">
-                {messages.map((msg) => {
-                  const isDinas = msg.sender === 'dinas';
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${
-                        isDinas ? 'items-start' : 'items-end'
-                      } animate-view-enter`}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1 text-[10px] text-[#64748B]">
-                        <span className="font-bold text-[#1E293B]">
-                          {msg.senderLabel}
-                        </span>
-                        <span>•</span>
-                        <span>{msg.timestamp}</span>
-                      </div>
-                      <div
-                        className={`max-w-[90%] sm:max-w-[80%] p-3 rounded-xl text-xs leading-relaxed border ${
-                          isDinas
-                            ? 'bg-[#FAF8F5] border-[#E4E0D8] text-[#1E293B]'
-                            : 'bg-[#2E6496] border-[#2E6496] text-[#FFFFFF]'
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Form Balasan */}
-              <form
-                onSubmit={handleSendReply}
-                className="pt-2 border-t border-[#E4E0D8] space-y-2"
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={replyInput}
-                    onChange={(e) => {
-                      setReplyInput(e.target.value);
-                      setReplyError(null);
-                    }}
-                    placeholder="Kirim pesan tambahan kepada tim verifikator..."
-                    className="flex-1 px-3.5 py-2 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs font-bold active:translate-y-[1px] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Kirim</span>
-                  </button>
-                </div>
-
-                {replyError && (
-                  <div className="text-[11px] text-[#DC2626] flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{replyError}</span>
-                  </div>
-                )}
-              </form>
-            </div>
           </div>
         )}
       </div>
