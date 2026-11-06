@@ -52,52 +52,61 @@ export const TRACKING_STAGES: TrackingStage[] = [
     key: 'LAPORAN_TERKIRIM',
     label: 'Laporan Terkirim',
     sublabel: 'Terenkripsi',
-    description: 'Laporan telah diterima dan masuk ke sistem pelaporan resmi.',
+    description: 'Laporan warga berhasil masuk dengan enkripsi dan kode tiket terverifikasi.',
   },
   {
     step: 2,
     key: 'MENUNGGU_VERIFIKASI',
     label: 'Menunggu Verifikasi',
     sublabel: 'Antrean Dinas',
-    description: 'Laporan masuk antrean penelaahan pengawas BOSP Dinas Pendidikan.',
+    description: 'Berkas masuk antrean telaah oleh tim verifikator Dinas Pendidikan & Inspektorat.',
   },
   {
     step: 3,
     key: 'VERIFIKASI_LAPORAN',
     label: 'Verifikasi Laporan',
     sublabel: 'Telaah Bukti',
-    description: 'Tim pemeriksa memverifikasi bukti kuitansi dan alokasi dana BOSP.',
+    description: 'Tim auditor menelaah kesesuaian bukti laporan dengan SPJ dan juknis BOSP.',
   },
   {
     step: 4,
     key: 'PEMERIKSAAN_LAPANGAN',
     label: 'Pemeriksaan Lapangan',
     sublabel: 'Sidak & BAP',
-    description: 'Tim auditor meminta klarifikasi langsung kepada pihak sekolah.',
+    description: 'Pengawas pembina dan auditor meminta klarifikasi langsung kepada pihak sekolah.',
   },
   {
     step: 5,
     key: 'TINDAK_LANJUT_SELESAI',
     label: 'Tindak Lanjut Selesai',
     sublabel: 'Putusan Resmi',
-    description: 'Pemeriksaan tuntas dan keputusan resmi dinas telah diterbitkan.',
+    description: 'Pemeriksaan tuntas dan berita acara resmi dinas telah diterbitkan.',
   },
 ];
 
-// Opsi Putusan Resmi Dinas Pendidikan ketika tahap 5 selesai (Hijau tanpa latar belakang merah)
+// Opsi Putusan Resmi Dinas Pendidikan ketika tahap 5 selesai:
+// Merah jika terbukti ada pelanggaran (Instruksi Pengembalian Dana), Hijau jika aman / sesuai ketentuan
 export const DINAS_VERDICTS = {
   TERBUKTI: {
     type: 'TERBUKTI',
+    isViolation: true,
     badge: 'Tindak Lanjut Selesai • Instruksi Pengembalian Dana',
-    badgeColor: 'text-[#16A34A] border border-[#16A34A]/30 bg-transparent',
+    badgeColor: 'text-[#DC2626] border border-[#DC2626]/40 bg-[#FEF2F2]',
+    headerBadgeColor: 'text-[#DC2626] border border-[#DC2626]/40 bg-transparent',
+    cardBorder: 'border-[#DC2626]/40',
+    iconBg: 'bg-[#FEE2E2] text-[#DC2626]',
     title: 'Berita Acara Pemeriksaan BOSP No. 421.5/BAP-BOSP/2026',
     actionText: 'Instruksi Pengembalian Dana 100% & Peringatan Tertulis',
     text: 'Berdasarkan hasil audit lapangan dan verifikasi bukti bersama tim pemeriksa BOSP, laporan dugaan pungutan terbukti melanggar Permendikbudristek No. 63/2022. Pihak sekolah telah menandatangani Berita Acara Pemeriksaan dan diwajibkan mengembalikan seluruh dana kepada orang tua siswa selambat-lambatnya 7 hari kerja di bawah pengawasan Inspektorat Daerah.',
   },
   TIDAK_TERBUKTI: {
     type: 'TIDAK_TERBUKTI',
-    badge: 'Tindak Lanjut Selesai • Klarifikasi Sesuai Prosedur',
-    badgeColor: 'text-[#16A34A] border border-[#16A34A]/30 bg-transparent',
+    isViolation: false,
+    badge: 'Tindak Lanjut Selesai • Sesuai Ketentuan & Aman',
+    badgeColor: 'text-[#16A34A] border border-[#16A34A]/40 bg-[#F0FDF4]',
+    headerBadgeColor: 'text-[#16A34A] border border-[#16A34A]/40 bg-transparent',
+    cardBorder: 'border-[#16A34A]/40',
+    iconBg: 'bg-[#DCFCE7] text-[#16A34A]',
     title: 'Berita Acara Klarifikasi No. 421.5/BAK-KOMITE/2026',
     actionText: 'Pungutan Dinyatakan Sesuai Prosedur & Laporan Ditutup',
     text: 'Tim Verifikator Dinas Pendidikan bersama Inspektorat Daerah telah meneliti dokumen SPJ dan pembukuan komite sekolah. Berdasarkan Berita Acara Klarifikasi, kegiatan tersebut merupakan sumbangan sukarela hasil kesepakatan musyawarah komite yang tidak mengikat sesuai Permendikbud No. 75/2016, serta tidak ada paksaan atau penahanan hak belajar siswa. Laporan dinyatakan selesai dan diarsipkan secara tertib.',
@@ -135,12 +144,10 @@ export function calculateRealtimeStage(status?: string, createdAt?: string): num
   const norm = (status || '').trim().toUpperCase();
   const dbStep = getStageNumber(norm);
 
-  // Jika status di database sudah tahap 2, 3, 4, atau 5, pakai status tersebut
   if (dbStep > 1) {
     return dbStep;
   }
 
-  // Jika masih status awal (LAPORAN_TERKIRIM), hitung berdasarkan waktu yang telah berjalan sejak dibuat
   if (createdAt) {
     const createdTime = new Date(createdAt).getTime();
     if (!isNaN(createdTime)) {
@@ -157,45 +164,103 @@ export function calculateRealtimeStage(status?: string, createdAt?: string): num
   return 1;
 }
 
-// Format waktu dan tanggal terstruktur rapi
+/**
+ * Menghitung waktu setiap tahapan pada timeline secara rapi, presisi,
+ * dan bebas error (tanpa NaN dan tanpa tata letak aneh).
+ */
+export function getStageTimestamp(
+  stageStep: number,
+  currentStep: number,
+  baseCreatedAt?: string
+): {
+  isDone: boolean;
+  isCurrent: boolean;
+  timeText: string;
+  badgeText?: string;
+} {
+  const isDone = stageStep < currentStep || (stageStep === 5 && currentStep === 5);
+  const isCurrent = stageStep === currentStep && currentStep !== 5;
+
+  if (stageStep > currentStep) {
+    return {
+      isDone: false,
+      isCurrent: false,
+      timeText: 'Menunggu antrean',
+      badgeText: 'Belum Dimulai',
+    };
+  }
+
+  try {
+    let baseMs = Date.now();
+    if (baseCreatedAt) {
+      const parsed = new Date(baseCreatedAt).getTime();
+      if (!isNaN(parsed)) {
+        baseMs = parsed;
+      }
+    }
+
+    // Offset penanganan tahapan (dalam milidetik)
+    const offsetsMinutes = [0, 2, 5, 10, 20];
+    const offsetMs = (offsetsMinutes[stageStep - 1] || 0) * 60 * 1000;
+    const stageTime = new Date(baseMs + offsetMs);
+
+    const dayStr = stageTime.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const hourStr = String(stageTime.getHours()).padStart(2, '0');
+    const minStr = String(stageTime.getMinutes()).padStart(2, '0');
+
+    return {
+      isDone,
+      isCurrent,
+      timeText: `${dayStr} • ${hourStr}:${minStr} WIB`,
+      badgeText: isDone ? 'Selesai' : isCurrent ? 'Sedang Berjalan' : undefined,
+    };
+  } catch {
+    return {
+      isDone,
+      isCurrent,
+      timeText: 'Hari ini • 10:00 WIB',
+      badgeText: isDone ? 'Selesai' : isCurrent ? 'Sedang Berjalan' : undefined,
+    };
+  }
+}
+
+// Format waktu dan tanggal aman untuk tampilan header
 export function formatReportDateTime(dateStrOrIso?: string): {
   dateFormatted: string;
   timeFormatted: string;
 } {
-  const now = new Date();
-  if (!dateStrOrIso) {
+  try {
+    const d = dateStrOrIso ? new Date(dateStrOrIso) : new Date();
+    if (isNaN(d.getTime())) {
+      const now = new Date();
+      return {
+        dateFormatted: now.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+        timeFormatted: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`,
+      };
+    }
+
     return {
-      dateFormatted: now.toLocaleDateString('id-ID', {
-        weekday: 'long',
+      dateFormatted: d.toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
       }),
-      timeFormatted: `${String(now.getHours()).padStart(2, '0')}:${String(
-        now.getMinutes()
-      ).padStart(2, '0')} WIB`,
+      timeFormatted: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} WIB`,
     };
-  }
-
-  const d = new Date(dateStrOrIso);
-  if (isNaN(d.getTime())) {
+  } catch {
     return {
-      dateFormatted: dateStrOrIso,
+      dateFormatted: 'Hari ini',
       timeFormatted: '10:00 WIB',
     };
   }
-
-  return {
-    dateFormatted: d.toLocaleDateString('id-ID', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }),
-    timeFormatted: `${String(d.getHours()).padStart(2, '0')}:${String(
-      d.getMinutes()
-    ).padStart(2, '0')} WIB`,
-  };
 }
 
 interface LiveTrackingPageProps {
@@ -291,6 +356,8 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   const [currentStageStep, setCurrentStageStep] = useState<number>(1);
 
   // 5. State Putusan Dinas (TERBUKTI / TIDAK_TERBUKTI)
+  // TERBUKTI = Merah (ada pelanggaran & instruksi pengembalian dana)
+  // TIDAK_TERBUKTI = Hijau (aman & sesuai ketentuan komite)
   const [verdictType, setVerdictType] = useState<'TERBUKTI' | 'TIDAK_TERBUKTI'>('TERBUKTI');
 
   // Load Riwayat & Supabase Reports saat Mount
@@ -433,7 +500,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     setIsLoadingReport(true);
     const cleaned = code.trim().toUpperCase();
 
-    // Tentukan ragam putusan berdasarkan akhiran nomor tiket (ganjil/genap)
+    // Tentukan ragam putusan: angka genap = TERBUKTI (merah), ganjil = TIDAK_TERBUKTI (hijau aman)
     const lastDigit = parseInt(cleaned.replace(/\D/g, '').slice(-1) || '0', 10);
     setVerdictType(lastDigit % 2 === 0 ? 'TERBUKTI' : 'TIDAK_TERBUKTI');
 
@@ -601,10 +668,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     TRACKING_STAGES.find((s) => s.step === currentStageStep) ||
     TRACKING_STAGES[0];
 
-  const dateTimeMeta = formatReportDateTime(
-    currentReportData?.createdAtRaw || currentReportData?.date
-  );
-
   const selectedVerdict = DINAS_VERDICTS[verdictType];
 
   return (
@@ -727,7 +790,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                         <span className="font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md">
                           {item.ticketCode}
                         </span>
-                        <span className="text-[#64748B] text-[11px]">
+                        <span className="text-[#64748B] text-[11px] font-mono tabular-nums">
                           {formatReportDateTime(item.date).dateFormatted}
                         </span>
                       </div>
@@ -770,12 +833,12 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
         ) : (
           /* ===================================================================
               KONDISI B: TIKET AKTIF DITEMUKAN
-              STATUS REALTIME BERSIH + ANIMASI CENTANG 1-5 + BALASAN DINAS
+              STATUS REALTIME BERSIH + TIMELINE AKURAT + PUTUSAN RESMI
              =================================================================== */
           <div className="space-y-6 animate-view-enter">
-            {/* 1. KARTU INFORMASI UTAMA & STATUS (TENANG, SOLID, TANPA KEDIP-KEDIP) */}
-            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-5">
-              {/* Header Kode Tiket & Status Badge Diam (Solid) */}
+            {/* 1. KARTU INFORMASI UTAMA & STATUS */}
+            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
+              {/* Header: Kode Tiket & Status Badge (Merah jika terbukti salah, Hijau jika aman) */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E0D8]">
                 <div className="space-y-1">
                   <span className="text-[11px] font-mono text-[#2E6496] font-bold block uppercase tracking-wider">
@@ -800,29 +863,39 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                   </div>
                 </div>
 
-                {/* Status Badge: Tindak Lanjut Selesai = Hijau dengan Centang tanpa BG */}
+                {/* Status Badge: Hijau jika Aman, Merah jika Terbukti Bersalah */}
                 <div className="self-start sm:self-auto">
                   <div
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 ${
                       currentStageStep === 5
-                        ? 'text-[#16A34A] border border-[#16A34A]/30 bg-transparent'
+                        ? selectedVerdict.headerBadgeColor
                         : currentStageStep >= 3
                         ? 'bg-[#FFF8E6] text-[#D97706] border border-[#FCE8B2]'
                         : 'bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC]'
                     }`}
                   >
                     {currentStageStep === 5 ? (
-                      <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
+                      selectedVerdict.isViolation ? (
+                        <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
+                      )
                     ) : (
                       <span className="w-2.5 h-2.5 rounded-full bg-current shrink-0" />
                     )}
-                    <span>{activeStageInfo.label}</span>
+                    <span>
+                      {currentStageStep === 5
+                        ? selectedVerdict.isViolation
+                          ? 'Tindak Lanjut Selesai (Terbukti Pelanggaran)'
+                          : 'Tindak Lanjut Selesai (Aman & Ditutup)'
+                        : activeStageInfo.label}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Rincian Rapi: Sekolah, Kategori, dan Waktu (Tanggal & Jam Rapi) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs">
+              {/* Rincian Rapi: 2 Kolom Lega (Sekolah Terlapor & Kategori Pengaduan) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs">
                 <div className="space-y-1">
                   <span className="text-[11px] text-[#64748B] block font-medium">
                     Sekolah Terlapor:
@@ -847,21 +920,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     {currentReportData?.category || reportCategory}
                   </span>
                 </div>
-
-                {/* Penempatan Waktu Rapi & Enak Dilihat */}
-                <div className="space-y-1">
-                  <span className="text-[11px] text-[#64748B] block font-medium">
-                    Waktu Pengiriman:
-                  </span>
-                  <div className="flex items-center gap-1.5 text-[#1E293B] font-semibold">
-                    <Clock className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
-                    <span>{dateTimeMeta.dateFormatted}</span>
-                    <span className="text-[#94A3B8]">•</span>
-                    <span className="font-mono text-[#2E6496]">
-                      {dateTimeMeta.timeFormatted}
-                    </span>
-                  </div>
-                </div>
               </div>
 
               {/* Bukti Dokumen Terlampir jika ada */}
@@ -884,7 +942,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                           <span className="font-medium truncate max-w-[200px]">
                             {att.name}
                           </span>
-                          <span className="text-[#64748B]">
+                          <span className="text-[#64748B] font-mono tabular-nums">
                             ({att.sizeFormatted})
                           </span>
                         </div>
@@ -892,96 +950,146 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     </div>
                   </div>
                 )}
+            </div>
 
-              {/* ===============================================================
-                  2. STEPPER PROGRESS (ANIMASI CENTANG 1, 2, 3, 4, 5 SOLID)
-                 =============================================================== */}
-              <div className="pt-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-sturdy-heading text-sm font-bold text-[#1E293B]">
-                    Tahapan Penanganan
+            {/* ===============================================================
+                2. TIMELINE PENANGANAN DENGAN PENEMPATAN WAKTU PRESISI & RAPI
+               =============================================================== */}
+            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
+                <div className="space-y-0.5">
+                  <h3 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
+                    Kronologi & Linimasa Penanganan
                   </h3>
-                  <span className="text-[11px] text-[#64748B] font-mono">
-                    Tahap {currentStageStep} dari 5
-                  </span>
+                  <p className="text-[11px] text-[#64748B]">
+                    Status dan catatan waktu setiap tahapan pemeriksaan secara berkala.
+                  </p>
                 </div>
+                <span className="text-xs font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2.5 py-1 rounded-lg shrink-0">
+                  Tahap {currentStageStep} / 5
+                </span>
+              </div>
 
-                <div className="p-4 sm:p-5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8]">
-                  <div className="relative">
-                    {/* Garis Penghubung Latar Belakang */}
-                    <div className="hidden sm:block absolute top-4 left-6 right-6 h-0.5 bg-[#E4E0D8] -z-0" />
-                    {/* Garis Penghubung Aktif Hijau Solid */}
-                    <div
-                      className="hidden sm:block absolute top-4 left-6 h-0.5 bg-[#16A34A] transition-all duration-500 ease-out -z-0"
-                      style={{
-                        width: `${Math.max(
-                          0,
-                          Math.min(100, ((currentStageStep - 1) / 4) * 100)
-                        )}%`,
-                      }}
-                    />
+              {/* Daftar Linimasa Vertikal Terstruktur */}
+              <div className="relative pl-2 sm:pl-3">
+                {/* Garis vertikal pembimbing linimasa */}
+                <div className="absolute left-6 sm:left-7 top-4 bottom-6 w-0.5 bg-[#E4E0D8]" />
 
-                    {/* 5 Titik Tahapan */}
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 sm:gap-2 relative z-10">
-                      {TRACKING_STAGES.map((st) => {
-                        const isDone =
-                          st.step < currentStageStep || currentStageStep === 5;
-                        const isCurrent =
-                          st.step === currentStageStep && currentStageStep !== 5;
+                <div className="space-y-4 sm:space-y-5">
+                  {TRACKING_STAGES.map((st, idx) => {
+                    const timeMeta = getStageTimestamp(
+                      st.step,
+                      currentStageStep,
+                      currentReportData?.createdAtRaw || currentReportData?.date
+                    );
+                    const isLastStep = idx === TRACKING_STAGES.length - 1;
 
-                        return (
-                          <div
-                            key={st.step}
-                            className="flex sm:flex-col items-center sm:text-center gap-2.5 sm:gap-1.5"
-                          >
-                            {/* Lingkaran Centang: Centang Hijau Mulus / Angka Solid Diam */}
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300 ${
-                                isDone
-                                  ? 'bg-[#16A34A] text-white border-2 border-[#16A34A] shadow-2xs'
-                                  : isCurrent
-                                  ? 'bg-[#2E6496] text-white border-2 border-[#2E6496] shadow-xs'
-                                  : 'bg-[#FFFFFF] text-[#94A3B8] border-2 border-[#CBD5E1]'
-                              }`}
-                            >
-                              {isDone ? (
-                                <Check className="w-4 h-4 text-white stroke-[3]" />
-                              ) : (
-                                <span className="font-mono">{st.step}</span>
+                    // Konfigurasi visual lingkaran tahapan
+                    let circleStyle = 'bg-[#FFFFFF] text-[#94A3B8] border-2 border-[#CBD5E1]';
+                    let titleStyle = 'text-[#64748B]';
+
+                    if (timeMeta.isDone) {
+                      if (isLastStep) {
+                        // Tahap 5: Merah jika terbukti ada pelanggaran, Hijau jika aman
+                        if (selectedVerdict.isViolation) {
+                          circleStyle = 'bg-[#DC2626] text-white border-2 border-[#DC2626] shadow-2xs';
+                          titleStyle = 'text-[#DC2626] font-extrabold';
+                        } else {
+                          circleStyle = 'bg-[#16A34A] text-white border-2 border-[#16A34A] shadow-2xs';
+                          titleStyle = 'text-[#16A34A] font-extrabold';
+                        }
+                      } else {
+                        circleStyle = 'bg-[#16A34A] text-white border-2 border-[#16A34A] shadow-2xs';
+                        titleStyle = 'text-[#16A34A] font-bold';
+                      }
+                    } else if (timeMeta.isCurrent) {
+                      circleStyle = 'bg-[#2E6496] text-white border-2 border-[#2E6496] shadow-xs';
+                      titleStyle = 'text-[#2E6496] font-extrabold';
+                    }
+
+                    return (
+                      <div key={st.step} className="relative flex items-start gap-3.5 sm:gap-4 z-10">
+                        {/* Lingkaran Indikator Tahap */}
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${circleStyle}`}
+                        >
+                          {timeMeta.isDone ? (
+                            isLastStep && selectedVerdict.isViolation ? (
+                              <AlertCircle className="w-4 h-4 text-white stroke-[2.5]" />
+                            ) : (
+                              <Check className="w-4 h-4 text-white stroke-[3]" />
+                            )
+                          ) : (
+                            <span className="font-mono">{st.step}</span>
+                          )}
+                        </div>
+
+                        {/* Kotak Rincian Tahap & Penempatan Waktu yang Rapi */}
+                        <div
+                          className={`flex-1 min-w-0 p-3.5 sm:p-4 rounded-xl border transition-all ${
+                            timeMeta.isCurrent
+                              ? 'bg-[#FFFFFF] border-[#2E6496]/50 shadow-xs'
+                              : timeMeta.isDone
+                              ? isLastStep && selectedVerdict.isViolation
+                                ? 'bg-[#FFFBFB] border-[#DC2626]/30'
+                                : 'bg-[#FAF8F5] border-[#E4E0D8]'
+                              : 'bg-[#FAF8F5]/60 border-[#E4E0D8]/60 opacity-75'
+                          }`}
+                        >
+                          {/* Baris Atas: Judul Tahap + Status Badge + Penempatan Waktu Presisi */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 pb-1.5 border-b border-[#E4E0D8]/60">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs sm:text-sm tracking-tight ${titleStyle}`}>
+                                {st.label}
+                              </span>
+                              {timeMeta.badgeText && (
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    timeMeta.isDone
+                                      ? isLastStep && selectedVerdict.isViolation
+                                        ? 'bg-[#FEE2E2] text-[#DC2626]'
+                                        : 'bg-[#DCFCE7] text-[#16A34A]'
+                                      : timeMeta.isCurrent
+                                      ? 'bg-[#EBF3F8] text-[#2E6496]'
+                                      : 'bg-[#F1F5F9] text-[#64748B]'
+                                  }`}
+                                >
+                                  {timeMeta.badgeText}
+                                </span>
                               )}
                             </div>
 
-                            <div className="space-y-0.5">
-                              <div
-                                className={`text-xs font-bold leading-tight ${
-                                  isDone
-                                    ? 'text-[#16A34A]'
-                                    : isCurrent
-                                    ? 'text-[#2E6496]'
-                                    : 'text-[#64748B]'
-                                }`}
-                              >
-                                {st.label}
-                              </div>
+                            {/* Waktu Linimasa: Format Bersih, Tabular Nums, Tidak Pernah Terpotong */}
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#64748B] tabular-nums shrink-0 self-start sm:self-auto">
+                              <Clock className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                              <span>{timeMeta.timeText}</span>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+
+                          <p className="text-xs text-[#475569] leading-relaxed pt-2">
+                            {st.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* ===============================================================
-                3. BALASAN DARI DINAS PENDIDIKAN
+                3. BALASAN & PUTUSAN RESMI DARI DINAS PENDIDIKAN
                 (HANYA MUNCUL KETIKA TAHAP 5 / TINDAK LANJUT SELESAI)
                =============================================================== */}
             {currentStageStep === 5 ? (
-              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4 animate-view-enter">
+              <div
+                className={`bg-[#FFFFFF] border rounded-2xl p-6 shadow-xs space-y-4 animate-view-enter ${selectedVerdict.cardBorder}`}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E0D8]">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#EBF3F8] text-[#2E6496] flex items-center justify-center font-bold shrink-0">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold shrink-0 ${selectedVerdict.iconBg}`}
+                    >
                       <FileBadge2 className="w-4 h-4" />
                     </div>
                     <div>
@@ -994,11 +1102,15 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Badge Putusan Bersih Hijau dengan Centang */}
+                  {/* Badge Putusan: Merah jika Terbukti Pelanggaran, Hijau jika Aman */}
                   <span
                     className={`px-3 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 self-start sm:self-auto ${selectedVerdict.badgeColor}`}
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                    {selectedVerdict.isViolation ? (
+                      <AlertCircle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                    )}
                     <span>{selectedVerdict.badge}</span>
                   </span>
                 </div>
@@ -1009,21 +1121,53 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     <span className="font-bold text-[#1E293B]">
                       {selectedVerdict.title}
                     </span>
-                    <span>{dateTimeMeta.dateFormatted}</span>
+                    <span className="font-mono tabular-nums">
+                      {formatReportDateTime(currentReportData?.createdAtRaw || currentReportData?.date).dateFormatted}
+                    </span>
                   </div>
 
                   <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed font-normal">
                     {selectedVerdict.text}
                   </p>
 
-                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-[#475569] border-t border-[#E4E0D8]">
-                    <span className="font-semibold text-[#2E6496]">
+                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] border-t border-[#E4E0D8]">
+                    <span
+                      className={`font-semibold ${
+                        selectedVerdict.isViolation ? 'text-[#DC2626]' : 'text-[#16A34A]'
+                      }`}
+                    >
                       Tindak Lanjut: {selectedVerdict.actionText}
                     </span>
                     <span className="font-mono text-[#64748B]">
                       No. Tiket: {activeTicket}
                     </span>
                   </div>
+                </div>
+
+                {/* Tombol Pengganti Variasi Putusan (Merah Terbukti vs Hijau Aman) */}
+                <div className="pt-1 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVerdictType((prev) =>
+                        prev === 'TERBUKTI' ? 'TIDAK_TERBUKTI' : 'TERBUKTI'
+                      )
+                    }
+                    className="text-[11px] text-[#64748B] hover:text-[#2E6496] flex items-center gap-1.5 cursor-pointer transition-colors"
+                    title="Klik untuk melihat skenario putusan lainnya"
+                  >
+                    <RefreshCw className="w-3 h-3 text-[#2E6496]" />
+                    <span>Ubah Skenario Hasil:</span>
+                    <span
+                      className={`font-bold underline ${
+                        verdictType === 'TERBUKTI' ? 'text-[#16A34A]' : 'text-[#DC2626]'
+                      }`}
+                    >
+                      {verdictType === 'TERBUKTI'
+                        ? 'Tampilkan Jika Aman (Hijau)'
+                        : 'Tampilkan Jika Terbukti Bersalah (Merah)'}
+                    </span>
+                  </button>
                 </div>
               </div>
             ) : (
