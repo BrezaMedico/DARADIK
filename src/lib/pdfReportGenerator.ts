@@ -8,7 +8,7 @@ import { SchoolData, formatRupiah } from '../data/schoolsData';
  */
 export async function generateBospTransparencyPdf(
   school: SchoolData,
-  targetYear: '2026' | '2025' = '2026'
+  targetYear: string = '2026'
 ): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -22,14 +22,14 @@ export async function generateBospTransparencyPdf(
   const contentWidth = pageWidth - marginX * 2; // 182mm
   let currentY = 14;
 
-  const yearData = school.history?.[targetYear] || {
+  const yearData = {
     year: targetYear,
-    isCurrentYear: targetYear === '2026',
+    isCurrentYear: true,
     totalBosp: school.totalBosp,
     tahap1: school.tahap1,
     tahap2: school.tahap2,
-    compositions: school.compositions,
-    items: school.items,
+    compositions: school.compositions || [],
+    items: school.items || [],
   };
 
   const totalItemSubtotal = yearData.items.reduce((sum, it) => sum + it.amount, 0);

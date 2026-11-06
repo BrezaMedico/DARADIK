@@ -29,7 +29,6 @@ import {
   BookOpen,
 } from 'lucide-react';
 import {
-  BAZMA_YEARLY_HISTORY,
   BospRealizationItem,
   SchoolData,
   WaScenarioData,
@@ -115,28 +114,14 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
   onOpenAnonymousReport,
   onShowToast,
 }) => {
-  const selectedYear = '2026';
-
-  // Active Year Data (Tahun Berjalan 2026)
-  const activeYearData = useMemo(() => {
-    if (school.history && school.history[selectedYear]) {
-      return school.history[selectedYear];
-    }
-    if (BAZMA_YEARLY_HISTORY[selectedYear]) {
-      return BAZMA_YEARLY_HISTORY[selectedYear];
-    }
-    return BAZMA_YEARLY_HISTORY['2026'];
-  }, [school.history]);
-
-  const currentItems = activeYearData.items;
-  const currentStudentCount =
-    activeYearData.studentCount || school.studentCount || 90;
-  const currentPerStudentEstimate =
-    activeYearData.perStudentEstimate || school.perStudentEstimate || 1900000;
+  // Data Sekolah Tahun Berjalan (Tahun 2026 Saja)
+  const currentItems = school.items || [];
+  const currentStudentCount = school.studentCount || 90;
+  const currentPerStudentEstimate = school.perStudentEstimate || 1900000;
   const currentTotalBosp =
-    activeYearData.totalBosp || currentStudentCount * currentPerStudentEstimate;
-  const currentTahap1 = activeYearData.tahap1;
-  const currentTahap2 = activeYearData.tahap2;
+    school.totalBosp || currentStudentCount * currentPerStudentEstimate;
+  const currentTahap1 = school.tahap1;
+  const currentTahap2 = school.tahap2;
 
   const schoolType =
     school.schoolType ||
@@ -196,7 +181,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
 
   // Animation progress
   const animProgress = useAnimatedProgress(
-    `${school.id}-${activeTab}-${selectedYear}`,
+    `${school.id}-${activeTab}`,
     560
   );
 
@@ -240,7 +225,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
 
   const handleShareSchool = async () => {
     const shareUrl = `${window.location.origin}/?npsn=${school.npsn}`;
-    const shareText = `Ringkasan Transparansi BOSP ${school.name} (NPSN: ${school.npsn}), Pagu BOSP TA ${selectedYear}: ${formatRupiah(
+    const shareText = `Ringkasan Transparansi BOSP ${school.name} (NPSN: ${school.npsn}), Pagu BOSP TA 2026: ${formatRupiah(
       currentTotalBosp
     )}. Cek rincian penggunaan di: ${shareUrl}`;
 
@@ -261,7 +246,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     try {
       await generateBospTransparencyPdf(school, '2026');
       onShowToast(
-        `Laporan PDF resmi ${school.name} (TA ${selectedYear}) berhasil diunduh.`
+        `Laporan PDF resmi ${school.name} (TA 2026) berhasil diunduh.`
       );
     } catch (err) {
       console.error('[DARADIK PDF]', err);
@@ -545,7 +530,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-base sm:text-lg font-extrabold text-[#FFFFFF]">
-                          Dana BOSP Tahun {selectedYear}
+                          Dana BOSP Tahun 2026
                         </h2>
                         <span className="px-2.5 py-0.5 rounded-full bg-[#FFFFFF]/20 text-[11px] font-bold text-[#FFFFFF]">
                           {educationLevel} {schoolType}
@@ -845,7 +830,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                       <strong className="text-[#1E293B]">
                         &ldquo;{committedQuery}&rdquo;
                       </strong>{' '}
-                      tidak tercatat dalam pembelanjaan BOSP tahun {selectedYear}.
+                      tidak tercatat dalam pembelanjaan BOSP tahun 2026.
                     </p>
                   </div>
                   <button

@@ -125,7 +125,6 @@ export interface SchoolData {
   tahap1Compositions?: BudgetComposition[];
   tahap2Compositions?: BudgetComposition[];
   items: BospRealizationItem[];
-  history?: Record<string, SchoolYearHistory>;
   imageUrl?: string;
 }
 
@@ -680,327 +679,7 @@ export const SMK_TI_BAZMA: SchoolData = {
   items: BAZMA_BOSP_ITEMS,
 };
 
-/**
- * Arsip Realisasi Pengadaan BOSP Resmi SMK TI BAZMA Tahun Lalu (TA 2025)
- */
-export const BAZMA_BOSP_ITEMS_2025: BospRealizationItem[] = [
-  {
-    id: 'item-2025-komputer-01',
-    code: 'RKAS-2025-02.04',
-    name: 'Workstation Komputer Praktikum Lab SIJA (10 Unit)',
-    unitSummary: '10 Unit Terpasang',
-    amount: 42000000,
-    category: 'Peralatan Sekolah & Fasilitas Lab Komputer',
-    aiCategoryPath: 'Infrastruktur TI > Komputer Workstation Lab',
-    date: '15 Agustus 2025',
-    stage: 'Tahap 2',
-    allocation: 'Pengadaan workstation koding dan sistem operasi Linux untuk praktikum 90 siswa kejuruan',
-    iconType: 'projector',
-    keywords: ['komputer', 'pc', 'workstation', 'lab komputer', 'praktikum', 'sija'],
-    invoice: {
-      number: 'INV/TECH-BGR/2025/08/0411',
-      vendorName: 'PT Multi Informatika Nusantara Bogor',
-      vendorAddress: 'Jl. Pajajaran No. 44, Kota Bogor',
-      npwp: '01.882.333.1-403.000',
-      date: '15 Agustus 2025',
-      treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Ag',
-      lineItems: [
-        {
-          name: 'PC Desktop Core i5 SSD 512GB RAM 16GB Lab Workstation',
-          qty: '10 Unit',
-          unitPrice: 4200000,
-          subtotal: 42000000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5684',
-      lng: '106.6975',
-      roomLabel: 'Lab Komputer SIJA 1 — SMK TI BAZMA',
-      uploadedAt: '18 Agu 2025 11:00 WIB',
-      inspectorNote: '10 unit PC telah diinstalasi OS Debian dan siap untuk praktikum siswa.',
-      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
-    },
-  },
-  {
-    id: 'item-2025-modul-02',
-    code: 'RKAS-2025-03.01',
-    name: 'Buku Teks & Modul Kurikulum Nasional Siswa',
-    unitSummary: '90 Paket Modul',
-    amount: 20000000,
-    category: 'Pengembangan Bahan Ajar & Modul Siswa',
-    aiCategoryPath: 'Kurikulum & Buku > Modul Praktikum Siswa',
-    date: '10 Maret 2025',
-    stage: 'Tahap 1',
-    allocation: 'Penyediaan modul materi ajar kejuruan gratis bagi seluruh 90 siswa SMK TI BAZMA',
-    iconType: 'book',
-    keywords: ['buku', 'modul', 'materi', 'buku teks', 'perpustakaan', 'kurikulum'],
-    invoice: {
-      number: 'INV/EDUKASI-BGR/2025/03/0091',
-      vendorName: 'Penerbit Mitra Edukasi Bogor',
-      vendorAddress: 'Jl. Raya Tajur No. 12, Kota Bogor',
-      npwp: '02.441.222.9-404.000',
-      date: '10 Maret 2025',
-      treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Ag',
-      lineItems: [
-        {
-          name: 'Paket Modul Kurikulum SMK Kejuruan SIJA Lengkap',
-          qty: '90 Paket',
-          unitPrice: 222222,
-          subtotal: 20000000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5683',
-      lng: '106.6974',
-      roomLabel: 'Perpustakaan & Ruang Baca — SMK TI BAZMA',
-      uploadedAt: '12 Mar 2025 10:15 WIB',
-      inspectorNote: 'Buku teks telah didistribusikan ke seluruh siswa tanpa dipungut biaya.',
-      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
-    },
-  },
-  {
-    id: 'item-2025-router-03',
-    code: 'RKAS-2025-02.05',
-    name: 'Router Gateway Core Mikrotik & Rack Server Asrama',
-    unitSummary: '2 Unit Router Core',
-    amount: 14800000,
-    category: 'Perangkat Jaringan & Komunikasi Data',
-    aiCategoryPath: 'Infrastruktur TI > Router Core Jaringan',
-    date: '22 September 2025',
-    stage: 'Tahap 2',
-    allocation: 'Pembaruan router gateway bandwidth management untuk akses internet asrama siswa',
-    iconType: 'projector',
-    keywords: ['router', 'mikrotik', 'gateway', 'wifi', 'jaringan', 'internet'],
-    invoice: {
-      number: 'INV/NET-2025/09/0112',
-      vendorName: 'CV Jaringan Mandiri Bogor',
-      vendorAddress: 'Jl. Padjadjaran No. 56, Kota Bogor',
-      npwp: '03.111.444.2-403.000',
-      date: '22 September 2025',
-      treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Ag',
-      lineItems: [
-        {
-          name: 'MikroTik Cloud Core Router CCR2004-16G-2S+',
-          qty: '2 Unit',
-          unitPrice: 7400000,
-          subtotal: 14800000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5682',
-      lng: '106.6978',
-      roomLabel: 'Ruang Server NOC — SMK TI BAZMA',
-      uploadedAt: '25 Sep 2025 14:00 WIB',
-      inspectorNote: 'Router core aktif dan manajemen bandwidth internet berjalan optimal.',
-      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
-    },
-  },
-  {
-    id: 'item-2025-internet-04',
-    code: 'RKAS-2025-06.01',
-    name: 'Langganan Internet Dedicated Fiber Optik 100 Mbps (TA 2025)',
-    unitSummary: '12 Bulan Penuh',
-    amount: 21600000,
-    category: 'Langganan Daya & Jasa Internet',
-    aiCategoryPath: 'Langganan Daya & Jasa > Internet Dedicated',
-    date: '05 Januari 2025',
-    stage: 'Tahap 1',
-    allocation: 'Akses broadband fiber optik 1:1 untuk pembelajaran digital dan praktikum siswa selama 12 bulan',
-    iconType: 'projector',
-    keywords: ['internet', 'wifi', 'fiber optik', 'langganan internet', 'bandwidth'],
-    invoice: {
-      number: 'INV/TELCO-2025/01/008',
-      vendorName: 'PT Telekomunikasi Data Nusantara Bogor',
-      vendorAddress: 'Jl. Pajajaran Raya No. 12, Kota Bogor',
-      npwp: '01.233.444.5-403.000',
-      date: '05 Januari 2025',
-      treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Ag',
-      lineItems: [
-        {
-          name: 'Akses Internet Dedicated 100 Mbps (12 Bulan TA 2025)',
-          qty: '12 Bulan',
-          unitPrice: 1800000,
-          subtotal: 21600000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5682',
-      lng: '106.6978',
-      roomLabel: 'NOC / Ruang Jaringan — SMK TI BAZMA',
-      uploadedAt: '10 Jan 2025 09:30 WIB',
-      inspectorNote: 'Layanan internet dedicated 100 Mbps aktif sepanjang tahun 2025.',
-      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
-    },
-  },
-  {
-    id: 'item-2025-sanitasi-05',
-    code: 'RKAS-2025-05.08',
-    name: 'Perbaikan Saluran Air Bersih & Pompa Asrama Siswa',
-    unitSummary: '6 Titik Sanitasi',
-    amount: 11200000,
-    category: 'Pemeliharaan Sarana Sanitasi & Higienitas',
-    aiCategoryPath: 'Pemeliharaan Sanitasi > Pompa & Kamar Mandi',
-    date: '20 Mei 2025',
-    stage: 'Tahap 1',
-    allocation: 'Perbaikan instalasi pipa air bersih dan penggantian pompa air otomatis gedung asrama santri',
-    iconType: 'sanitation',
-    keywords: ['toilet', 'wc', 'kamar mandi', 'air bersih', 'sanitasi', 'pompa'],
-    invoice: {
-      number: 'INV/SAN-2025/05/0074',
-      vendorName: 'CV Berkah Sanitasi Mandiri',
-      vendorAddress: 'Jl. Raya Leuwiliang No. 70, Kab. Bogor',
-      npwp: '04.119.502.1-403.000',
-      date: '20 Mei 2025',
-      treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Ag',
-      lineItems: [
-        {
-          name: 'Pompa Air Booster Otomatis & Pemipaan PVC SNI',
-          qty: '2 Paket',
-          unitPrice: 5600000,
-          subtotal: 11200000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5681',
-      lng: '106.6976',
-      roomLabel: 'Gedung Asrama Siswa — SMK TI BAZMA',
-      uploadedAt: '22 Mei 2025 15:00 WIB',
-      inspectorNote: 'Debit air bersih lancar mengalir ke seluruh kamar mandi asrama.',
-      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
-    },
-  },
-  {
-    id: 'item-2025-cat-06',
-    code: 'RKAS-2025-05.02',
-    name: 'Pengecatan & Pemeliharaan Ruang Kelas Belajar',
-    unitSummary: '3 Ruang Kelas',
-    amount: 9800000,
-    category: 'Pemeliharaan Gedung & Ruang Belajar',
-    aiCategoryPath: 'Pemeliharaan Gedung > Pengecatan Ruang Kelas',
-    date: '14 Juli 2025',
-    stage: 'Tahap 2',
-    allocation: 'Pengecatan ulang dinding ruang kelas teori dan lab komputer agar bersih dan nyaman untuk kegiatan belajar',
-    iconType: 'paint',
-    keywords: ['cat', 'cat kelas', 'pengecatan', 'cat tembok', 'ruang kelas', 'pemeliharaan'],
-    invoice: {
-      number: 'INV/CAT-2025/07/0033',
-      vendorName: 'Toko Cat & Bangunan Ciampea Indah',
-      vendorAddress: 'Jl. Raya Ciampea No. 28, Kab. Bogor',
-      npwp: '05.212.890.1-403.000',
-      date: '14 Juli 2025',
-      treasurerName: 'Rina Marlina, S.E.',
-      principalName: 'Ahmad Dahlan, S.Ag',
-      lineItems: [
-        {
-          name: 'Cat Tembok Interior Anti-Jamur & Alat Kuas/Roll',
-          qty: '12 Pail',
-          unitPrice: 816666,
-          subtotal: 9800000,
-        },
-      ],
-    },
-    geotag: {
-      lat: '-6.5683',
-      lng: '106.6975',
-      roomLabel: 'Ruang Kelas Teori & Lab — SMK TI BAZMA',
-      uploadedAt: '17 Jul 2025 13:20 WIB',
-      inspectorNote: 'Dinding kelas telah dicat rapi dan bersih.',
-      conditionStatus: 'Terverifikasi Fisik & Geotagging Dapodik',
-    },
-  },
-];
 
-export const BAZMA_YEARLY_HISTORY: Record<string, SchoolYearHistory> = {
-  '2026': {
-    year: '2026',
-    isCurrentYear: true,
-    studentCount: 90,
-    perStudentEstimate: 1900000,
-    totalBosp: 171000000,
-    tahap1: {
-      amount: 85500000,
-      period: 'Jan–Jun',
-      status: 'Sudah Cair',
-      disbursedDate: '16 Februari 2026',
-    },
-    tahap2: {
-      amount: 85500000,
-      period: 'Jul–Des',
-      status: 'Sudah Cair',
-      disbursedDate: '14 Agustus 2026',
-    },
-    compositions: BAZMA_GLOBAL_COMPOSITIONS_2026,
-    tahap1Compositions: BAZMA_TAHAP1_COMPOSITIONS_2026,
-    tahap2Compositions: BAZMA_TAHAP2_COMPOSITIONS_2026,
-    items: BAZMA_BOSP_ITEMS,
-  },
-  '2025': {
-    year: '2025',
-    isCurrentYear: false,
-    studentCount: 90,
-    perStudentEstimate: 1600000,
-    totalBosp: 144000000,
-    tahap1: {
-      amount: 72000000,
-      period: 'Jan–Jun',
-      status: 'Sudah Cair',
-      disbursedDate: '18 Februari 2025',
-    },
-    tahap2: {
-      amount: 72000000,
-      period: 'Jul–Des',
-      status: 'Sudah Cair',
-      disbursedDate: '11 Agustus 2025',
-    },
-    compositions: [
-      {
-        id: 'comp-2025-1',
-        label: 'Pengembangan Perpustakaan & Buku / Modul Ajar',
-        percentage: 15,
-        amount: 21600000,
-        color: '#2E6496',
-        description: 'Buku kejuruan dan bahan praktik siswa.',
-      },
-      {
-        id: 'comp-2025-2',
-        label: 'Pemeliharaan Sarana dan Prasarana Sekolah',
-        percentage: 18,
-        amount: 25920000,
-        color: '#4B83B1',
-        description: 'Perbaikan sanitasi asrama dan perawatan ruang kelas.',
-      },
-      {
-        id: 'comp-2025-3',
-        label: 'Pembayaran Honor Guru & Tendik (Sekolah Swasta)',
-        percentage: 32,
-        amount: 46080000,
-        color: '#66A3BF',
-        description: 'Honorarium guru produktif dan tenaga kependidikan.',
-      },
-      {
-        id: 'comp-2025-4',
-        label: 'Komponen Lainnya (Workstation Lab, Daya & Jasa)',
-        percentage: 35,
-        amount: 50400000,
-        color: '#8CBCCF',
-        description: 'Workstation lab komputer dan dedicated internet.',
-      },
-    ],
-    items: BAZMA_BOSP_ITEMS_2025,
-  },
-};
-
-SMK_TI_BAZMA.history = BAZMA_YEARLY_HISTORY;
 
 const PRINCIPAL_FIRST_NAMES = [
   'Drs. H. Bambang',
@@ -1431,7 +1110,7 @@ export function customizeBospItemsForSchool(
   });
 }
 
-export function buildSchoolYearlyHistory(
+export function buildSchoolPayload(
   schoolName: string,
   principalName: string,
   treasurerName: string,
@@ -1444,9 +1123,12 @@ export function buildSchoolYearlyHistory(
     kabupaten?: string;
     seq?: number;
   }
-): Record<string, SchoolYearHistory> {
-  if (schoolName === 'SMK TI BAZMA') return BAZMA_YEARLY_HISTORY;
-
+): {
+  compositions: BudgetComposition[];
+  tahap1Compositions?: BudgetComposition[];
+  tahap2Compositions?: BudgetComposition[];
+  items: BospRealizationItem[];
+} {
   const studentCount = options?.studentCount || 300;
   const perStudentEstimate = options?.perStudentEstimate || 1500000;
   const totalBosp = options?.totalBosp || studentCount * perStudentEstimate;
@@ -1469,83 +1151,19 @@ export function buildSchoolYearlyHistory(
       seq
     );
 
-  const prevPerStudent = Math.max(850000, perStudentEstimate - 40000);
-  const prevTotalBosp = studentCount * prevPerStudent;
-  const prevTahap1 = Math.round(prevTotalBosp * 0.5);
-  const prevTahap2 = prevTotalBosp - prevTahap1;
-  const prevComp = buildSchoolCompositions(
-    prevTotalBosp,
-    prevTahap1,
-    prevTahap2,
-    schoolType,
-    educationLevel,
-    kabupaten,
-    seq + 3
-  );
-
   return {
-    '2026': {
-      year: '2026',
-      isCurrentYear: true,
-      studentCount,
-      perStudentEstimate,
-      totalBosp,
-      tahap1: {
-        amount: tahap1Amount,
-        period: 'Jan–Jun',
-        status: 'Sudah Cair',
-        disbursedDate: `${10 + (seq % 12)} Februari 2026`,
-      },
-      tahap2: {
-        amount: tahap2Amount,
-        period: 'Jul–Des',
-        status: 'Sudah Cair',
-        disbursedDate: `${11 + (seq % 14)} Agustus 2026`,
-      },
-      compositions: globalCompositions,
-      tahap1Compositions,
-      tahap2Compositions,
-      items: customizeBospItemsForSchool(
-        BAZMA_BOSP_ITEMS,
-        schoolName,
-        principalName,
-        treasurerName,
-        scaleFactor,
-        educationLevel,
-        kabupaten
-      ),
-    },
-    '2025': {
-      year: '2025',
-      isCurrentYear: false,
-      studentCount,
-      perStudentEstimate: prevPerStudent,
-      totalBosp: prevTotalBosp,
-      tahap1: {
-        amount: prevTahap1,
-        period: 'Jan–Jun',
-        status: 'Sudah Cair',
-        disbursedDate: '18 Februari 2025',
-      },
-      tahap2: {
-        amount: prevTahap2,
-        period: 'Jul–Des',
-        status: 'Sudah Cair',
-        disbursedDate: '11 Agustus 2025',
-      },
-      compositions: prevComp.globalCompositions,
-      tahap1Compositions: prevComp.tahap1Compositions,
-      tahap2Compositions: prevComp.tahap2Compositions,
-      items: customizeBospItemsForSchool(
-        BAZMA_BOSP_ITEMS_2025,
-        schoolName,
-        principalName,
-        treasurerName,
-        prevTotalBosp / 144000000,
-        educationLevel,
-        kabupaten
-      ),
-    },
+    compositions: globalCompositions,
+    tahap1Compositions,
+    tahap2Compositions,
+    items: customizeBospItemsForSchool(
+      BAZMA_BOSP_ITEMS,
+      schoolName,
+      principalName,
+      treasurerName,
+      scaleFactor,
+      educationLevel,
+      kabupaten
+    ),
   };
 }
 
@@ -1703,26 +1321,20 @@ function buildStructuredSchoolsDatabase(): SchoolData[] {
         disbursedDate: `${11 + (currentSeq % 14)} Agustus 2026`,
       };
 
-      let cachedHistory: Record<string, SchoolYearHistory> | null = null;
-      const getLazyHistory = (): Record<string, SchoolYearHistory> => {
-        if (!cachedHistory) {
-          cachedHistory = buildSchoolYearlyHistory(
-            schoolName,
-            principalName,
-            treasurerName,
-            {
-              studentCount,
-              perStudentEstimate: perStudentRate,
-              totalBosp,
-              schoolType: currentSchoolType,
-              educationLevel: currentEducationLevel,
-              kabupaten,
-              seq: currentSeq,
-            }
-          );
+      const payload = buildSchoolPayload(
+        schoolName,
+        principalName,
+        treasurerName,
+        {
+          studentCount,
+          perStudentEstimate: perStudentRate,
+          totalBosp,
+          schoolType: currentSchoolType,
+          educationLevel: currentEducationLevel,
+          kabupaten,
+          seq: currentSeq,
         }
-        return cachedHistory;
-      };
+      );
 
       schools.push({
         id: slug,
@@ -1746,21 +1358,10 @@ function buildStructuredSchoolsDatabase(): SchoolData[] {
         totalBosp,
         tahap1: tahap1Info,
         tahap2: tahap2Info,
-        get compositions() {
-          return getLazyHistory()['2026'].compositions;
-        },
-        get tahap1Compositions() {
-          return getLazyHistory()['2026'].tahap1Compositions;
-        },
-        get tahap2Compositions() {
-          return getLazyHistory()['2026'].tahap2Compositions;
-        },
-        get items() {
-          return getLazyHistory()['2026'].items;
-        },
-        get history() {
-          return getLazyHistory();
-        },
+        compositions: payload.compositions,
+        tahap1Compositions: payload.tahap1Compositions,
+        tahap2Compositions: payload.tahap2Compositions,
+        items: payload.items,
       });
 
       seq++;

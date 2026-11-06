@@ -4,7 +4,6 @@ import {
   SCHOOLS_DATABASE,
   SMK_TI_BAZMA,
   SchoolData,
-  buildSchoolYearlyHistory,
   customizeBospItemsForSchool,
 } from '../data/schoolsData';
 
@@ -51,16 +50,6 @@ export function hydrateSupabaseRowToSchoolData(
         treasurerName
       );
 
-  const history =
-    localMatch.history ||
-    buildSchoolYearlyHistory(name, principalName, treasurerName, {
-      studentCount: localMatch.studentCount,
-      perStudentEstimate: localMatch.perStudentEstimate,
-      totalBosp: localMatch.totalBosp,
-      schoolType: localMatch.schoolType,
-      educationLevel: localMatch.educationLevel,
-      kabupaten: localMatch.kabupaten,
-    });
 
   return {
     id,
@@ -96,7 +85,6 @@ export function hydrateSupabaseRowToSchoolData(
     tahap1Compositions: localMatch.tahap1Compositions?.map((c) => ({ ...c })),
     tahap2Compositions: localMatch.tahap2Compositions?.map((c) => ({ ...c })),
     items,
-    history,
     imageUrl: String(row.image_url || payload.imageUrl || localMatch.imageUrl || ''),
   };
 }
