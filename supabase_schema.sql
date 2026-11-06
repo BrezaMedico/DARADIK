@@ -185,13 +185,21 @@ INSERT INTO public.schools_smk (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ------------------------------------------------------------------------------
--- 8. PEMBERSIHAN TABEL 'schools' LAMA
+-- 8. PEMBERSIHAN TABEL 'schools' LAMA (BERSIH TOTAL DARI DATABASE)
 -- ------------------------------------------------------------------------------
--- Menghapus tabel fisik lama yang menumpuk seluruh jenjang:
-DROP TABLE IF EXISTS public.schools CASCADE;
+-- Hapus objek 'schools' lama (baik berbentuk VIEW maupun TABLE fisik):
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema = 'public' AND table_name = 'schools') THEN
+    EXECUTE 'DROP VIEW public.schools CASCADE';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'schools' AND table_type = 'BASE TABLE') THEN
+    EXECUTE 'DROP TABLE public.schools CASCADE';
+  END IF;
+END $$;
 
--- Mengubah 'schools' menjadi VIEW virtual gabungan (tanpa menduplikasi data fisik)
--- sehingga query pencarian global tetap berjalan ringan:
+-- Buat ulang 'schools' sebagai VIEW virtual gabungan dari 4 tabel jenjang
+-- (data fisik murni tersimpan terpisah di schools_sd, schools_smp, schools_sma, schools_smk):
 CREATE OR REPLACE VIEW public.schools AS
 SELECT * FROM public.schools_all;
 
