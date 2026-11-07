@@ -1,11 +1,5 @@
-/**
- * Normalisasi Teks Bahasa Indonesia & Kamus Pelafalan untuk Piper TTS / Web Speech API
- * Mengubah angka, mata uang (Rp), persentase, tanggal, tahun, dan singkatan
- * menjadi kata bahasa Indonesia yang natural agar pelafalan TTS akurat.
- */
-
+// Phonetic spellings prevent Piper TTS from reading Indonesian acronyms as English words.
 export const KAMUS_PELAFALAN = {
-  // Singkatan Regulasi & Dana Pendidikan (mudah diedit/ditambah)
   BOSP: 'bos-pe',
   BOS: 'bos',
   RKAS: 'er-ka-a-es',
@@ -72,10 +66,6 @@ const SATUAN = [
   'sebelas',
 ];
 
-/**
- * Mengubah bilangan bulat non-negatif menjadi kata bahasa Indonesia
- * Contoh: 1680000 -> "satu juta enam ratus delapan puluh ribu"
- */
 export function angkaKeKata(n) {
   const num = Number(n);
   if (Number.isNaN(num)) return String(n);
@@ -150,15 +140,11 @@ export function angkaKeKata(n) {
   return String(bulat);
 }
 
-/**
- * Menormalkan teks bahasa Indonesia sebelum dikirim ke mesin TTS
- */
 export function normalizeIndonesianTextForTts(rawText = '') {
   if (!rawText || typeof rawText !== 'string') return '';
 
   let text = rawText;
 
-  // 1. Hapus URL panjang, tag HTML, markdown, bullet, dan emoji
   text = text.replace(/https?:\/\/\S+/gi, 'tautan situs');
   text = text.replace(/<[^>]+>/g, ' ');
   text = text.replace(/[*_~`#>|•●▪►]/g, ' ');
@@ -167,13 +153,12 @@ export function normalizeIndonesianTextForTts(rawText = '') {
     ' '
   );
 
-  // 2. Normalisasi simbol perbandingan atau rentang
   text = text.replace(/s\.d\.|s\/d/gi, 'sampai dengan');
   text = text.replace(/≥/g, 'minimal ');
   text = text.replace(/≤/g, 'maksimal ');
   text = text.replace(/\b(\d+)\s*[-–]\s*(\d+)\b/g, '$1 sampai $2');
 
-  // 3. Normalisasi format mata uang Rupiah: "Rp 1.680.000" atau "Rp1.500.000,00"
+  // Expand currency, dates, percentages, and grouped numbers before plain digits so separators stay intact.
   text = text.replace(
     /Rp\.?\s*(\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?\b/gi,
     (_, rawDigits) => {
@@ -183,7 +168,6 @@ export function normalizeIndonesianTextForTts(rawText = '') {
     }
   );
 
-  // 4. Normalisasi tanggal numerik: DD/MM/YYYY atau DD-MM-YYYY
   text = text.replace(
     /\b(0?[1-9]|[12]\d|3[01])[\/\-](0?[1-9]|1[0-2])[\/\-](20\d{2})\b/g,
     (_, d, m, y) => {
@@ -194,7 +178,6 @@ export function normalizeIndonesianTextForTts(rawText = '') {
     }
   );
 
-  // 5. Normalisasi persentase: "10%" atau "12,5%"
   text = text.replace(
     /\b(\d+)(?:[,.](\d+))?\s*%/g,
     (_, intPart, decPart) => {
@@ -208,13 +191,11 @@ export function normalizeIndonesianTextForTts(rawText = '') {
     }
   );
 
-  // 6. Normalisasi angka ribuan bertitik (misal 1.680.000 tanpa Rp)
   text = text.replace(/\b\d{1,3}(?:\.\d{3})+\b/g, (match) => {
     const cleanNum = parseInt(match.replace(/\./g, ''), 10);
     return Number.isNaN(cleanNum) ? match : angkaKeKata(cleanNum);
   });
 
-  // 7. Normalisasi angka desimal dengan koma (misal 2,5 -> dua koma lima)
   text = text.replace(/\b(\d+),(\d+)\b/g, (_, intPart, decPart) => {
     const utama = angkaKeKata(parseInt(intPart, 10));
     const desimal = decPart
@@ -224,9 +205,8 @@ export function normalizeIndonesianTextForTts(rawText = '') {
     return `${utama} koma ${desimal}`;
   });
 
-  // 8. Normalisasi angka biasa & tahun (misal 2026 -> dua ribu dua puluh enam)
   text = text.replace(/\b\d+\b/g, (match) => {
-    // Jika kode panjang seperti NPSN 8 digit dengan nol di depan, eja per digit
+    // Spell 8+ digit identifiers like NPSN digit-by-digit instead of as millions.
     if (match.length >= 8) {
       return match
         .split('')
@@ -237,26 +217,20 @@ export function normalizeIndonesianTextForTts(rawText = '') {
     return Number.isNaN(num) ? match : angkaKeKata(num);
   });
 
-  // 9. Terapkan Kamus Pelafalan Singkatan (case-sensitive dan word-boundary)
   for (const [singkatan, lafal] of Object.entries(KAMUS_PELAFALAN)) {
     const escaped = singkatan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`\\b${escaped}\\b`, 'g');
     text = text.replace(regex, lafal);
   }
 
-  // 10. Rapikan garis miring (misal Bapak/Ibu -> Bapak atau Ibu)
   text = text.replace(/\bBapak\/Ibu\b/gi, 'Bapak Ibu');
   text = text.replace(/\s*\/\s*/g, ' atau ');
 
-  // 11. Rapikan spasi berlebih
   text = text.replace(/\s+/g, ' ').trim();
 
   return text;
 }
 
-/**
- * Memecah teks menjadi antrian per kalimat agar TTS dapat mulai berbicara cepat
- */
 export function splitIntoSentences(text = '') {
   if (!text || typeof text !== 'string') return [];
   const cleaned = text.replace(/\s+/g, ' ').trim();

@@ -1,11 +1,3 @@
-/**
- * KNOWLEDGE BASE RESMI BOSP 2026 & PANDUAN APLIKASI DARADIK
- * Bagian bertanda [DAPAT_DIEDIT] dapat disesuaikan kapan saja oleh pemilik website.
- */
-
-// ============================================================================
-// 1. DOKUMEN ATURAN BOSP TAHUN 2026 [DAPAT_DIEDIT]
-// ============================================================================
 export const DOKUMEN_BOSP_2026 = `
 [DOKUMEN RESMI PETUNJUK TEKNIS BOSP TAHUN ANGGARAN 2026 - PERMENDIKDASMEN NO. 8 TAHUN 2026]
 
@@ -56,9 +48,6 @@ export const DOKUMEN_BOSP_2026 = `
 - SIPLah adalah Sistem Informasi Pengadaan Sekolah, yaitu toko daring resmi tempat sekolah berbelanja barang dan jasa menggunakan dana BOSP agar tercatat transparan beserta bukti kuitansi dan pajaknya.
 `;
 
-// ============================================================================
-// 2. PANDUAN PENGGUNAAN APLIKASI DARADIK [DAPAT_DIEDIT]
-// ============================================================================
 export const PANDUAN_APLIKASI_DARADIK = `
 [PANDUAN PENGGUNAAN WEBSITE DARADIK - TRANSPARANSI DANA PENDIDIKAN & PELAPORAN ANONIM]
 
@@ -91,11 +80,8 @@ export const PANDUAN_APLIKASI_DARADIK = `
 - Klik tombol Kamus BOSP di halaman utama atau tombol Kamus Aturan BOSP di halaman profil sekolah untuk membaca daftar biaya yang wajib gratis dan yang tidak ditanggung BOSP.
 `;
 
-// ============================================================================
-// 3. SYSTEM PROMPT FINAL UNTUK GEMINI
-// ============================================================================
 export const FINAL_SYSTEM_PROMPT = `
-Kamu adalah "Asisten BOSP" yang ramah, pintar, hangat, dan serba tahu di aplikasi DARADIK.
+Kamu adalah "Tanya BOS" yang ramah, pintar, hangat, dan serba tahu di aplikasi DARADIK.
 Kamu bertugas menemani dan menjawab APA PUN pertanyaan dari pengguna dengan luwes dan komunikatif, baik seputar sekolah, aplikasi, maupun pertanyaan umum lainnya.
 
 PANDUAN PENGETAHUAN & MENJAWAB:
@@ -129,10 +115,7 @@ Kembalikan HANYA objek JSON valid berikut:
 }
 `.trim();
 
-/**
- * Penjawab cerdas serba tahu berbasis dokumen BOSP 2026, panduan DARADIK,
- * dan percakapan umum untuk merespons pertanyaan apa pun termasuk yang tidak jelas.
- */
+// Local keyword fallback used when Gemini is unconfigured or times out.
 export function getLocalKnowledgeReply(userMessage = '', history = []) {
   const q = (userMessage || '').toLowerCase().trim();
   const rawQ = (userMessage || '').trim();
@@ -141,7 +124,7 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
       ? (history[history.length - 1]?.text || '').toLowerCase()
       : '';
 
-  // 0. Pertanyaan sangat pendek / tidak jelas / typo / gibberish (contoh: "asdfghjk", "??", "gaje", "hah?")
+  // Flag low-vowel or repeated-character strings as gibberish before keyword matching.
   const vowelsCount = (rawQ.match(/[aiueo]/gi) || []).length;
   const lettersCount = (rawQ.match(/[a-z]/gi) || []).length;
   const cleanWord = q.replace(/[?!.,;]/g, '').trim();
@@ -164,7 +147,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 1. Pertanyaan makanan / resep / santai
   if (q.includes('resep') || q.includes('masak') || q.includes('makan') || q.includes('mie')) {
     return {
       teks: 'Wah, ngomongin makanan enak memang selalu bikin lapar! Untuk mie yang nikmat, tambahkan sedikit bawang goreng, sayur sawi, dan telur setengah matang ya. Nah, kalau kamu ada pertanyaan seputar sekolah atau BOSP, tanyakan saja padaku!',
@@ -172,7 +154,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 2. Pertanyaan matematika sederhana
   if (q.includes('1 + 1') || q.includes('1+1') || q.includes('berapa 1 + 1')) {
     return {
       teks: 'Satu ditambah satu tentu saja sama dengan dua! Nah, kalau kamu mau tahu berapa besaran dana bantuan sekolah per siswa di wilayahmu, aku juga siap bantu jelaskan.',
@@ -180,7 +161,7 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 1. Jawaban singkat persetujuan ("ya", "boleh", "mau", "oke", "lanjut") terhadap tawaran bot sebelumnya
+  // Match short affirmative replies against the bot's previous follow-up question.
   if (
     /^(ya|iya|boleh|mau|oke|ok|lanjut|jelaskan|apa saja|gimana|bagaimana)\b/i.test(
       q
@@ -210,7 +191,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     }
   }
 
-  // 2. Obrolan santai, humor, atau lelucon
   if (
     q.includes('lucu') ||
     q.includes('lelucon') ||
@@ -224,7 +204,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 3. Ucapan terima kasih / pujian
   if (
     q.includes('terima kasih') ||
     q.includes('makasih') ||
@@ -240,7 +219,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 4. Identitas bot / kemampuan
   if (
     q.includes('siapa kamu') ||
     q.includes('kamu siapa') ||
@@ -250,12 +228,11 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     q.includes('namamu')
   ) {
     return {
-      teks: 'Aku Asisten BOSP di aplikasi DARADIK. Aku bisa menjawab apa saja yang mau kamu tanyakan, mulai dari aturan dana sekolah, panduan memakai fitur website ini, sampai ngobrol santai seputar dunia pendidikan. Mau tanya apa hari ini?',
+      teks: 'Aku Tanya BOS di aplikasi DARADIK. Aku siap menjawab apa saja yang mau kamu tanyakan seputar transparansi dana BOSP, cara penggunaan website, hingga konsultasi aturan pendidikan. Mau tanya apa hari ini?',
       emosi: 'senang',
     };
   }
 
-  // 5. Apa itu BOSP / pengertian
   if (
     q.includes('apa itu bosp') ||
     q.includes('apa itu bos') ||
@@ -273,7 +250,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 6. PPDB / SPMB / Pendaftaran siswa baru / daftar ulang
   if (
     q.includes('ppdb') ||
     q.includes('spmb') ||
@@ -288,7 +264,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 7. Ujian / LKS / Rapor / ANBK / Fotokopi soal
   if (
     q.includes('ujian') ||
     q.includes('ulangan') ||
@@ -305,7 +280,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 8. Listrik / Internet / Air / Meja Kursi / Toilet / Cat kelas / Komputer
   if (
     q.includes('listrik') ||
     q.includes('internet') ||
@@ -324,7 +298,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 9. Ekstrakurikuler / Lomba / Pramuka
   if (
     q.includes('ekskul') ||
     q.includes('ekstrakurikuler') ||
@@ -337,7 +310,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 10. BOSP boleh dipakai untuk apa / komponen umum
   if (
     q.includes('boleh dipakai') ||
     q.includes('untuk apa') ||
@@ -353,7 +325,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 11. Larangan / tidak boleh / study tour / seragam / gedung / wisuda
   if (
     q.includes('larangan') ||
     q.includes('tidak boleh') ||
@@ -373,7 +344,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 12. Kapan dana cair / jadwal / tahap
   if (
     q.includes('kapan') ||
     q.includes('cair') ||
@@ -388,7 +358,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 13. Besaran / nominal / per siswa / wilayah BOSP
   if (
     q.includes('besaran bosp') ||
     q.includes('nominal bosp') ||
@@ -402,7 +371,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 14. Persentase / batas honor / buku / sarpras / RKAS / SIPLah
   if (
     q.includes('persen') ||
     q.includes('honor') ||
@@ -419,7 +387,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 15. Cara cek iuran WA / scanner WhatsApp
   if (
     /\bwa\b/i.test(q) ||
     q.includes('whatsapp') ||
@@ -434,7 +401,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 16. Cara cari sekolah / lihat kuitansi / foto kelas / PDF
   if (
     q.includes('cari sekolah') ||
     q.includes('npsn') ||
@@ -451,7 +417,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 17. Cara pakai aplikasi / panduan umum
   if (
     q.includes('cara pakai') ||
     q.includes('cara menggunakan') ||
@@ -468,7 +433,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 18. Cara lapor / pungli / iuran / komite / sumbangan / takut / pantau tiket
   if (
     q.includes('lapor') ||
     q.includes('pungli') ||
@@ -488,7 +452,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 19. Sapaan
   if (
     /^(halo|hai|hi|tes|test|ping|selamat|pagi|siang|sore|malam|assalamualaikum|permisi|p)\b/i.test(
       q
@@ -500,7 +463,6 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     };
   }
 
-  // 20. Jawaban ramah untuk pertanyaan umum apa pun di luar BOSP
   return {
     teks: 'Pertanyaan yang menarik! Aku bisa bantu jelaskan berbagai hal seputar dunia sekolah, aturan dana BOSP, maupun penggunaan aplikasi ini. Boleh ceritakan sedikit lebih detail apa yang ingin kamu ketahui?',
     emosi: 'senang',

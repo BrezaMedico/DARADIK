@@ -53,13 +53,13 @@
 
 /* Sturdy / Structured Geometric Font for Headings ("font yang kaku, enak dibaca") */
 .font-sturdy-heading {
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
   letter-spacing: -0.035em;
 }
 
 /* Cursive / Tulis Sambung yang Bersih, Alami, Terhubung & Sangat Mudah Dibaca */
 .font-script-sekolah {
-  font-family: 'Satisfy', 'Dancing Script', 'Caveat', cursive;
+  font-family: 'Satisfy', cursive;
   font-weight: 400;
   letter-spacing: 0.02em;
   display: inline-block;
@@ -73,7 +73,7 @@
    ===================================================================== */
 /* Judul Utama Halaman / Hero (Heading 1) */
 .daradik-h1 {
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.15;
@@ -82,7 +82,7 @@
 
 /* Judul Seksi / Bagian (Heading 2) */
 .daradik-h2 {
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.25;
@@ -134,7 +134,7 @@
 
 /* Angka Keuangan & Tabular */
 .daradik-stat {
-  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
 }

@@ -8,12 +8,12 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- -----------------------------------------------------------------------------
--- 1. PASTIKAN AKSES BACA TABEL MASTER SEKOLAH & BUAT VIEW GABUNGAN schools_all
+-- 1. PENGUNCIAN TABEL MASTER SEKOLAH (AKSES PUBLIK WAJIB MELALUI RPC TERKENDALI)
 -- -----------------------------------------------------------------------------
-GRANT SELECT ON public.schools_sd TO anon, authenticated;
-GRANT SELECT ON public.schools_smp TO anon, authenticated;
-GRANT SELECT ON public.schools_sma TO anon, authenticated;
-GRANT SELECT ON public.schools_smk TO anon, authenticated;
+REVOKE ALL ON public.schools_sd FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.schools_smp FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.schools_sma FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.schools_smk FROM PUBLIC, anon, authenticated;
 
 DO $$
 DECLARE
@@ -22,10 +22,8 @@ BEGIN
   FOREACH tbl IN ARRAY ARRAY['schools_sd', 'schools_smp', 'schools_sma', 'schools_smk']
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS "Public Select %s" ON public.%I;', tbl, tbl);
-    EXECUTE format(
-      'CREATE POLICY "Public Select %s" ON public.%I FOR SELECT TO anon, authenticated USING (true);',
-      tbl, tbl
-    );
+    EXECUTE format('DROP POLICY IF EXISTS "Public Read Schools %s" ON public.%I;', UPPER(SUBSTRING(tbl FROM 9)), tbl);
+    EXECUTE format('DROP POLICY IF EXISTS "Public Modify Schools %s" ON public.%I;', UPPER(SUBSTRING(tbl FROM 9)), tbl);
   END LOOP;
 END $$;
 
@@ -114,7 +112,7 @@ SELECT
   updated_at
 FROM public.schools_smk;
 
-GRANT SELECT ON public.schools_all TO anon, authenticated;
+REVOKE ALL ON public.schools_all FROM PUBLIC, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 2. TABEL PROFIL PETUGAS DINAS PENDIDIKAN & FUNGSI OTORISASI
@@ -478,64 +476,28 @@ ALTER TABLE public.report_internal_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.report_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.report_tracking_signals ENABLE ROW LEVEL SECURITY;
 
--- Hapus policy lama yang mengizinkan publik membaca/mengubah seluruh tabel anonymous_reports
+-- Hapus seluruh policy yang mengizinkan akses langsung publik pada tabel laporan
 DROP POLICY IF EXISTS "Public Select Anonymous Reports" ON public.anonymous_reports;
 DROP POLICY IF EXISTS "Public Insert Anonymous Reports" ON public.anonymous_reports;
 DROP POLICY IF EXISTS "Public Update Anonymous Reports" ON public.anonymous_reports;
+DROP POLICY IF EXISTS "Public Update Anonymous Reports Status" ON public.anonymous_reports;
 
--- Officer profiles: petugas hanya dapat melihat profil dirinya atau sesama petugas aktif
+-- Officer profiles: petugas hanya dapat melihat profil dirinya yang aktif
 DROP POLICY IF EXISTS "Officers Read Profiles" ON public.officer_profiles;
 CREATE POLICY "Officers Read Profiles"
 ON public.officer_profiles FOR SELECT
 TO authenticated
-USING (id = auth.uid() OR public.is_active_officer());
+USING (id = auth.uid() AND is_active = TRUE);
 
--- Anonymous reports: SELECT langsung hanya untuk petugas resmi; mutasi wajib melalui RPC tervalidasi
-DROP POLICY IF EXISTS "Active Officers Select Reports" ON public.anonymous_reports;
-CREATE POLICY "Active Officers Select Reports"
-ON public.anonymous_reports FOR SELECT
-TO authenticated
-USING (public.is_active_officer());
-
--- Report status history: SELECT langsung hanya untuk petugas resmi (orang tua mengakses via RPC kode tiket)
-DROP POLICY IF EXISTS "Active Officers Select Report History" ON public.report_status_history;
-CREATE POLICY "Active Officers Select Report History"
-ON public.report_status_history FOR SELECT
-TO authenticated
-USING (public.is_active_officer());
-
--- Internal notes: 100% khusus petugas resmi, tidak pernah terekspos ke pelapor
-DROP POLICY IF EXISTS "Active Officers Select Internal Notes" ON public.report_internal_notes;
-CREATE POLICY "Active Officers Select Internal Notes"
-ON public.report_internal_notes FOR SELECT
-TO authenticated
-USING (public.is_active_officer());
-
--- Report messages: SELECT langsung untuk petugas resmi; pelapor membaca & membalas via RPC kode tiket
-DROP POLICY IF EXISTS "Active Officers Select Report Messages" ON public.report_messages;
-CREATE POLICY "Active Officers Select Report Messages"
-ON public.report_messages FOR SELECT
-TO authenticated
-USING (public.is_active_officer());
-
--- Tracking signals: hanya berisi ticket_code & updated_at agar Realtime orang tua bekerja aman
+-- Tracking signals: hanya menyimpan SHA-256 signal_hash & updated_at (tanpa kode tiket asli)
 DROP POLICY IF EXISTS "Public Read Tracking Signals" ON public.report_tracking_signals;
 CREATE POLICY "Public Read Tracking Signals"
 ON public.report_tracking_signals FOR SELECT
 TO anon, authenticated
 USING (true);
 
-REVOKE ALL ON public.anonymous_reports FROM anon;
-REVOKE ALL ON public.report_status_history FROM anon;
-REVOKE ALL ON public.report_internal_notes FROM anon;
-REVOKE ALL ON public.report_messages FROM anon;
-REVOKE ALL ON public.officer_profiles FROM anon;
-
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.officer_profiles TO authenticated;
-GRANT SELECT ON public.anonymous_reports TO authenticated;
-GRANT SELECT ON public.report_status_history TO authenticated;
-GRANT SELECT ON public.report_internal_notes TO authenticated;
-GRANT SELECT ON public.report_messages TO authenticated;
 GRANT SELECT ON public.report_tracking_signals TO anon, authenticated;
 
 -- -----------------------------------------------------------------------------

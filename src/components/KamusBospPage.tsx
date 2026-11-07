@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, X, Flag } from 'lucide-react';
-import { KAMUS_BOSP_DATA } from '../data/schoolsData';
+import { KAMUS_BOSP_DATA, KamusBospItem } from '../data/schoolsData';
+import { fetchKamusBospFromSupabase } from '../lib/supabase';
 
 interface KamusBospPageProps {
   onBack: () => void;
@@ -15,10 +16,30 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
+  const [kamusData, setKamusData] = useState<{
+    allowed: KamusBospItem[];
+    prohibited: KamusBospItem[];
+  }>(KAMUS_BOSP_DATA);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchKamusBospFromSupabase()
+      .then((remote) => {
+        if (!cancelled && remote) {
+          setKamusData(remote);
+        }
+      })
+      .catch(() => {
+        // fallback
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const q = searchQuery.trim().toLowerCase();
 
-  const filteredAllowed = KAMUS_BOSP_DATA.allowed.filter(
+  const filteredAllowed = kamusData.allowed.filter(
     (item) =>
       !q ||
       item.title.toLowerCase().includes(q) ||
@@ -26,7 +47,7 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
       item.ref.toLowerCase().includes(q)
   );
 
-  const filteredProhibited = KAMUS_BOSP_DATA.prohibited.filter(
+  const filteredProhibited = kamusData.prohibited.filter(
     (item) =>
       !q ||
       item.title.toLowerCase().includes(q) ||

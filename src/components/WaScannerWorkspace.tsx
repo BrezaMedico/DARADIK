@@ -80,6 +80,12 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           rotationDeg: rotation,
           schoolName: school.name,
           studentCount: school.studentCount,
+          schoolType: school.schoolType,
+          educationLevel: school.educationLevel || school.jenjang,
+          totalBosp: school.totalBosp,
+          compositions: school.compositions,
+          tahap1Compositions: school.tahap1Compositions,
+          tahap2Compositions: school.tahap2Compositions,
         }
       );
       setOcrScanResult(result);
@@ -112,7 +118,17 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
         text,
         school.items,
         school.name,
-        school.studentCount
+        school.studentCount,
+        {
+          schoolName: school.name,
+          studentCount: school.studentCount,
+          schoolType: school.schoolType,
+          educationLevel: school.educationLevel || school.jenjang,
+          totalBosp: school.totalBosp,
+          compositions: school.compositions,
+          tahap1Compositions: school.tahap1Compositions,
+          tahap2Compositions: school.tahap2Compositions,
+        }
       );
       setOcrScanResult(result);
     } catch (err: any) {
@@ -284,7 +300,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           {/* Header Ringkas */}
           <div className="text-center space-y-1.5">
             <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] tracking-tight">
-              Cek Iuran Grup WhatsApp
+              Verifikasi Iuran Grup WhatsApp
             </h2>
             <p className="text-xs sm:text-sm text-[#64748B]">
               Cari tahu apakah iuran sekolah ini termasuk pungli atau sudah didanai BOSP.
@@ -533,7 +549,11 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                         isDanger ? 'text-[#DC2626]' : 'text-[#2E6496]'
                       }`}
                     >
-                      {isDanger ? 'Terindikasi Pungli' : 'Bukan Dana BOSP'}
+                      {isDanger
+                        ? 'Terindikasi Pungli'
+                        : ocrScanResult.statusType === 'neutral'
+                        ? 'Pesan Informatif'
+                        : 'Bukan Dana BOSP'}
                     </span>
                   </div>
 
@@ -547,9 +567,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                     isDanger ? 'text-[#991B1B]' : 'text-[#1E293B]'
                   }`}
                 >
-                  {isDanger
-                    ? 'Terindikasi Tumpang Tindih dengan Dana BOSP'
-                    : 'Bukan Pengadaan dari Anggaran Resmi BOSP'}
+                  {ocrScanResult.statusTitle}
                 </h3>
 
                 <p
@@ -557,9 +575,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                     isDanger ? 'text-[#7F1D1D]' : 'text-[#475569]'
                   }`}
                 >
-                  {isDanger
-                    ? `Barang ini sudah dibiayai oleh dana BOSP resmi pemerintah di ${school.name}. Sekolah dilarang menarik iuran dari orang tua murid.`
-                    : `Kegiatan ini tidak termasuk belanja wajib BOSP. Kendati demikian, sumbangan wali murid tetap wajib bersifat sukarela tanpa paksaan.`}
+                  {ocrScanResult.bospFact}
                 </p>
               </div>
 
@@ -596,7 +612,8 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                             : 'bg-[#EBF3F8] text-[#2E6496]'
                         }`}
                       >
-                        {comp?.teacherText.isMandatory ? 'Wajib/Menagih' : 'Sukarela'}
+                        {comp?.teacherText.toneBadge ||
+                          (comp?.teacherText.isMandatory ? 'Wajib/Menagih' : 'Sukarela')}
                       </span>
                     </div>
                   </div>
@@ -608,9 +625,10 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                       <div>
                         <span className="text-[11px] text-[#64748B] block">2. Anggaran Sekolah ({school.name})</span>
                         <span className="font-bold text-[#1E293B] text-xs sm:text-sm">
-                          {comp?.schoolBudget.isFundedByBosp
-                            ? 'Sudah Dibiayai BOSP Negara'
-                            : 'Di Luar Pagu BOSP (Non-RKAS)'}
+                          {comp?.schoolBudget.budgetStatusLabel ||
+                            (comp?.schoolBudget.isFundedByBosp
+                              ? 'Sudah Dibiayai BOSP Negara'
+                              : 'Di Luar Pagu BOSP (Non-RKAS)')}
                         </span>
                       </div>
                     </div>
@@ -635,9 +653,10 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                       <div>
                         <span className="text-[11px] text-[#64748B] block">3. Aturan Kemendikbudristek</span>
                         <span className="font-semibold text-[#1E293B] text-xs">
-                          {isDanger
-                            ? 'Permendikbudristek 63/2023 Pasal 61'
-                            : 'Permendikbud 75/2016 Pasal 10 & 12'}
+                          {comp?.bospPolicy.primaryRegulation ||
+                            (isDanger
+                              ? 'Permendikdasmen 8/2026 & Permendikbudristek 63/2023'
+                              : 'Permendikbud 75/2016 Pasal 10 & 12')}
                         </span>
                       </div>
                     </div>
@@ -648,7 +667,11 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                           : 'bg-[#EBF3F8] text-[#2E6496]'
                       }`}
                     >
-                      {isDanger ? 'Melanggar Regulasi' : 'Sesuai Ketentuan'}
+                      {isDanger
+                        ? 'Melanggar Regulasi'
+                        : ocrScanResult.statusType === 'neutral'
+                        ? 'Tidak Ada Tarikan'
+                        : 'Sesuai Ketentuan'}
                     </span>
                   </div>
                 </div>

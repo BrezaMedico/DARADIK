@@ -28,6 +28,7 @@ import {
   Wallet,
   BookOpen,
   Camera,
+  Maximize2,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -333,7 +334,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     <div className="w-full py-4 sm:py-8 lg:py-10 px-3 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* ===================================================================
-            1. TOP UTILITY BAR (Kembali ke Pencarian Left | Bagikan & Unduh Right)
+            1. TOP UTILITY BAR (Kembali ke Beranda Left | Bagikan & Unduh Right)
            =================================================================== */}
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 animate-school-header">
           <button
@@ -342,7 +343,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             className="min-h-[42px] w-full sm:w-auto px-4 py-2.5 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-bold text-[#1E293B] shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-            <span>Kembali ke Pencarian</span>
+            <span>Kembali ke Beranda</span>
           </button>
 
           <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-2 justify-end">
@@ -456,6 +457,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
           <button
             type="button"
             role="tab"
+            data-tour-id="tour-profile-summary"
             aria-selected={activeTab === 'summary'}
             onClick={() => onTabChange('summary')}
             className={`min-h-[54px] sm:min-h-[48px] py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
@@ -479,6 +481,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
           <button
             type="button"
             role="tab"
+            data-tour-id="tour-profile-items"
             aria-selected={activeTab === 'items-ai'}
             onClick={() => onTabChange('items-ai')}
             className={`min-h-[54px] sm:min-h-[48px] py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
@@ -522,6 +525,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
           <button
             type="button"
             role="tab"
+            data-tour-id="tour-profile-wa"
             aria-selected={activeTab === 'wa-scanner'}
             onClick={() => onTabChange('wa-scanner')}
             className={`min-h-[54px] sm:min-h-[48px] py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
@@ -539,7 +543,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             >
               <ScanLine className="w-3.5 h-3.5" />
             </div>
-            <span>Cek Iuran WA</span>
+            <span>Verifikasi Iuran WA</span>
           </button>
         </div>
 
@@ -1046,7 +1050,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                                   className="min-h-[42px] school-btn-secondary px-3 sm:px-4 py-2 rounded-full text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
                                   <Camera className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
-                                  <span>Bukti Fisik</span>
+                                  <span>Lihat Bukti Fisik</span>
                                 </button>
                               </div>
 

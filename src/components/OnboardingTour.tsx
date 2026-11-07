@@ -8,6 +8,10 @@ import {
   BookOpen,
   Flag,
   HelpCircle,
+  Sparkles,
+  Scale,
+  Package,
+  ScanLine,
 } from 'lucide-react';
 
 export interface TourStep {
@@ -17,14 +21,14 @@ export interface TourStep {
   title: string;
   description: string;
   tip?: string;
-  icon: 'search' | 'kamus' | 'lacak' | 'lapor';
+  icon: 'search' | 'kamus' | 'lacak' | 'lapor' | 'ai' | 'summary' | 'items' | 'wa';
 }
 
-const TOUR_STEPS: TourStep[] = [
+const LANDING_TOUR_STEPS: TourStep[] = [
   {
     id: 'step-search',
     targetSelector: '[data-tour-id="tour-search-box"]',
-    stepNum: '1 dari 4',
+    stepNum: '1 dari 5',
     title: 'Cari Transparansi Sekolah',
     description:
       'Ketik nama sekolah atau NPSN untuk melihat rincian belanja BOSP Tahap 1 & 2, kuitansi realisasi fisik, dan cek kwitansi.',
@@ -34,7 +38,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'step-kamus',
     targetSelector: '[data-tour-id="tour-kamus-bosp"]',
-    stepNum: '2 dari 4',
+    stepNum: '2 dari 5',
     title: 'Kamus BOSP',
     description:
       'Pedoman Permendikdasmen untuk membedakan kebutuhan yang wajib ditanggung dana sekolah dan pungutan yang dilarang.',
@@ -44,7 +48,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'step-lacak',
     targetSelector: '[data-tour-id="tour-lacak-lapor"]',
-    stepNum: '3 dari 4',
+    stepNum: '3 dari 5',
     title: 'Lacak Lapor',
     description:
       'Pantau progres verifikasi aduan di Inspektorat lewat kode tiket dan kirim pesan balasan dua arah secara anonim.',
@@ -54,18 +58,62 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'step-lapor',
     targetSelector: '[data-tour-id="tour-lapor"]',
-    stepNum: '4 dari 4',
+    stepNum: '4 dari 5',
     title: 'Lapor Pungutan Liar',
     description:
       'Sampaikan dugaan pungutan tanpa akun atau nomor HP. Metadata lokasi dan perangkat pada foto bukti dibersihkan otomatis.',
     tip: 'Simpan kode tiket setelah kirim untuk memantau status aduan.',
     icon: 'lapor',
   },
+  {
+    id: 'step-tanya-bos',
+    targetSelector: '[data-tour-id="tour-tanya-bos"], #bosp-chat-fab',
+    stepNum: '5 dari 5',
+    title: 'Tanya BOS',
+    description:
+      'Asisten interaktif cerdas untuk bertanya apa saja seputar alokasi dana BOSP, aturan pendidikan resmi, atau cara menggunakan fitur DARADIK.',
+    tip: 'Bisa ditanya via ketikan teks maupun tombol suara mikrofon!',
+    icon: 'ai',
+  },
+];
+
+const PROFILE_TOUR_STEPS: TourStep[] = [
+  {
+    id: 'step-profile-summary',
+    targetSelector: '[data-tour-id="tour-profile-summary"]',
+    stepNum: '1 dari 3',
+    title: 'Ringkasan Dana',
+    description:
+      'Lihat total pagu dana BOSP tahun berjalan, pencairan dana Tahap 1 dan Tahap 2, serta diagram persentase komposisi belanja sekolah.',
+    tip: 'Informasi ini mempermudah memantau sisa pagu dan serapan anggaran sekolah.',
+    icon: 'summary',
+  },
+  {
+    id: 'step-profile-items',
+    targetSelector: '[data-tour-id="tour-profile-items"]',
+    stepNum: '2 dari 3',
+    title: 'Hasil Belanja',
+    description:
+      'Daftar bukti riil pengeluaran BOSP sekolah, dilengkapi pencarian semantik item belanja, arsip foto fisik barang, dan dokumen nota kuitansi.',
+    tip: 'Klik Lihat Bukti Fisik pada tiap item untuk memeriksa foto barang belanjaan asli.',
+    icon: 'items',
+  },
+  {
+    id: 'step-profile-wa',
+    targetSelector: '[data-tour-id="tour-profile-wa"]',
+    stepNum: '3 dari 3',
+    title: 'Verifikasi Iuran WA',
+    description:
+      'Pindai dan verifikasi pesan tagihan atau iuran di grup WhatsApp sekolah untuk mencocokkan apakah pengeluaran tersebut sesuai aturan BOSP atau indikasi pungli.',
+    tip: 'Cukup salin teks pesan WA atau unggah tangkapan layar chat grup komite.',
+    icon: 'wa',
+  },
 ];
 
 interface OnboardingTourProps {
   isOpen: boolean;
   onClose: () => void;
+  tourType?: 'landing' | 'school-profile';
 }
 
 interface SpotlightRect {
@@ -94,6 +142,7 @@ function findVisibleTarget(selector: string): HTMLElement | null {
 export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   isOpen,
   onClose,
+  tourType = 'landing',
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<SpotlightRect | null>(null);
@@ -103,18 +152,19 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   });
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  const currentStep = TOUR_STEPS[currentStepIndex];
+  const steps = tourType === 'school-profile' ? PROFILE_TOUR_STEPS : LANDING_TOUR_STEPS;
+  const currentStep = steps[currentStepIndex];
 
-  // Reset ke langkah pertama setiap kali tour dibuka
+  // Reset ke langkah pertama setiap kali tour dibuka atau berganti halaman
   useEffect(() => {
     if (isOpen) {
       setCurrentStepIndex(0);
     }
-  }, [isOpen]);
+  }, [isOpen, tourType]);
 
   const updateSpotlightPosition = useCallback(() => {
     if (!isOpen) return;
-    const step = TOUR_STEPS[currentStepIndex];
+    const step = steps[currentStepIndex];
     if (!step) return;
 
     const el = findVisibleTarget(step.targetSelector);
@@ -137,12 +187,12 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       width: Math.min(window.innerWidth - 8, rect.width + pad * 2),
       height: rect.height + pad * 2,
     });
-  }, [isOpen, currentStepIndex]);
+  }, [isOpen, currentStepIndex, steps]);
 
   // Scroll otomatis ke elemen target saat langkah berubah
   useEffect(() => {
     if (!isOpen) return;
-    const step = TOUR_STEPS[currentStepIndex];
+    const step = steps[currentStepIndex];
     if (!step) return;
 
     const timer = setTimeout(() => {
@@ -159,8 +209,15 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
             behavior: 'smooth',
           });
         } else if (!isInMobileBottomNav) {
-          // Untuk tombol di navbar atas desktop, pastikan layar berada di paling atas
-          if (window.scrollY > 80) {
+          // Untuk tombol di navbar atas desktop atau tab profil, sesuaikan posisi
+          if (step.targetSelector.includes('tour-profile')) {
+            el.click();
+            const scrollTarget = window.scrollY + rect.top - 120;
+            window.scrollTo({
+              top: Math.max(0, scrollTarget),
+              behavior: 'smooth',
+            });
+          } else if (window.scrollY > 80 && !step.targetSelector.includes('#bosp-chat-fab')) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         }
@@ -177,7 +234,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       clearInterval(interval);
       clearTimeout(stopInterval);
     };
-  }, [isOpen, currentStepIndex, updateSpotlightPosition]);
+  }, [isOpen, currentStepIndex, updateSpotlightPosition, steps]);
 
   // Pantau scroll & resize
   useEffect(() => {
@@ -202,7 +259,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowRight') {
-        if (currentStepIndex < TOUR_STEPS.length - 1) {
+        if (currentStepIndex < steps.length - 1) {
           setCurrentStepIndex((prev) => prev + 1);
         } else {
           onClose();
@@ -215,11 +272,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentStepIndex, onClose]);
+  }, [isOpen, currentStepIndex, onClose, steps]);
 
   if (!isOpen || !currentStep) return null;
 
-  const isLastStep = currentStepIndex === TOUR_STEPS.length - 1;
+  const isLastStep = currentStepIndex === steps.length - 1;
 
   const handleNext = () => {
     if (isLastStep) {
@@ -246,6 +303,14 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
         return <Search className={cls} />;
       case 'lapor':
         return <Flag className={cls} />;
+      case 'ai':
+        return <Sparkles className={cls} />;
+      case 'summary':
+        return <Scale className={cls} />;
+      case 'items':
+        return <Package className={cls} />;
+      case 'wa':
+        return <ScanLine className={cls} />;
       default:
         return <HelpCircle className={cls} />;
     }
@@ -367,7 +432,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] select-none"
+      className="fixed inset-0 z-[10000] select-none"
       role="dialog"
       aria-modal="true"
       aria-label="Panduan Penggunaan DARADIK"
@@ -416,7 +481,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
             width: `${targetRect.width}px`,
             height: `${targetRect.height}px`,
           }}
-          className="fixed z-[101] rounded-[14px] border-2 border-[#FFFFFF] ring-4 ring-[#2E6496]/60 shadow-[0_0_24px_rgba(46,100,150,0.45)] pointer-events-none transition-all duration-300 ease-out"
+          className="fixed z-[10001] rounded-[14px] border-2 border-[#FFFFFF] ring-4 ring-[#2E6496]/60 shadow-[0_0_24px_rgba(46,100,150,0.45)] pointer-events-none transition-all duration-300 ease-out"
           aria-hidden="true"
         />
       )}
@@ -425,7 +490,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       <div
         ref={cardRef}
         style={cardStyle}
-        className="fixed z-[102] bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 sm:p-5 shadow-xl space-y-3 transition-all duration-300 ease-out animate-view-enter"
+        className="fixed z-[10002] bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3 transition-all duration-300 ease-out animate-view-enter"
       >
         {/* Panah Penunjuk ke Elemen Target */}
         {isCardRightOfTarget ? (
@@ -467,7 +532,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
         {/* Judul & Penjelasan */}
         <div>
-          <h3 className="font-sturdy-heading text-base sm:text-[17px] font-extrabold text-[#1E293B] tracking-tight leading-snug">
+          <h3 className="text-base sm:text-[17px] font-extrabold text-[#1E293B] tracking-tight leading-snug">
             {currentStep.title}
           </h3>
           <p className="text-xs sm:text-sm text-[#475569] leading-relaxed mt-1">
@@ -495,7 +560,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
           {/* Indikator Titik Langkah */}
           <div className="flex items-center gap-1" aria-hidden="true">
-            {TOUR_STEPS.map((st, idx) => (
+            {steps.map((st, idx) => (
               <button
                 key={st.id}
                 type="button"

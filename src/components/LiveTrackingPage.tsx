@@ -37,6 +37,7 @@ import {
   getParentStatusLabel,
   getResolutionOutcomeOption,
 } from '../lib/reportTracking';
+import { computeTicketSignalHash } from '../lib/cryptoSecurity';
 
 interface TicketBookmarkItem {
   ticketCode: string;
@@ -85,9 +86,9 @@ function readTicketBookmarksFromCookie(): TicketBookmarkItem[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((item) => String(item?.ticketCode || '').toUpperCase().startsWith('CHK-'))
+      .filter((item) => String(item?.ticketCode || '').trim().startsWith('CHK-'))
       .map((item) => ({
-        ticketCode: String(item.ticketCode).toUpperCase(),
+        ticketCode: String(item.ticketCode).trim(),
         schoolName: String(item.schoolName || 'Sekolah Terlapor'),
         schoolNpsn: item.schoolNpsn ? String(item.schoolNpsn) : undefined,
         category: String(item.category || 'Laporan Pengaduan'),
@@ -192,7 +193,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 }) => {
   const [ticketInput, setTicketInput] = useState<string>(ticketCode || '');
   const [activeTicket, setActiveTicket] = useState<string>(
-    ticketCode ? ticketCode.trim().toUpperCase() : ''
+    ticketCode ? ticketCode.trim() : ''
   );
   const [viewMode, setViewMode] = useState<'list' | 'detail'>(ticketCode ? 'detail' : 'list');
   const [trackingPayload, setTrackingPayload] =
@@ -225,7 +226,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
   const loadTrackingData = useCallback(
     async (codeToFetch: string, silentRefresh: boolean = false) => {
-      const clean = codeToFetch.trim().toUpperCase();
+      const clean = codeToFetch.trim();
       if (!clean) {
         setTrackingPayload(null);
         setNotFoundTicket(null);
@@ -279,7 +280,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   );
 
   useEffect(() => {
-    const incoming = ticketCode ? ticketCode.trim().toUpperCase() : '';
+    const incoming = ticketCode ? ticketCode.trim() : '';
     if (incoming) {
       setTicketInput(incoming);
       setActiveTicket(incoming);
@@ -288,35 +289,51 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     }
   }, [ticketCode, loadTrackingData]);
 
-  // Supabase Realtime pada sinyal kode tiket aktif
+  // Supabase Realtime pada hash sinyal kode tiket aktif (tanpa mengekspos kode tiket asli)
   useEffect(() => {
     if (!activeTicket) {
       setIsRealtimeSubscribed(false);
       return;
     }
 
-    const clean = activeTicket.trim().toUpperCase();
-    const channel = supabase
-      .channel(`public-report-signal-${clean}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'report_tracking_signals',
-          filter: `ticket_code=eq.${clean}`,
-        },
-        () => {
-          loadTrackingData(clean, true);
-        }
-      )
-      .subscribe((status) => {
-        setIsRealtimeSubscribed(status === 'SUBSCRIBED');
+    let cancelled = false;
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null;
+    const clean = activeTicket.trim();
+
+    computeTicketSignalHash(clean)
+      .then((signalHash) => {
+        if (cancelled || !signalHash) return;
+        const ch = supabase
+          .channel(`public-report-signal-${signalHash.slice(0, 20)}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'report_tracking_signals',
+              filter: `ticket_code=eq.${signalHash}`,
+            },
+            () => {
+              loadTrackingData(clean, true);
+            }
+          )
+          .subscribe((status) => {
+            if (!cancelled) {
+              setIsRealtimeSubscribed(status === 'SUBSCRIBED');
+            }
+          });
+        activeChannel = ch;
+      })
+      .catch(() => {
+        if (!cancelled) setIsRealtimeSubscribed(false);
       });
 
     return () => {
+      cancelled = true;
       setIsRealtimeSubscribed(false);
-      supabase.removeChannel(channel);
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel);
+      }
     };
   }, [activeTicket, loadTrackingData]);
 
@@ -331,9 +348,9 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = ticketInput.trim().toUpperCase();
+    const clean = ticketInput.trim();
     if (!clean) {
-      setQueryError('Masukkan kode tiket laporan terlebih dahulu (contoh: CHK-2026-5266-KOT).');
+      setQueryError('Masukkan kode tiket laporan terlebih dahulu (contoh: CHK-9xK4mP-7vR2nQ-B8wL).');
       return;
     }
     setActiveTicket(clean);
@@ -517,10 +534,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     type="text"
                     value={ticketInput}
                     onChange={(e) => {
-                      setTicketInput(e.target.value.toUpperCase());
+                      setTicketInput(e.target.value);
                       if (queryError) setQueryError(null);
                     }}
-                    placeholder="Masukkan kode tiket (contoh: CHK-2026-5266-KOT)"
+                    placeholder="Masukkan kode tiket (contoh: CHK-9xK4mP-7vR2nQ-B8wL)"
                     aria-label="Kode tiket pelacakan laporan"
                     className="w-full min-h-[46px] pl-10 pr-9 py-2.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] font-mono text-sm font-bold text-[#1E293B] placeholder:font-sans placeholder:font-normal placeholder:text-[#64748B] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
                   />
@@ -735,7 +752,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     Kode Tiket {notFoundTicket} Tidak Ditemukan
                   </h2>
                   <p className="text-xs sm:text-sm text-[#475569] max-w-md mx-auto leading-relaxed">
-                    Pastikan kode tiket diketik lengkap beserta tanda hubung (misalnya CHK-2026-5266-KOT).
+                    Pastikan kode tiket diketik lengkap sesuai huruf kapital, huruf kecil, dan angka (misalnya CHK-9xK4mP-7vR2nQ-B8wL).
                   </p>
                 </div>
                 <button

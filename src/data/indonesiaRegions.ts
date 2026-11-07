@@ -1,8 +1,4 @@
-/**
- * Data Wilayah Kabupaten/Kota Seluruh Indonesia (38 Provinsi, 514 Kabupaten/Kota)
- * Beserta Satuan Biaya Dana BOSP per Siswa per Tahun (SD, SMP, SMA, SMK)
- * Sesuai Daftar_Wilayah_SD_SMP_SMA_SMK_terisi.xlsx (Kepmendikbud 16/P/2021)
- */
+// Regional BOSP per-student annual unit costs across 514 regencies/cities per Kepmendikbud 16/P/2021.
 
 export interface RegionalBospRate {
   no: number;

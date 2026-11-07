@@ -49,6 +49,7 @@ export interface BospRealizationItem {
     inspectorNote: string;
     conditionStatus: string;
   };
+  photoUrl?: string;
 }
 
 export type SchoolOwnershipType = 'Negeri' | 'Swasta';
@@ -192,6 +193,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: 'Buku telah didistribusikan ke rak perpustakaan dan dibagikan langsung kepada siswa tanpa pungutan biaya.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-perpustakaan-buku-paket.jpg',
   },
   {
     id: 'item-atk-kertas-02',
@@ -253,6 +255,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: 'Persediaan kertas HVS dan tinta tersimpan di lemari logistik untuk keperluan ujian siswa.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-asesmen-kertas-hvs.jpg',
   },
   {
     id: 'item-sanitasi-toilet-03',
@@ -317,6 +320,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: 'Seluruh keran air mengalir lancar, saluran pembuangan bersih, dan fasilitas cuci tangan berfungsi baik.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-sarpras-sanitasi-wastafel.jpg',
   },
   {
     id: 'item-meja-kursi-04',
@@ -369,6 +373,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: '30 pasang meja kursi baru telah tertata rapi di dalam ruang kelas dan siap digunakan siswa.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-sarpras-meja-kursi-kelas.jpg',
   },
   {
     id: 'item-kipas-angin-05',
@@ -422,6 +427,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: 'Semua unit kipas angin dinding telah dipasang kuat dengan kabel instalasi rapi dan berputar normal.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-sarpras-kipas-angin-dinding.jpg',
   },
   {
     id: 'item-internet-wifi-06',
@@ -476,6 +482,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: 'Router dan sinyal WiFi aktif mencakup area ruang guru dan ruang kelas untuk kebutuhan asesmen.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-jasa-internet-wifi-router.jpg',
   },
   {
     id: 'item-proyektor-lcd-07',
@@ -534,6 +541,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       inspectorNote: 'Proyektor dan layar display terpasang kokoh, pencahayaan jelas untuk presentasi belajar siswa.',
       conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
     },
+    photoUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/bukti-fisik/bukti-multimedia-proyektor-lcd.jpg',
   },
 ];
 
@@ -681,7 +689,7 @@ export const SMK_TI_BAZMA: SchoolData = {
   studentCount: 90,
   perStudentEstimate: 1900000,
   totalBosp: 171000000,
-  imageUrl: '/smk-ti-bazma.jpg',
+  imageUrl: 'https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/bosp-evidence/schools/smk-ti-bazma.jpg',
   tahap1: {
     amount: 85500000,
     period: 'Jan–Jun',
@@ -1357,7 +1365,9 @@ function buildStructuredSchoolsDatabase(): SchoolData[] {
   return schools;
 }
 
-export const SCHOOLS_DATABASE: SchoolData[] = buildStructuredSchoolsDatabase();
+export function getSchoolsSeedDatabase(): SchoolData[] {
+  return buildStructuredSchoolsDatabase();
+}
 
 export interface WaScenarioData {
   id: 'scenario-a' | 'scenario-b';

@@ -269,7 +269,7 @@ export const IntroSplashScreen: React.FC<IntroSplashScreenProps> = ({
   return (
     <div
       onClick={handleSkip}
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#FAF8F5] select-none transition-opacity duration-500 ease-out cursor-pointer ${
+      className={`fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-[#FAF8F5] select-none transition-opacity duration-500 ease-out cursor-pointer ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
       aria-label="Memuat DARADIK"

@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import {
-  BAZMA_BOSP_ITEMS,
-  SCHOOLS_DATABASE,
-  SMK_TI_BAZMA,
+  BospRealizationItem,
+  BudgetComposition,
+  KamusBospItem,
   SchoolData,
-  customizeBospItemsForSchool,
 } from '../data/schoolsData';
 import {
   InspectionMethodCode,
@@ -12,6 +11,10 @@ import {
   ReportInternalStatus,
   ResolutionOutcomeCode,
 } from './reportTracking';
+import {
+  encryptClientPayload,
+  generateAnonymousEvidencePath,
+} from './cryptoSecurity';
 
 const supabaseUrl =
   import.meta.env.VITE_SUPABASE_URL || 'https://eteimuixvdbcnzokckff.supabase.co';
@@ -19,10 +22,113 @@ const supabaseKey =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   'sb_publishable__L_ZAHdcCN9NXZn1myW90A_QfDZyD8J';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+const privacyShieldFetch: typeof fetch = (input, init) => {
+  const headers = new Headers(init?.headers || {});
+  headers.set('X-Client-Info', 'daradik-privacy-shield');
+  headers.delete('X-Forwarded-For');
+  headers.delete('CF-Connecting-IP');
+  headers.delete('X-Real-IP');
+
+  return fetch(input, {
+    ...init,
+    headers,
+    referrerPolicy: 'no-referrer',
+  });
+};
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'daradik-privacy-shield',
+    },
+    fetch: privacyShieldFetch,
+  },
+});
+
+export function mapDbItemRowToBospRealizationItem(
+  row: Record<string, unknown>
+): BospRealizationItem {
+  const invoiceRaw =
+    row.invoice_json && typeof row.invoice_json === 'object'
+      ? (row.invoice_json as BospRealizationItem['invoice'])
+      : {
+          number: '-',
+          vendorName: '-',
+          vendorAddress: '-',
+          npwp: '-',
+          date: '-',
+          treasurerName: '-',
+          principalName: '-',
+          lineItems: [],
+        };
+
+  const geotagRaw =
+    row.geotag_json && typeof row.geotag_json === 'object'
+      ? (row.geotag_json as BospRealizationItem['geotag'])
+      : {
+          lat: '-6.5683',
+          lng: '106.6974',
+          roomLabel: '-',
+          uploadedAt: '-',
+          inspectorNote: '-',
+          conditionStatus: 'Terverifikasi Fisik & Titik Geotagging Dapodik',
+        };
+
+  const keywordsRaw = Array.isArray(row.keywords)
+    ? row.keywords.map((k) => String(k))
+    : [];
+
+  return {
+    id: String(row.item_id || row.id || ''),
+    code: String(row.code || ''),
+    name: String(row.name || ''),
+    unitSummary: String(row.unit_summary || ''),
+    amount: Number(row.amount || 0),
+    category: String(row.category || ''),
+    aiCategoryPath: String(row.ai_category_path || ''),
+    date: String(row.realization_date || ''),
+    stage: (String(row.stage || 'Tahap 1') === 'Tahap 2'
+      ? 'Tahap 2'
+      : 'Tahap 1') as 'Tahap 1' | 'Tahap 2',
+    allocation: String(row.allocation || ''),
+    iconType: (String(row.icon_type || 'book') as BospRealizationItem['iconType']),
+    keywords: keywordsRaw,
+    invoice: invoiceRaw,
+    geotag: geotagRaw,
+    photoUrl: row.photo_url ? String(row.photo_url) : undefined,
+  };
+}
+
+export async function fetchSchoolBospItemsFromSupabase(
+  schoolIdOrNpsn: string
+): Promise<BospRealizationItem[]> {
+  const clean = (schoolIdOrNpsn || '').trim();
+  if (!clean) return [];
+
+  try {
+    const { data, error } = await supabase.rpc('rpc_get_school_bosp_items', {
+      p_identifier: clean,
+    });
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      return data.map((row) =>
+        mapDbItemRowToBospRealizationItem(row as Record<string, unknown>)
+      );
+    }
+  } catch {
+    // fallback ke items di data_payload
+  }
+  return [];
+}
 
 export function hydrateSupabaseRowToSchoolData(
-  row: Record<string, unknown>
+  row: Record<string, unknown>,
+  dbItems?: BospRealizationItem[]
 ): SchoolData {
   const payload =
     row.data_payload &&
@@ -31,71 +137,142 @@ export function hydrateSupabaseRowToSchoolData(
       ? (row.data_payload as Partial<SchoolData>)
       : {};
 
-  const id = String(row.id || payload.id || SMK_TI_BAZMA.id);
-  const npsn = String(row.npsn || payload.npsn || SMK_TI_BAZMA.npsn);
-  const localMatch =
-    SCHOOLS_DATABASE.find((s) => s.id === id || s.npsn === npsn) || SMK_TI_BAZMA;
+  const id = String(row.id || payload.id || '');
+  const npsn = String(row.npsn || payload.npsn || '');
+  const name = String(row.name || payload.name || '');
 
-  const name = String(row.name || payload.name || localMatch.name);
-  const isFeatured = localMatch.id === SMK_TI_BAZMA.id;
+  const jenjangRaw = String(
+    row.jenjang || payload.jenjang || payload.educationLevel || 'SMK'
+  ).toUpperCase();
+  const jenjang = (
+    ['SD', 'SMP', 'SMA', 'SMK'].includes(jenjangRaw) ? jenjangRaw : 'SMK'
+  ) as 'SD' | 'SMP' | 'SMA' | 'SMK';
+
+  const schoolTypeRaw = String(
+    row.school_type || payload.schoolType || 'Negeri'
+  );
+  const schoolType: 'Negeri' | 'Swasta' =
+    schoolTypeRaw === 'Swasta' ? 'Swasta' : 'Negeri';
+
+  const provinsi = String(row.provinsi || payload.provinsi || '');
+  const kabupaten = String(row.kabupaten || payload.kabupaten || '');
+  const kecamatan = String(row.kecamatan || payload.kecamatan || '');
+  const address = String(row.address || payload.address || '');
+  const status = String(
+    row.status || payload.status || 'Terdaftar Aktif di Kemendikdasmen'
+  );
+
   const principalName = String(
-    (isFeatured ? SMK_TI_BAZMA.principalName : payload.principalName) ||
-      localMatch.principalName ||
-      'Ahmad Dahlan, S.Ag'
+    row.principal_name || payload.principalName || '-'
   );
   const treasurerName = String(
-    payload.treasurerName || localMatch.treasurerName || 'Rina Marlina, S.E.'
+    row.treasurer_name || payload.treasurerName || '-'
   );
 
-  const items = localMatch.items?.length
-    ? localMatch.items
-    : customizeBospItemsForSchool(
-        BAZMA_BOSP_ITEMS,
-        name,
-        principalName,
-        treasurerName
-      );
+  const studentCount = Number(
+    row.student_count ?? payload.studentCount ?? 100
+  );
+  const perStudentEstimate = Number(
+    row.per_student_estimate ?? payload.perStudentEstimate ?? 1500000
+  );
+  const totalBosp = Number(
+    row.total_bosp ?? payload.totalBosp ?? studentCount * perStudentEstimate
+  );
+
+  const maxHonorariumLimit = Number(
+    payload.maxHonorariumLimit ?? (schoolType === 'Swasta' ? 40 : 20)
+  );
+  const regionCostZone = String(
+    row.region_cost_zone ||
+      payload.regionCostZone ||
+      `Satuan Biaya BOSP ${kabupaten}, ${provinsi} (${jenjang}) — Kepmendikbud 16/P/2021`
+  );
+
+  const halfAmount = Math.round(totalBosp / 2);
+  const tahap1 =
+    payload.tahap1 && typeof payload.tahap1 === 'object'
+      ? {
+          amount: Number(payload.tahap1.amount ?? halfAmount),
+          period: String(payload.tahap1.period || 'Jan–Jun'),
+          status: String(payload.tahap1.status || 'Sudah Cair'),
+          disbursedDate: String(
+            payload.tahap1.disbursedDate || '16 Februari 2026'
+          ),
+        }
+      : {
+          amount: halfAmount,
+          period: 'Jan–Jun',
+          status: 'Sudah Cair',
+          disbursedDate: '16 Februari 2026',
+        };
+
+  const tahap2 =
+    payload.tahap2 && typeof payload.tahap2 === 'object'
+      ? {
+          amount: Number(payload.tahap2.amount ?? totalBosp - halfAmount),
+          period: String(payload.tahap2.period || 'Jul–Des'),
+          status: String(payload.tahap2.status || 'Sudah Cair'),
+          disbursedDate: String(
+            payload.tahap2.disbursedDate || '14 Agustus 2026'
+          ),
+        }
+      : {
+          amount: totalBosp - halfAmount,
+          period: 'Jul–Des',
+          status: 'Sudah Cair',
+          disbursedDate: '14 Agustus 2026',
+        };
+
+  const compositions: BudgetComposition[] = Array.isArray(payload.compositions)
+    ? payload.compositions.map((c) => ({ ...c }))
+    : [];
+
+  const tahap1Compositions: BudgetComposition[] | undefined =
+    Array.isArray(payload.tahap1Compositions) &&
+    payload.tahap1Compositions.length > 0
+      ? payload.tahap1Compositions.map((c) => ({ ...c }))
+      : undefined;
+
+  const tahap2Compositions: BudgetComposition[] | undefined =
+    Array.isArray(payload.tahap2Compositions) &&
+    payload.tahap2Compositions.length > 0
+      ? payload.tahap2Compositions.map((c) => ({ ...c }))
+      : undefined;
+
+  const items: BospRealizationItem[] =
+    dbItems && dbItems.length > 0
+      ? dbItems
+      : Array.isArray(payload.items)
+      ? payload.items.map((it) => ({ ...it }))
+      : [];
 
   return {
     id,
     name,
-    npsn: isFeatured ? SMK_TI_BAZMA.npsn : npsn,
-    sampleNisn: String(payload.sampleNisn || localMatch.sampleNisn),
+    npsn,
+    sampleNisn: String(payload.sampleNisn || '0081928491'),
     principalName,
     treasurerName,
-    provinsi: String(row.provinsi || payload.provinsi || localMatch.provinsi),
-    kabupaten: String(
-      row.kabupaten || payload.kabupaten || localMatch.kabupaten
-    ),
-    kecamatan: String(
-      row.kecamatan || payload.kecamatan || localMatch.kecamatan
-    ),
-    address: String(
-      isFeatured
-        ? SMK_TI_BAZMA.address
-        : row.address || payload.address || localMatch.address
-    ),
-    status: localMatch.status,
-    schoolType: localMatch.schoolType,
-    educationLevel: localMatch.educationLevel,
-    jenjang:
-      (String(row.jenjang || payload.jenjang || localMatch.jenjang || 'SMK') as
-        | 'SD'
-        | 'SMP'
-        | 'SMA'
-        | 'SMK'),
-    maxHonorariumLimit: localMatch.maxHonorariumLimit,
-    regionCostZone: localMatch.regionCostZone,
-    studentCount: localMatch.studentCount,
-    perStudentEstimate: localMatch.perStudentEstimate,
-    totalBosp: localMatch.totalBosp,
-    tahap1: { ...localMatch.tahap1 },
-    tahap2: { ...localMatch.tahap2 },
-    compositions: localMatch.compositions.map((c) => ({ ...c })),
-    tahap1Compositions: localMatch.tahap1Compositions?.map((c) => ({ ...c })),
-    tahap2Compositions: localMatch.tahap2Compositions?.map((c) => ({ ...c })),
+    provinsi,
+    kabupaten,
+    kecamatan,
+    address,
+    status,
+    schoolType,
+    educationLevel: jenjang,
+    jenjang,
+    maxHonorariumLimit,
+    regionCostZone,
+    studentCount,
+    perStudentEstimate,
+    totalBosp,
+    tahap1,
+    tahap2,
+    compositions,
+    tahap1Compositions,
+    tahap2Compositions,
     items,
-    imageUrl: String(row.image_url || payload.imageUrl || localMatch.imageUrl || ''),
+    imageUrl: String(row.image_url || payload.imageUrl || ''),
   };
 }
 
@@ -149,54 +326,80 @@ export function detectJenjangFromIdOrName(schoolIdOrName: string): JenjangType |
 
 export async function fetchSchoolFromSupabase(
   schoolId: string = 'smk-ti-bazma',
-  jenjangHint?: string
+  _jenjangHint?: string
 ): Promise<SchoolData | null> {
-  const detected = (jenjangHint as JenjangType) || detectJenjangFromIdOrName(schoolId);
-  const targetTables = detected
-    ? [getJenjangTableName(detected), 'schools_all']
-    : ['schools_smk', 'schools_sma', 'schools_smp', 'schools_sd', 'schools_all'];
-
-  for (const tbl of targetTables) {
-    try {
-      const { data, error } = await supabase
-        .from(tbl)
-        .select('*')
-        .or(`id.eq.${schoolId},npsn.eq.${schoolId}`)
-        .maybeSingle();
-
-      if (!error && data) {
-        return hydrateSupabaseRowToSchoolData(data as Record<string, unknown>);
-      }
-    } catch {
-      // lanjut ke tabel berikutnya
-    }
-  }
-
-  return null;
-}
-
-export async function fetchAllSchoolsFromSupabase(
-  jenjang?: JenjangType
-): Promise<SchoolData[] | null> {
-  const targetTable = jenjang ? getJenjangTableName(jenjang) : 'schools_all';
+  const cleanId = (schoolId || '').trim();
+  if (!cleanId) return null;
 
   try {
-    const { data, error } = await supabase
-      .from(targetTable)
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(200);
+    const { data, error } = await supabase.rpc('rpc_get_school_by_id_or_npsn', {
+      p_identifier: cleanId,
+    });
 
-    if (!error && data && data.length > 0) {
-      return data.map((row: Record<string, unknown>) =>
-        hydrateSupabaseRowToSchoolData(row)
-      );
+    if (!error && data && typeof data === 'object') {
+      const bundle = data as Record<string, unknown>;
+      const schoolRow = bundle.school as Record<string, unknown> | undefined;
+      const rawItems = Array.isArray(bundle.items) ? bundle.items : [];
+      if (schoolRow) {
+        const dbItems = rawItems.map((it) =>
+          mapDbItemRowToBospRealizationItem(it as Record<string, unknown>)
+        );
+        return hydrateSupabaseRowToSchoolData(schoolRow, dbItems);
+      }
     }
   } catch {
     // ignore
   }
 
   return null;
+}
+
+export async function fetchKamusBospFromSupabase(): Promise<{
+  allowed: KamusBospItem[];
+  prohibited: KamusBospItem[];
+} | null> {
+  try {
+    const { data, error } = await supabase.rpc('rpc_get_kamus_bosp');
+
+    if (error || !Array.isArray(data) || data.length === 0) {
+      return null;
+    }
+
+    const allowed: KamusBospItem[] = [];
+    const prohibited: KamusBospItem[] = [];
+
+    for (const row of data as Record<string, unknown>[]) {
+      const item: KamusBospItem = {
+        title: String(row.title || ''),
+        detail: String(row.detail || ''),
+        ref: String(row.ref || ''),
+      };
+      if (String(row.entry_type) === 'prohibited') {
+        prohibited.push(item);
+      } else {
+        allowed.push(item);
+      }
+    }
+
+    return { allowed, prohibited };
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchAllSchoolsFromSupabase(
+  jenjang?: JenjangType
+): Promise<SchoolData[] | null> {
+  try {
+    const res = await fetchPaginatedSchoolsFromSupabase({
+      level: jenjang || '',
+      page: 1,
+      pageSize: 50,
+    });
+    return res.schools.length > 0 ? res.schools : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface PaginatedSchoolsQuery {
@@ -229,149 +432,38 @@ export async function fetchPaginatedSchoolsFromSupabase(
   const status = (params.status || '').trim();
   const searchRaw = (params.search || '').trim();
 
-  const buildBaseQuery = () => {
-    let query = supabase
-      .from('schools_all')
-      .select(
-        'id, name, npsn, jenjang, school_type, status, address, provinsi, kabupaten, kecamatan, student_count, total_bosp, per_student_estimate',
-        { count: 'exact' }
-      );
+  const { data, error } = await supabase.rpc('rpc_get_paginated_schools', {
+    p_province: province,
+    p_city: city,
+    p_level: level,
+    p_status: status,
+    p_search: searchRaw,
+    p_page: requestedPage,
+    p_page_size: pageSize,
+  });
 
-    if (province) {
-      query = query.eq('provinsi', province);
-    }
-    if (city) {
-      query = query.eq('kabupaten', city);
-    }
-    if (level && ['SD', 'SMP', 'SMA', 'SMK'].includes(level)) {
-      query = query.eq('jenjang', level);
-    }
-    if (status && (status === 'Negeri' || status === 'Swasta')) {
-      query = query.eq('school_type', status);
-    }
-
-    if (searchRaw) {
-      const tokens = searchRaw
-        .split(/\s+/)
-        .map((tk) => tk.replace(/[,%()]/g, '').trim())
-        .filter(Boolean);
-
-      for (const tk of tokens) {
-        const lower = tk.toLowerCase();
-        if ('teknologi'.startsWith(lower) && lower.length >= 3) {
-          query = query.or(`name.ilike.%${tk}%,name.ilike.% TI %`);
-        } else if ('informasi'.startsWith(lower) && lower.length >= 4) {
-          query = query.or(`name.ilike.%${tk}%,name.ilike.% TI %`);
-        } else {
-          query = query.or(
-            `name.ilike.%${tk}%,id.ilike.%${tk}%,npsn.ilike.%${tk}%`
-          );
-        }
-      }
-    }
-
-    return query
-      .order('name', { ascending: true })
-      .order('id', { ascending: true });
-  };
-
-  const from = (requestedPage - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  const { data, count, error } = await buildBaseQuery().range(from, to);
-
-  if (error) {
+  if (error || !data || typeof data !== 'object') {
     throw new Error(
-      error.message || 'Gagal memuat daftar sekolah dari database.'
+      error?.message || 'Gagal memuat daftar sekolah dari database.'
     );
   }
 
-  const totalCount = typeof count === 'number' ? count : 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-  if (totalCount > 0 && requestedPage > totalPages) {
-    const clampedFrom = (totalPages - 1) * pageSize;
-    const clampedTo = clampedFrom + pageSize - 1;
-    const retryRes = await buildBaseQuery().range(clampedFrom, clampedTo);
-    if (retryRes.error) {
-      throw new Error(
-        retryRes.error.message || 'Gagal memuat daftar sekolah dari database.'
-      );
-    }
-    return {
-      schools: (retryRes.data || []).map((row) =>
-        hydrateSupabaseRowToSchoolData(row as Record<string, unknown>)
-      ),
-      totalCount,
-      page: totalPages,
-      pageSize,
-      totalPages,
-    };
-  }
+  const payload = data as Record<string, unknown>;
+  const rawRows = Array.isArray(payload.rows) ? payload.rows : [];
+  const totalCount = Number(payload.total_count || 0);
+  const resolvedPage = Number(payload.page || 1);
+  const resolvedSize = Number(payload.page_size || pageSize);
+  const totalPages = Math.max(1, Number(payload.total_pages || 1));
 
   return {
-    schools: (data || []).map((row) =>
+    schools: rawRows.map((row) =>
       hydrateSupabaseRowToSchoolData(row as Record<string, unknown>)
     ),
     totalCount,
-    page: totalCount === 0 ? 1 : requestedPage,
-    pageSize,
+    page: totalCount === 0 ? 1 : resolvedPage,
+    pageSize: resolvedSize,
     totalPages,
   };
-}
-
-export async function syncSchoolToSupabase(school: SchoolData): Promise<boolean> {
-  const jenjang = school.jenjang || school.educationLevel || 'SMK';
-  const jenjangTable = getJenjangTableName(jenjang);
-
-  const payload = {
-    id: school.id,
-    name: school.name,
-    npsn: school.npsn,
-    student_count: school.studentCount,
-    total_bosp: school.totalBosp,
-    per_student_estimate: school.perStudentEstimate,
-    kabupaten: school.kabupaten,
-    kecamatan: school.kecamatan,
-    provinsi: school.provinsi,
-    address: school.address,
-    status: school.status,
-    school_type: school.schoolType || 'Negeri',
-    data_payload: {
-      id: school.id,
-      name: school.name,
-      npsn: school.npsn,
-      sampleNisn: school.sampleNisn,
-      principalName: school.principalName,
-      treasurerName: school.treasurerName,
-      provinsi: school.provinsi,
-      kabupaten: school.kabupaten,
-      kecamatan: school.kecamatan,
-      address: school.address,
-      status: school.status,
-      schoolType: school.schoolType,
-      educationLevel: school.educationLevel,
-      jenjang: school.jenjang,
-      maxHonorariumLimit: school.maxHonorariumLimit,
-      regionCostZone: school.regionCostZone,
-      studentCount: school.studentCount,
-      perStudentEstimate: school.perStudentEstimate,
-      totalBosp: school.totalBosp,
-      tahap1: school.tahap1,
-      tahap2: school.tahap2,
-      compositions: school.compositions,
-    },
-    updated_at: new Date().toISOString(),
-  };
-
-  try {
-    const { error } = await supabase
-      .from(jenjangTable)
-      .upsert(payload, { onConflict: 'id' });
-    return !error;
-  } catch {
-    return false;
-  }
 }
 
 export function generateUUID(): string {
@@ -606,29 +698,21 @@ function cleanRpcErrorMessage(rawMessage: string): string {
 }
 
 /**
- * Pencarian sekolah langsung dari view master database public.schools_all (4.112+ sekolah)
+ * Pencarian sekolah melalui RPC terkendali rpc_search_master_schools
  */
 export async function searchMasterSchoolsInSupabase(
   query: string,
   limit: number = 20
 ): Promise<MasterSchoolSearchOption[]> {
   const q = query.trim();
-  let builder = supabase
-    .from('schools_all')
-    .select('id, name, npsn, jenjang, school_type, provinsi, kabupaten, kecamatan, address')
-    .limit(limit);
+  const safeLimit = Math.max(1, Math.min(30, limit));
 
-  if (q) {
-    const safe = q.replace(/[,%()]/g, ' ').trim();
-    builder = builder.or(
-      `name.ilike.%${safe}%,npsn.ilike.%${safe}%,kabupaten.ilike.%${safe}%,kecamatan.ilike.%${safe}%`
-    );
-  } else {
-    builder = builder.order('name', { ascending: true });
-  }
+  const { data, error } = await supabase.rpc('rpc_search_master_schools', {
+    p_query: q,
+    p_limit: safeLimit,
+  });
 
-  const { data, error } = await builder;
-  if (error || !data) {
+  if (error || !Array.isArray(data)) {
     throw new Error(error?.message || 'Gagal memuat daftar sekolah dari basis data.');
   }
 
@@ -646,8 +730,7 @@ export async function searchMasterSchoolsInSupabase(
 }
 
 /**
- * Mengambil identitas resmi sekolah dari tabel master database murni berdasarkan NPSN.
- * Tidak pernah mengarang data atau fallback ke sekolah lain apabila NPSN tidak ditemukan.
+ * Mengambil identitas resmi sekolah dari tabel master database murni berdasarkan NPSN via RPC terkendali.
  */
 export async function fetchOfficialSchoolIdentityByNpsn(
   npsn: string
@@ -655,19 +738,15 @@ export async function fetchOfficialSchoolIdentityByNpsn(
   const cleanNpsn = (npsn || '').trim();
   if (!cleanNpsn || cleanNpsn === '-') return null;
 
-  const { data, error } = await supabase
-    .from('schools_all')
-    .select(
-      'id, name, npsn, jenjang, school_type, status, address, provinsi, kabupaten, kecamatan, principal_name, treasurer_name, student_count, total_bosp, per_student_estimate, region_cost_zone'
-    )
-    .eq('npsn', cleanNpsn)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('rpc_get_official_school_identity', {
+    p_npsn: cleanNpsn,
+  });
 
   if (error) {
     throw new Error(`Gagal memeriksa data sekolah pada basis data: ${error.message}`);
   }
 
-  if (!data) {
+  if (!data || typeof data !== 'object') {
     return null;
   }
 
@@ -705,20 +784,18 @@ export async function fetchOfficialSchoolIdentityByNpsn(
 
 /**
  * Mengunggah berkas gambar/dokumen bukti laporan ke Supabase Storage bucket 'report-evidence'
+ * menggunakan token nama berkas acak agar nama berkas perangkat pelapor dirahasiakan.
  */
 export async function uploadReportEvidenceFile(
   blobOrFile: Blob | File,
-  originalFileName: string,
+  _originalFileName: string,
   folder: 'initial' | 'followup' = 'initial'
 ): Promise<ReportAttachmentMeta> {
-  const safeBaseName = originalFileName
-    .replace(/[^a-zA-Z0-9._-]/g, '_')
-    .replace(/_+/g, '_')
-    .slice(-80);
-  const now = new Date();
-  const ym = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  const storagePath = `${folder}/${ym}/${generateUUID()}-${safeBaseName || 'bukti.jpg'}`;
   const mimeType = blobOrFile.type || 'image/jpeg';
+  const { storagePath, maskedDisplayName } = generateAnonymousEvidencePath(
+    folder,
+    mimeType
+  );
 
   const { error: uploadError } = await supabase.storage
     .from('report-evidence')
@@ -728,7 +805,7 @@ export async function uploadReportEvidenceFile(
     });
 
   if (uploadError) {
-    throw new Error(`Gagal mengunggah berkas bukti (${originalFileName}): ${uploadError.message}`);
+    throw new Error(`Gagal mengunggah berkas bukti terenkripsi: ${uploadError.message}`);
   }
 
   const { data: pubData } = supabase.storage
@@ -738,12 +815,12 @@ export async function uploadReportEvidenceFile(
   const sizeKb = Math.max(1, Math.round(blobOrFile.size / 1024));
 
   return {
-    name: originalFileName,
+    name: maskedDisplayName,
     sizeFormatted: `${sizeKb} KB`,
     url: pubData.publicUrl,
     storagePath,
     mimeType,
-    uploadedAt: now.toISOString(),
+    uploadedAt: new Date().toISOString(),
   };
 }
 
@@ -772,23 +849,27 @@ export interface SubmitPublicReportResult {
 }
 
 /**
- * Mengirim laporan baru langsung ke Supabase melalui RPC atomik submit_public_report
+ * Mengirim laporan baru ke Supabase dalam bentuk amplop terenkripsi penuh (E2EE AES-256-CBC + HMAC-SHA256)
  */
 export async function submitPublicReportRpc(
   input: SubmitPublicReportInput
 ): Promise<SubmitPublicReportResult> {
-  const { data, error } = await supabase.rpc('submit_public_report', {
-    p_school_id: input.schoolId,
-    p_school_name: input.schoolName,
-    p_school_npsn: input.schoolNpsn,
-    p_kabupaten: input.kabupaten,
-    p_kecamatan: input.kecamatan,
-    p_category: input.category,
-    p_requester_role: input.requesterRole,
-    p_notes: input.notes,
-    p_attachments: input.attachments,
-    p_ocr_text: input.ocrText || null,
-    p_ocr_bosp_fact: input.ocrBospFact || null,
+  const encryptedEnvelope = await encryptClientPayload({
+    schoolId: input.schoolId,
+    schoolName: input.schoolName,
+    schoolNpsn: input.schoolNpsn,
+    kabupaten: input.kabupaten,
+    kecamatan: input.kecamatan,
+    category: input.category,
+    requesterRole: input.requesterRole,
+    notes: input.notes,
+    attachments: input.attachments,
+    ocrText: input.ocrText || null,
+    ocrBospFact: input.ocrBospFact || null,
+  });
+
+  const { data, error } = await supabase.rpc('submit_public_report_encrypted', {
+    p_envelope: encryptedEnvelope,
   });
 
   if (error) {
@@ -812,12 +893,12 @@ export async function submitPublicReportRpc(
 }
 
 /**
- * Mengambil status pelacakan, riwayat perubahan, dan pesan anonim berdasarkan kode tiket
+ * Mengambil status pelacakan, riwayat perubahan, dan pesan anonim berdasarkan kode tiket (case-sensitive)
  */
 export async function fetchPublicReportTrackingRpc(
   ticketCode: string
 ): Promise<PublicReportTrackingPayload | null> {
-  const cleanCode = ticketCode.trim().toUpperCase();
+  const cleanCode = ticketCode.trim();
   if (!cleanCode) return null;
 
   const { data, error } = await supabase.rpc('get_public_report_tracking', {
@@ -892,17 +973,21 @@ export async function fetchPublicReportTrackingRpc(
 }
 
 /**
- * Mengirim balasan pesan dan bukti tambahan dari pelapor secara anonim menggunakan kode tiket
+ * Mengirim balasan pesan dan bukti tambahan dari pelapor secara anonim & terenkripsi penuh (E2EE)
  */
 export async function submitReporterAdditionalInfoRpc(
   ticketCode: string,
   message: string,
   attachments: ReportAttachmentMeta[] = []
 ): Promise<void> {
-  const { error } = await supabase.rpc('submit_reporter_additional_info', {
-    p_ticket_code: ticketCode.trim().toUpperCase(),
-    p_message: message,
-    p_attachments: attachments,
+  const encryptedEnvelope = await encryptClientPayload({
+    ticketCode: ticketCode.trim(),
+    message,
+    attachments,
+  });
+
+  const { error } = await supabase.rpc('submit_reporter_additional_info_encrypted', {
+    p_envelope: encryptedEnvelope,
   });
 
   if (error) {
@@ -975,18 +1060,16 @@ export async function signOutOfficer(): Promise<void> {
 }
 
 export async function fetchOfficerReportsQueue(): Promise<OfficerQueueReportRow[]> {
-  const { data, error } = await supabase
-    .from('anonymous_reports')
-    .select(
-      'id, ticket_code, school_id, school_name, school_npsn, kabupaten, kecamatan, category, requester_role, status, waiting_additional_info, is_forwarded, forwarded_to, resolution_outcome, attachment_count, opened_at, opened_by_name, resolved_at, resolved_by_name, version, created_at, updated_at'
-    )
-    .order('created_at', { ascending: true });
+  const { data, error } = await supabase.rpc('officer_get_reports_queue');
 
   if (error) {
-    throw new Error(`Gagal memuat antrean laporan dari Supabase: ${error.message}`);
+    throw new Error(
+      `Gagal memuat antrean laporan dari Supabase: ${cleanRpcErrorMessage(error.message)}`
+    );
   }
 
-  return (data || []).map((r: Record<string, unknown>) => ({
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((r: Record<string, unknown>) => ({
     id: String(r.id || ''),
     ticket_code: String(r.ticket_code || ''),
     school_id: String(r.school_id || ''),
@@ -1018,40 +1101,22 @@ export async function fetchOfficerReportDetailSnapshot(
   reportId: string,
   autoTransitionedOnOpen: boolean = false
 ): Promise<OfficerReportDetailBundle> {
-  const [reportRes, historyRes, internalRes, messagesRes] = await Promise.all([
-    supabase
-      .from('anonymous_reports')
-      .select(
-        'id, ticket_code, school_id, school_name, school_npsn, kabupaten, kecamatan, category, requester_role, notes_encrypted, status, waiting_additional_info, is_forwarded, forwarded_to, ocr_text, ocr_bosp_fact, rejection_reason, resolution_outcome, public_resolution_note, skip_inspection_reason, field_inspection_conducted, inspection_methods, attachment_count, attachments_json, opened_at, opened_by_name, resolved_at, resolved_by_name, version, created_at, updated_at'
-      )
-      .eq('id', reportId)
-      .single(),
-    supabase
-      .from('report_status_history')
-      .select(
-        'id, report_id, previous_status, new_status, changed_by_uid, changed_by_name, note, is_internal, created_at'
-      )
-      .eq('report_id', reportId)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('report_internal_notes')
-      .select('id, report_id, officer_uid, officer_name, note, created_at')
-      .eq('report_id', reportId)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('report_messages')
-      .select('id, sender_type, sender_label, message, attachments_json, created_at')
-      .eq('report_id', reportId)
-      .order('created_at', { ascending: true }),
-  ]);
+  const { data, error } = await supabase.rpc('officer_get_report_detail_bundle', {
+    p_report_id: reportId,
+  });
 
-  if (reportRes.error || !reportRes.data) {
+  if (error || !data || typeof data !== 'object') {
     throw new Error(
-      reportRes.error?.message || 'Detail laporan tidak ditemukan di basis data.'
+      error ? cleanRpcErrorMessage(error.message) : 'Detail laporan tidak ditemukan di basis data.'
     );
   }
 
-  const r = reportRes.data as Record<string, unknown>;
+  const bundle = data as Record<string, unknown>;
+  const r = (bundle.report || {}) as Record<string, unknown>;
+  const rawHistory = Array.isArray(bundle.history) ? bundle.history : [];
+  const rawInternal = Array.isArray(bundle.internal_notes) ? bundle.internal_notes : [];
+  const rawMessages = Array.isArray(bundle.messages) ? bundle.messages : [];
+
   const schoolNpsn = String(r.school_npsn || '');
   const schoolIdentity = await fetchOfficialSchoolIdentityByNpsn(schoolNpsn);
 
@@ -1098,7 +1163,7 @@ export async function fetchOfficerReportDetailSnapshot(
   return {
     report: fullReport,
     schoolIdentity,
-    history: (historyRes.data || []).map((h: Record<string, unknown>) => ({
+    history: rawHistory.map((h: Record<string, unknown>) => ({
       id: String(h.id || ''),
       report_id: String(h.report_id || reportId),
       previous_status: h.previous_status ? String(h.previous_status) : null,
@@ -1109,7 +1174,7 @@ export async function fetchOfficerReportDetailSnapshot(
       is_internal: Boolean(h.is_internal),
       created_at: String(h.created_at || ''),
     })),
-    internalNotes: (internalRes.data || []).map((n: Record<string, unknown>) => ({
+    internalNotes: rawInternal.map((n: Record<string, unknown>) => ({
       id: String(n.id || ''),
       report_id: String(n.report_id || reportId),
       officer_uid: String(n.officer_uid || ''),
@@ -1117,7 +1182,7 @@ export async function fetchOfficerReportDetailSnapshot(
       note: String(n.note || ''),
       created_at: String(n.created_at || ''),
     })),
-    messages: (messagesRes.data || []).map((m: Record<string, unknown>) => ({
+    messages: rawMessages.map((m: Record<string, unknown>) => ({
       id: String(m.id || ''),
       sender_type: String(m.sender_type) === 'OFFICER' ? 'OFFICER' : 'REPORTER',
       sender_label: String(m.sender_label || ''),

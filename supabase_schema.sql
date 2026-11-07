@@ -27,9 +27,8 @@ CREATE TABLE IF NOT EXISTS public.schools_sd (
 
 ALTER TABLE public.schools_sd ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Schools SD" ON public.schools_sd;
-CREATE POLICY "Public Read Schools SD" ON public.schools_sd FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public Modify Schools SD" ON public.schools_sd;
-CREATE POLICY "Public Modify Schools SD" ON public.schools_sd FOR ALL USING (true);
+REVOKE ALL ON public.schools_sd FROM PUBLIC, anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 2. TABEL SEKOLAH MENENGAH PERTAMA (SMP NEGERI & SWASTA)
@@ -54,9 +53,8 @@ CREATE TABLE IF NOT EXISTS public.schools_smp (
 
 ALTER TABLE public.schools_smp ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Schools SMP" ON public.schools_smp;
-CREATE POLICY "Public Read Schools SMP" ON public.schools_smp FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public Modify Schools SMP" ON public.schools_smp;
-CREATE POLICY "Public Modify Schools SMP" ON public.schools_smp FOR ALL USING (true);
+REVOKE ALL ON public.schools_smp FROM PUBLIC, anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 3. TABEL SEKOLAH MENENGAH ATAS (SMA NEGERI & SWASTA)
@@ -81,9 +79,8 @@ CREATE TABLE IF NOT EXISTS public.schools_sma (
 
 ALTER TABLE public.schools_sma ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Schools SMA" ON public.schools_sma;
-CREATE POLICY "Public Read Schools SMA" ON public.schools_sma FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public Modify Schools SMA" ON public.schools_sma;
-CREATE POLICY "Public Modify Schools SMA" ON public.schools_sma FOR ALL USING (true);
+REVOKE ALL ON public.schools_sma FROM PUBLIC, anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 4. TABEL SEKOLAH MENENGAH KEJURUAN (SMK NEGERI & SWASTA)
@@ -108,9 +105,8 @@ CREATE TABLE IF NOT EXISTS public.schools_smk (
 
 ALTER TABLE public.schools_smk ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public Read Schools SMK" ON public.schools_smk;
-CREATE POLICY "Public Read Schools SMK" ON public.schools_smk FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Public Modify Schools SMK" ON public.schools_smk;
-CREATE POLICY "Public Modify Schools SMK" ON public.schools_smk FOR ALL USING (true);
+REVOKE ALL ON public.schools_smk FROM PUBLIC, anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 5. VIEW GABUNGAN OTOMATIS (AGAR PENCARIAN GLOBAL TETAP RINGAN & CEPAT)
@@ -204,7 +200,7 @@ SELECT
   updated_at
 FROM public.schools_smk;
 
-GRANT SELECT ON public.schools_all TO anon, authenticated;
+REVOKE ALL ON public.schools_all FROM PUBLIC, anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 6. MIGRASI OTOMATIS DARI TABEL 'schools' LAMA (JIKA SUDAH BERISI DATA)
@@ -285,5 +281,5 @@ END $$;
 CREATE OR REPLACE VIEW public.schools AS
 SELECT * FROM public.schools_all;
 
-GRANT SELECT ON public.schools TO anon, authenticated;
+REVOKE ALL ON public.schools FROM PUBLIC, anon, authenticated;
 

@@ -17,8 +17,8 @@
   const CONFIG = Object.assign(
     {
       apiBaseUrl: '',
-      botName: 'Asisten BOSP',
-      greetingText: 'Halo! Aku asisten BOSP. Mau tanya apa hari ini?',
+      botName: 'Tanya BOS',
+      greetingText: 'Halo! Aku Tanya BOS. Mau tanya apa hari ini seputar dana sekolah atau aturan BOSP?',
       storageMuteKey: 'daradik_bosp_tts_muted',
       maxInputLength: 300,
     },
@@ -349,7 +349,7 @@
       q.includes('namamu')
     ) {
       return {
-        teks: 'Aku Asisten BOSP di aplikasi DARADIK. Aku bisa menjawab apa saja yang mau kamu tanyakan, mulai dari aturan dana sekolah, panduan memakai fitur website ini, sampai ngobrol santai seputar dunia pendidikan. Mau tanya apa hari ini?',
+        teks: 'Aku Tanya BOS di aplikasi DARADIK. Aku siap menjawab apa saja yang mau kamu tanyakan seputar transparansi dana BOSP, cara penggunaan website, hingga konsultasi aturan pendidikan. Mau tanya apa hari ini?',
         emosi: 'senang',
       };
     }
@@ -580,7 +580,7 @@
     const root = document.createElement('div');
     root.className = 'bosp-widget-root';
     root.setAttribute('role', 'region');
-    root.setAttribute('aria-label', 'Asisten Chatbot BOSP');
+    root.setAttribute('aria-label', 'Tanya BOS - Asisten Cerdas');
 
     root.innerHTML = [
       '<div id="bosp-chat-popup" class="bosp-popup" role="dialog" aria-modal="false" aria-labelledby="bosp-dialog-title" aria-hidden="true">',
@@ -613,7 +613,7 @@
       '  </header>',
 
       '  <!-- Panggung Maskot Bola Glossy 3D Bermata Kapsul Interaktif (Tanpa Mulut) -->',
-      '  <div class="bosp-orb-stage" id="bosp-orb-stage" data-emotion="netral" title="Klik untuk menyapa Asisten BOSP">',
+      '  <div class="bosp-orb-stage" id="bosp-orb-stage" data-emotion="netral" title="Klik untuk menyapa Tanya BOS">',
       '    <span class="bosp-star bosp-star--1" aria-hidden="true"></span>',
       '    <span class="bosp-star bosp-star--2" aria-hidden="true"></span>',
       '    <span class="bosp-star bosp-star--3" aria-hidden="true"></span>',
@@ -643,7 +643,7 @@
       '  <form id="bosp-chat-form" class="bosp-input-bar" autocomplete="off">',
       '    <input id="bosp-chat-input" type="text" class="bosp-text-input" placeholder="Tanyakan soal BOSP atau cara pakai web..." maxlength="' +
         CONFIG.maxInputLength +
-        '" aria-label="Ketik pertanyaan untuk Asisten BOSP" />',
+        '" aria-label="Ketik pertanyaan untuk Tanya BOS" />',
       '    <button type="button" id="bosp-mic-btn" class="bosp-mic-btn" title="Tanya dengan suara" aria-label="Tanya dengan suara">',
       '      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>',
       '    </button>',
@@ -654,7 +654,7 @@
       '</div>',
 
       '<!-- Tombol Peluncur Jelas & Mudah Dipahami -->',
-      '<button type="button" id="bosp-chat-fab" class="bosp-fab-btn" aria-label="Tanya Asisten AI BOSP" aria-expanded="false" aria-controls="bosp-chat-popup">',
+      '<button type="button" id="bosp-chat-fab" data-tour-id="tour-tanya-bos" class="bosp-fab-btn" aria-label="Tanya BOS" aria-expanded="false" aria-controls="bosp-chat-popup">',
       '  <span class="bosp-fab-avatar" aria-hidden="true">',
       '    <span class="bosp-fab-eyes" id="bosp-fab-eyes">',
       '      <span class="bosp-fab-eye"></span>',
@@ -662,8 +662,8 @@
       '    </span>',
       '  </span>',
       '  <span class="bosp-fab-copy">',
-      '    <span class="bosp-fab-title" id="bosp-fab-title">Tanya BOSP</span>',
-      '    <span class="bosp-fab-sub" id="bosp-fab-sub">Asisten AI</span>',
+      '    <span class="bosp-fab-title" id="bosp-fab-title">Tanya BOS</span>',
+      '    <span class="bosp-fab-sub" id="bosp-fab-sub">Asisten Cerdas</span>',
       '  </span>',
       '</button>',
     ].join('\n');
@@ -1467,7 +1467,7 @@
                       parts: [
                         {
                           text:
-                            'Kamu adalah Asisten BOSP DARADIK yang ramah. Jawab pertanyaan pengguna berikut ini secara santai, akurat, dan jelas dalam 2-3 kalimat bahasa Indonesia tanpa markdown/simbol/bintang: ' +
+                            'Kamu adalah Tanya BOS di aplikasi DARADIK yang ramah. Jawab pertanyaan pengguna berikut ini secara santai, akurat, dan jelas dalam 2-3 kalimat bahasa Indonesia tanpa markdown/simbol/bintang: ' +
                             question,
                         },
                       ],

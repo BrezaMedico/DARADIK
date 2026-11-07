@@ -19,19 +19,33 @@
   --bosp-danger: #C24136;
   --bosp-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, sans-serif;
-  --bosp-font-heading: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  --bosp-font-heading: 'Plus Jakarta Sans', sans-serif;
 }
 
 .bosp-widget-root {
   position: fixed;
   right: 22px;
   bottom: 22px;
-  z-index: 9990;
+  z-index: 990;
   font-family: var(--bosp-font-sans);
   color: var(--bosp-text-main);
   line-height: 1.5;
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* Sembunyikan tombol chatbot saat animasi pembuka/intro splash masih berjalan */
+body.is-intro-active .bosp-widget-root {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Saat sesi panduan fitur berjalan, posisikan widget di bawah lapisan sorotan panduan */
+body.is-tour-active .bosp-widget-root {
+  z-index: 999;
 }
 
 .bosp-widget-root *,

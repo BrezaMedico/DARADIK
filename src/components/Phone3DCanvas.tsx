@@ -102,18 +102,22 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
       const height = container.clientHeight || 440;
       camera.aspect = width / height;
 
-      // Sizing proporsional & lebih kecil ("kecilin lagi untuk ukuran hpnya")
-      if (width < 380) {
-        camera.position.z = 305;
+      // Sizing proporsional & bedakan tegas antara Mobile vs Desktop
+      const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+
+      if (screenWidth < 480) {
+        // Layar HP: posisi naik dengan headroom atas aman agar tidak terpotong
+        camera.position.set(0, 14, 272);
         baseX = 0;
-      } else if (width < 640) {
-        camera.position.z = 292;
+      } else if (screenWidth < 768) {
+        camera.position.set(0, 14, 268);
         baseX = 0;
-      } else if (width < 1024) {
-        camera.position.z = 282;
-        baseX = 2;
+      } else if (screenWidth < 1024) {
+        camera.position.set(0, 10, 272);
+        baseX = 0;
       } else {
-        camera.position.z = 300;
+        // Layar Desktop (>=1024px): Proporsional, elegan, tidak membesar dan tidak terpotong
+        camera.position.set(3, 0, 325);
         baseX = 3;
       }
 
@@ -235,14 +239,25 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
     }
 
     // Fade lembut di tepi bawah kanvas agar ponsel yang naik tidak terpotong tegas;
-    // area fade mengecil mulus sampai hilang di posisi akhir.
+    // Pada mobile (<1024px) gunakan mask fade lembut di bagian bawah agar menyatu sempurna di bawah judul.
+    const isMobileWidth = () => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
+
     const applyFade = (fadePct: number) => {
-      const val =
-        fadePct <= 0.2
-          ? 'none'
-          : `linear-gradient(to top, transparent 0%, rgba(0,0,0,0.35) ${(fadePct * 0.45).toFixed(1)}%, black ${fadePct.toFixed(1)}%)`;
-      container.style.maskImage = val;
-      container.style.webkitMaskImage = val;
+      if (isMobileWidth()) {
+        const mobileMask =
+          'linear-gradient(to bottom, black 46%, rgba(0,0,0,0.55) 66%, transparent 84%)';
+        container.style.maskImage = mobileMask;
+        container.style.webkitMaskImage = mobileMask;
+      } else {
+        if (fadePct <= 0.2) {
+          container.style.maskImage = 'none';
+          container.style.webkitMaskImage = 'none';
+        } else {
+          const val = `linear-gradient(to top, transparent 0%, rgba(0,0,0,0.35) ${(fadePct * 0.45).toFixed(1)}%, black ${fadePct.toFixed(1)}%)`;
+          container.style.maskImage = val;
+          container.style.webkitMaskImage = val;
+        }
+      }
     };
     applyFade(42);
 
@@ -313,7 +328,7 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-[360px] sm:h-[420px] lg:h-[560px] flex items-center justify-center select-none pointer-events-none ${className}`}
+      className={`relative w-full h-[330px] sm:h-[370px] lg:h-[560px] flex items-center justify-center select-none pointer-events-none ${className}`}
       style={{ filter: 'drop-shadow(0 22px 22px rgba(10, 25, 50, 0.22)) drop-shadow(0 6px 8px rgba(10, 25, 50, 0.12))' }}
       aria-label="Visualisasi 3D Interaktif iPhone 16 Pro Max DARADIK"
     >

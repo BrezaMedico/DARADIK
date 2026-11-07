@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookOpen, FileCheck2, Flag, Home, School } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { AppView } from '../App';
+import type { AppView } from '@/types/school';
 
 interface MobileBottomNavProps {
   currentView: AppView;

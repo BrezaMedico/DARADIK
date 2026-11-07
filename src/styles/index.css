@@ -1,0 +1,1087 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Opt-in to intrinsic keyword interpolation for smooth accordion/panel sizing */
+  interpolate-size: allow-keywords;
+
+  /* School Page Palette Tokens (Aligned with Agreed 4-Color Civic Palette) */
+  --school-bg: #FAF8F5;
+  --school-surface: #FFFFFF;
+  --school-sand: #F2EFE8;
+  --school-subtle: #EBF3F8;
+  --school-border: #C9DFDC;
+  --school-border-strong: #A8C8C4;
+  --school-ink: #1E293B;
+  --school-charcoal: #0F172A;
+  --school-muted: #475569;
+  --school-accent: #2E6496;
+  --school-accent-hover: #245385;
+  --school-accent-mid: #66A3BF;
+  --school-accent-soft: #C9DFDC;
+  --school-accent-tint: #EBF3F8;
+  --school-amber: #C87A28;
+  --school-amber-soft: #FBF3E6;
+  --school-bronze: #7C6A56;
+  --school-danger: #C24136;
+  --school-danger-soft: #FDF3F2;
+}
+
+@layer base {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #1E293B;
+    background-color: #FAF8F5;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sturdy / Structured Geometric Font for Headings ("font yang kaku, enak dibaca") */
+.font-sturdy-heading {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  letter-spacing: -0.035em;
+}
+
+/* Cursive / Tulis Sambung yang Bersih, Alami, Terhubung & Sangat Mudah Dibaca */
+.font-script-sekolah {
+  font-family: 'Satisfy', cursive;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  display: inline-block;
+  line-height: 1;
+  vertical-align: baseline;
+  text-shadow: 0 1px 2px rgba(10, 30, 55, 0.35);
+}
+
+/* =====================================================================
+   DARADIK TYPOGRAPHY SYSTEM RULES (Aturan Konsistensi Font & Skala Teks)
+   ===================================================================== */
+/* Judul Utama Halaman / Hero (Heading 1) */
+.daradik-h1 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: #1E293B;
+}
+
+/* Judul Seksi / Bagian (Heading 2) */
+.daradik-h2 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: #1E293B;
+}
+
+/* Judul Kartu / Modul (Heading 3) */
+.daradik-h3 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  color: #1E293B;
+}
+
+/* Paragraf Lead / Pengantar */
+.daradik-lead {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+/* Paragraf Utama / Isi */
+.daradik-body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* Kicker / Label Seksi (Huruf Kapital Kecil) */
+.daradik-kicker {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2E6496;
+}
+
+/* Keterangan Tambahan / Metadata */
+.daradik-caption {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #64748B;
+}
+
+/* Angka Keuangan & Tabular */
+.daradik-stat {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+/* White Stroke-Only Architectural Rectangle Shapes */
+.stroke-rect-white {
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Default White Liquid Glass Navbar (Transparansi tipis, nembus dikit) */
+.liquid-glass-nav-white {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(250, 248, 245, 0.84) 50%,
+    rgba(255, 255, 255, 0.90) 100%
+  );
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.98),
+    inset 0 -1px 1px rgba(52, 104, 161, 0.10),
+    0 10px 28px -10px rgba(20, 52, 88, 0.16);
+}
+
+/* Interactive Link Hover with Animated Underline & Soft Pill Tint */
+.nav-link-interactive {
+  position: relative;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.nav-link-interactive::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background-color: #2e6496;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-link-interactive:hover::after {
+  transform: scaleX(1);
+}
+
+/* Bespoke Coastal Blue Gradient with Long Smooth Bottom Fade */
+.daradik-hero-blue-gradient {
+  background-color: #245385;
+  background-image:
+    radial-gradient(at 82% 18%, rgba(201, 223, 220, 0.22) 0px, transparent 48%),
+    radial-gradient(at 15% 24%, rgba(102, 163, 191, 0.28) 0px, transparent 52%),
+    linear-gradient(
+      180deg,
+      #1a3d66 0%,
+      #255486 32%,
+      #3468a1 54%,
+      #66a3bf 74%,
+      #b5d3d4 88%,
+      #e6ece8 95%,
+      #faf8f5 100%
+    );
+}
+
+/* Very Thin Base Grid (42px x 42px) */
+.daradik-grid-base {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+/* Subtle Thin Interactive Grid Revealed by Mouse Cursor (42px x 42px) */
+.daradik-grid-spotlight {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+/* =====================================================================
+   BACKGROUND GRID LIQUID GLASS CELLS (42px x 42px Small Grid Squares)
+   ===================================================================== */
+.grid-glass-cell {
+  width: 42px;
+  height: 42px;
+  pointer-events: none;
+  transition:
+    opacity 220ms ease-out,
+    box-shadow 220ms ease-out,
+    border-color 220ms ease-out;
+}
+
+/* 4 Variasi Gradasi & Glossy Berbeda untuk Kotak-Kotak Kecil Grid */
+.grid-cell-v1 {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(201, 223, 220, 0.12) 100%
+  );
+}
+
+.grid-cell-v2 {
+  background: linear-gradient(
+    160deg,
+    rgba(220, 239, 234, 0.24) 0%,
+    rgba(255, 255, 255, 0.03) 55%,
+    rgba(102, 163, 191, 0.15) 100%
+  );
+}
+
+.grid-cell-v3 {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.26), transparent 65%),
+    linear-gradient(125deg, rgba(255, 255, 255, 0.08) 0%, rgba(181, 211, 212, 0.04) 100%);
+}
+
+.grid-cell-v4 {
+  background: linear-gradient(
+    215deg,
+    rgba(255, 255, 255, 0.20) 0%,
+    rgba(255, 255, 255, 0.03) 60%,
+    rgba(220, 239, 234, 0.14) 100%
+  );
+}
+
+/* Animasi Mandiri Halus pada Kotak-Kotak Kecil Grid Background */
+@keyframes gridCellBreathA {
+  0%, 100% {
+    opacity: 0.08;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.34;
+    transform: scale(1);
+  }
+}
+
+@keyframes gridCellBreathB {
+  0%, 100% {
+    opacity: 0.30;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.06;
+    transform: scale(0.98);
+  }
+}
+
+.grid-cell-anim-a {
+  animation: gridCellBreathA 5.5s ease-in-out infinite;
+}
+
+.grid-cell-anim-b {
+  animation: gridCellBreathB 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid-cell-anim-a,
+  .grid-cell-anim-b {
+    animation: none !important;
+  }
+}
+
+/* Clean, Minimalist Solid Brand CTA Button (Minimalkan Gradasi) */
+.daradik-cta-subtle {
+  background-color: #245385;
+  border: 1px solid #1e4570;
+  box-shadow: 0 4px 12px -2px rgba(22, 54, 92, 0.22);
+  transition: background-color 180ms ease,
+              border-color 180ms ease,
+              box-shadow 200ms ease,
+              transform 150ms ease;
+}
+
+.daradik-cta-subtle:hover {
+  background-color: #1c436d;
+  border-color: #17385c;
+  box-shadow: 0 6px 18px -2px rgba(22, 54, 92, 0.30);
+  transform: translateY(-1px);
+}
+
+.daradik-cta-subtle:active {
+  background-color: #17385c;
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(22, 54, 92, 0.25);
+}
+
+/* =====================================================================
+   SCHOOL PAGE BUTTON & INTERACTIVE COMPONENT SYSTEM (Agreed Civic Palette)
+   ===================================================================== */
+.school-btn-primary {
+  background-color: var(--school-accent);
+  color: #FFFFFF;
+  border: 1px solid #245385;
+  box-shadow: 0 4px 12px -2px rgba(46, 100, 150, 0.25);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.school-btn-primary:hover:not(:disabled) {
+  background-color: var(--school-accent-hover);
+  border-color: #1a426e;
+  box-shadow: 0 6px 16px -3px rgba(46, 100, 150, 0.35);
+  transform: translateY(-1px);
+}
+
+.school-btn-primary:active:not(:disabled) {
+  background-color: #1a426e;
+  transform: translateY(0.5px);
+  box-shadow: 0 2px 6px rgba(46, 100, 150, 0.22);
+}
+
+.school-btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(46, 100, 150, 0.30);
+}
+
+.school-btn-secondary {
+  background-color: var(--school-surface);
+  color: var(--school-ink);
+  border: 1px solid var(--school-border);
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.school-btn-secondary:hover:not(:disabled) {
+  background-color: var(--school-sand);
+  border-color: var(--school-border-strong);
+  box-shadow: 0 3px 8px -2px rgba(24, 24, 27, 0.07);
+}
+
+.school-btn-secondary:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.school-btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 94, 75, 0.22);
+}
+
+.school-btn-danger {
+  background-color: var(--school-danger);
+  color: #FFFFFF;
+  border: 1px solid #A63329;
+  box-shadow: 0 4px 12px -2px rgba(194, 65, 54, 0.20);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.school-btn-danger:hover:not(:disabled) {
+  background-color: #A63329;
+  box-shadow: 0 6px 16px -3px rgba(194, 65, 54, 0.28);
+  transform: translateY(-1px);
+}
+
+.school-btn-danger:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+/* Shake Animation for Empty Search Validation */
+@keyframes daradikShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-7px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(7px);
+  }
+}
+
+.animate-daradik-shake {
+  animation: daradikShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Crisp, Clean & Subtle Light Sheen on Hover (Simple & Non-Distracting) */
+@keyframes cleanLightSweep {
+  0% {
+    transform: translate3d(-120%, 0, 0) skewX(-20deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(240%, 0, 0) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.btn-glass-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glass-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -20%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 100%
+  );
+  transform: translate3d(-120%, 0, 0) skewX(-20deg);
+  pointer-events: none;
+}
+
+.btn-glass-sheen:hover::after {
+  animation: cleanLightSweep 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* =====================================================================
+   DIRECTED ENTRANCE ANIMATIONS FOR SCHOOL PAGE (220ms–450ms, smooth easing)
+   ===================================================================== */
+@keyframes schoolEnterUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes schoolHeaderEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-school-header {
+  animation: schoolHeaderEnter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-school-item {
+  animation: schoolEnterUp 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Modern @starting-style entry & intrinsic accordion panel transition */
+.school-expand-panel {
+  block-size: auto;
+  block-size: calc-size(auto, size);
+  opacity: 1;
+  translate: 0 0;
+  overflow: hidden;
+  transition:
+    block-size 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 260ms ease-out,
+    translate 260ms ease-out;
+  transition-behavior: allow-discrete;
+}
+
+@starting-style {
+  .school-expand-panel {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+
+/* =====================================================================
+   Animasi Masuk Landing Page: Efek Kaca Cekung (Concave Perspective)
+   "animasi cekung: di bagian bawahnya dia ngelebar dan ketengah kembali normal, ngelebar sekaligus ngeblur"
+   ===================================================================== */
+@keyframes concaveLensReveal {
+  0% {
+    opacity: 0;
+    transform: perspective(700px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(700px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(700px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
+  }
+}
+
+/* Backward compatibility alias */
+@keyframes convexLensZoomOutReveal {
+  0% {
+    opacity: 0;
+    transform: perspective(700px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(700px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(700px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
+  }
+}
+
+.scroll-reveal-once {
+  will-change: transform, opacity, filter;
+  transform-origin: 50% 12%;
+}
+
+.scroll-reveal-hidden {
+  opacity: 0;
+  transform-origin: 50% 12%;
+  transform: perspective(700px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+  filter: blur(16px) contrast(108%);
+  pointer-events: none;
+}
+
+.scroll-reveal-visible {
+  animation: concaveLensReveal 1400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: auto;
+}
+
+/* 3D Parallax Tilt for Phone */
+.parallax-phone-container {
+  perspective: 1000px;
+}
+
+.parallax-phone-target {
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+@keyframes concavePageEnter {
+  0% {
+    opacity: 0;
+    transform: perspective(750px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(750px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(750px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
+  }
+}
+
+@keyframes cembungPageEnter {
+  0% {
+    opacity: 0;
+    transform: perspective(750px) rotateX(15deg) scaleX(1.18) scaleY(1.05) translate3d(0, 32px, 0);
+    filter: blur(16px) contrast(108%);
+  }
+  65% {
+    opacity: 0.96;
+    transform: perspective(750px) rotateX(2deg) scaleX(1.015) scaleY(1.005) translate3d(0, -2px, 0);
+    filter: blur(1.5px) contrast(101%);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(750px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
+    filter: blur(0px) contrast(100%);
+  }
+}
+
+@keyframes mobilePageEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-view-enter {
+  animation: concavePageEnter 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform-origin: 50% 12%;
+  will-change: transform, opacity, filter;
+}
+
+@media (max-width: 639px) {
+  .animate-view-enter {
+    animation: mobilePageEnter 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
+  }
+}
+
+/* Accessibility: Respect prefers-reduced-motion across all animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-school-header,
+  .animate-school-item,
+  .animate-view-enter,
+  .scroll-reveal-visible,
+  .btn-glass-sheen:hover::after {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+
+  .school-expand-panel,
+  .school-btn-primary,
+  .school-btn-secondary,
+  .school-btn-danger {
+    transition: none !important;
+    translate: none !important;
+  }
+
+  @starting-style {
+    .school-expand-panel {
+      translate: none;
+    }
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* 3-Dots Wave Bouncing Animation ("loading 3 titik yang naik turun") */
+@keyframes ai-dot-wave {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-12px);
+    opacity: 1;
+  }
+}
+
+.animate-ai-dot-1 {
+  animation: ai-dot-wave 1.2s infinite ease-in-out;
+  animation-delay: 0s;
+}
+
+.animate-ai-dot-2 {
+  animation: ai-dot-wave 1.2s infinite ease-in-out;
+  animation-delay: 0.22s;
+}
+
+.animate-ai-dot-3 {
+  animation: ai-dot-wave 1.2s infinite ease-in-out;
+  animation-delay: 0.44s;
+}
+
+/* 3D Blue Magnifying Glass Animations */
+@keyframes magnifier-float {
+  0%, 100% {
+    transform: translate3d(-5px, -2px, 0) rotate(-2deg);
+  }
+  50% {
+    transform: translate3d(5px, 2px, 0) rotate(2deg);
+  }
+}
+
+.animate-magnifier-float {
+  animation: magnifier-float 3.4s ease-in-out infinite;
+  transform-origin: 75% 75%;
+}
+
+@keyframes shadow-pulse {
+  0%, 100% {
+    transform: scaleX(0.92);
+    opacity: 0.12;
+  }
+  50% {
+    transform: scaleX(1.08);
+    opacity: 0.22;
+  }
+}
+
+.animate-shadow-pulse {
+  animation: shadow-pulse 3.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes lens-scan {
+  0% {
+    transform: translateY(-24px);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(38px);
+    opacity: 0.2;
+  }
+}
+
+.animate-lens-scan {
+  animation: lens-scan 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes line-pulse-1 {
+  0%, 100% { opacity: 0.45; }
+  33% { opacity: 1; }
+}
+
+@keyframes line-pulse-2 {
+  0%, 100% { opacity: 0.45; }
+  66% { opacity: 1; }
+}
+
+@keyframes line-pulse-3 {
+  0%, 100% { opacity: 0.45; }
+  90% { opacity: 1; }
+}
+
+.animate-line-pulse-1 {
+  animation: line-pulse-1 1.8s ease-in-out infinite;
+}
+
+.animate-line-pulse-2 {
+  animation: line-pulse-2 1.8s ease-in-out infinite 0.25s;
+}
+
+.animate-line-pulse-3 {
+  animation: line-pulse-3 1.8s ease-in-out infinite 0.5s;
+}
+
+@keyframes glare-shift {
+  0%, 100% {
+    opacity: 0.7;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(1px, -1px);
+  }
+}
+
+.animate-glare-shift {
+  animation: glare-shift 2.8s ease-in-out infinite;
+}
+
+/* =====================================================================
+   4-SQUARE COUNTER-CLOCKWISE LOADER (Animasi Persegi Berputar Berbalik Arah Jarum Jam)
+   Top-Right -> Top-Left -> Bottom-Left -> Bottom-Right -> Top-Right
+   Pace: Tenang, santai, halus (2.8s)
+   Warna: Nuansa abu-abu lembut menyatu dengan background (#FAF8F5 / #E4E0D8)
+   ===================================================================== */
+.ccw-square-container {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.ccw-square-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  animation-duration: 2.8s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-iteration-count: infinite;
+}
+
+/* Square 1: Starts at Top-Left (0, 0) -> Bottom-Left (0, 24) -> Bottom-Right (24, 24) -> Top-Right (24, 0) -> Top-Left (0, 0) */
+@keyframes ccw-square-1 {
+  0%, 100% { transform: translate(0px, 0px); }
+  25% { transform: translate(0px, 24px); }
+  50% { transform: translate(24px, 24px); }
+  75% { transform: translate(24px, 0px); }
+}
+
+/* Square 2: Starts at Top-Right (24, 0) -> Top-Left (0, 0) -> Bottom-Left (0, 24) -> Bottom-Right (24, 24) -> Top-Right (24, 0) */
+@keyframes ccw-square-2 {
+  0%, 100% { transform: translate(24px, 0px); }
+  25% { transform: translate(0px, 0px); }
+  50% { transform: translate(0px, 24px); }
+  75% { transform: translate(24px, 24px); }
+}
+
+/* Square 3: Starts at Bottom-Right (24, 24) -> Top-Right (24, 0) -> Top-Left (0, 0) -> Bottom-Left (0, 24) -> Bottom-Right (24, 24) */
+@keyframes ccw-square-3 {
+  0%, 100% { transform: translate(24px, 24px); }
+  25% { transform: translate(24px, 0px); }
+  50% { transform: translate(0px, 0px); }
+  75% { transform: translate(0px, 24px); }
+}
+
+/* Square 4: Starts at Bottom-Left (0, 24) -> Bottom-Right (24, 24) -> Top-Right (24, 0) -> Top-Left (0, 0) -> Bottom-Left (0, 24) */
+@keyframes ccw-square-4 {
+  0%, 100% { transform: translate(0px, 24px); }
+  25% { transform: translate(24px, 24px); }
+  50% { transform: translate(24px, 0px); }
+  75% { transform: translate(0px, 0px); }
+}
+
+/* Warna Abu-Abu Halus yang Menyatu dengan Background */
+.ccw-sq-1 {
+  background-color: #64748B; /* slate-500 netral */
+  box-shadow: 0 1px 2px rgba(100, 116, 139, 0.15);
+  animation-name: ccw-square-1;
+}
+
+.ccw-sq-2 {
+  background-color: #94A3B8; /* slate-400 */
+  box-shadow: 0 1px 2px rgba(148, 163, 184, 0.12);
+  animation-name: ccw-square-2;
+}
+
+.ccw-sq-3 {
+  background-color: #CBD5E1; /* slate-300 */
+  box-shadow: 0 1px 2px rgba(203, 213, 225, 0.1);
+  animation-name: ccw-square-3;
+}
+
+.ccw-sq-4 {
+  background-color: #475569;
+  box-shadow: 0 1px 2px rgba(71, 85, 105, 0.14);
+  animation-name: ccw-square-4;
+}
+
+/* Sembunyikan penuh widget chatbot publik pada halaman /admin */
+body.is-admin-route .bosp-widget-root {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Native <dialog> modal scroll lock & backdrop (Modern Web Guidance) */
+html:has(dialog:modal) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+.daradik-modal-dialog,
+dialog.daradik-modal-dialog {
+  border: 1px solid #C9DFDC;
+  border-radius: 16px;
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  color: #1E293B;
+  max-width: min(560px, calc(100vw - 24px));
+  width: 100%;
+  overscroll-behavior: contain;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+}
+
+.daradik-modal-dialog::backdrop,
+dialog.daradik-modal-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+}
+
+/* Affordance & Focus-Visible Kontras Tinggi (WCAG AA) */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #2E6496;
+  outline-offset: 2px;
+}
+
+.school-custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #C9DFDC transparent;
+}
+.school-custom-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.school-custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.school-custom-scroll::-webkit-scrollbar-thumb {
+  background: #C9DFDC;
+  border-radius: 9999px;
+}
+.school-custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #A8C8C4;
+}
+
+
+
+/* =====================================================================
+   MOBILE SHELL (bottom navigation, safe area, keyboard & form comfort)
+   Hanya berlaku di bawah breakpoint sm (640px) kecuali dinyatakan lain,
+   sehingga tampilan desktop tidak berubah.
+   ===================================================================== */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --mobile-nav-h: 62px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* clip (bukan hidden) agar position: sticky di dalam halaman tetap bekerja */
+body {
+  overflow-x: clip;
+}
+
+/* Offset konten di bawah header tetap, termasuk notch */
+.app-top-offset {
+  padding-top: calc(5rem + var(--safe-top));
+}
+
+.app-header-fixed {
+  top: calc(0.5rem + var(--safe-top));
+}
+
+@media (min-width: 640px) {
+  .app-header-fixed {
+    top: calc(0.75rem + var(--safe-top));
+  }
+}
+
+/* Ruang cadangan agar konten terakhir tidak tertutup bottom nav */
+.has-mobile-nav {
+  padding-bottom: calc(var(--mobile-nav-h) + var(--safe-bottom));
+}
+
+@media (min-width: 640px) {
+  .has-mobile-nav {
+    padding-bottom: 0;
+  }
+}
+
+/* Bottom navigation: solid, tipis, mengikuti safe area */
+.mobile-nav {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  :root {
+    --mobile-nav-h: 48px;
+  }
+  .mobile-nav-item {
+    flex-direction: row;
+    gap: 0.375rem;
+    min-height: 48px;
+  }
+}
+
+/* Keyboard virtual terbuka: lepas elemen fixed bawah agar input & tombol kirim terlihat */
+body.kb-open .mobile-nav {
+  display: none;
+}
+
+body.kb-open .has-mobile-nav {
+  padding-bottom: 0;
+}
+
+/* Form nyaman di HP: font 16px mencegah zoom otomatis iOS, scroll-margin menjaga
+   field tidak tertutup keyboard / bottom nav saat fokus */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+input,
+select,
+textarea {
+  scroll-margin-top: 96px;
+  scroll-margin-bottom: 140px;
+}
+
+/* Target sentuh minimal 44px pada perangkat layar sentuh untuk kontrol umum */
+@media (pointer: coarse) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Scroll container horizontal yang jelas pada HP (tabel / chip) */
+.scroll-x-hint {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Widget chatbot: naik di atas bottom nav, turun lagi saat keyboard terbuka */
+@media (max-width: 639px) {
+  .bosp-widget-root {
+    bottom: calc(var(--mobile-nav-h) + var(--safe-bottom) + 12px) !important;
+    right: calc(14px + var(--safe-right)) !important;
+  }
+  body.kb-open .bosp-widget-root {
+    bottom: calc(14px + var(--safe-bottom)) !important;
+  }
+  body.is-admin-route .bosp-widget-root {
+    display: none !important;
+  }
+}

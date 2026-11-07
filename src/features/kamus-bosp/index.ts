@@ -1,0 +1,2 @@
+export { KamusBospPage } from './KamusBospPage';
+

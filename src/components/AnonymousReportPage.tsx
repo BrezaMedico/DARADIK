@@ -24,10 +24,11 @@ import {
   Clock,
   MessageSquare,
 } from 'lucide-react';
-import { SCHOOLS_DATABASE, SchoolData } from '../data/schoolsData';
+import { SchoolData } from '../data/schoolsData';
 import {
   MasterSchoolSearchOption,
   ReportAttachmentMeta,
+  fetchSchoolFromSupabase,
   searchMasterSchoolsInSupabase,
   submitPublicReportRpc,
   uploadReportEvidenceFile,
@@ -204,7 +205,7 @@ function saveTicketBookmarkToBrowserCookie(bookmark: {
       bookmark,
       ...safeList.filter(
         (item: { ticketCode?: string }) =>
-          String(item?.ticketCode || '').toUpperCase() !== bookmark.ticketCode.toUpperCase()
+          String(item?.ticketCode || '').trim() !== bookmark.ticketCode.trim()
       ),
     ].slice(0, 12);
     setCookie(TRACKED_TICKETS_COOKIE_KEY, JSON.stringify(updated), 60);
@@ -306,9 +307,9 @@ function renderMathCaptchaToCanvas(canvas: HTMLCanvasElement, text: string) {
 
   const charColors = ['#991B1B', '#1E3A8A', '#166534', '#92400E', '#1E293B'];
   const fonts = [
-    'bold 24px "Space Grotesk", sans-serif',
-    'bold 23px "JetBrains Mono", monospace',
     'bold 24px "Plus Jakarta Sans", sans-serif',
+    'bold 23px "Plus Jakarta Sans", sans-serif',
+    'bold 25px "Plus Jakarta Sans", sans-serif',
   ];
 
   const chars = text.split('');
@@ -626,30 +627,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
         }
       } catch {
         if (!cancelled) {
-          const q = schoolSearchQuery.trim().toLowerCase();
-          const fallbackLocal = SCHOOLS_DATABASE.filter((s) => {
-            if (!q) return true;
-            return `${s.name} ${s.npsn} ${s.kabupaten} ${s.kecamatan}`
-              .toLowerCase()
-              .includes(q);
-          })
-            .slice(0, 16)
-            .map((s) => ({
-              id: s.id,
-              name: s.name,
-              npsn: s.npsn,
-              jenjang: (s.jenjang || s.educationLevel || 'SMK') as
-                | 'SD'
-                | 'SMP'
-                | 'SMA'
-                | 'SMK',
-              schoolType: (s.schoolType || 'Negeri') as 'Negeri' | 'Swasta',
-              provinsi: s.provinsi,
-              kabupaten: s.kabupaten,
-              kecamatan: s.kecamatan,
-              address: s.address,
-            }));
-          setRemoteSchools(fallbackLocal);
+          setRemoteSchools([]);
         }
       } finally {
         if (!cancelled) {
@@ -675,12 +653,15 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       provinsi: option.provinsi,
     });
 
-    const localMatch = SCHOOLS_DATABASE.find(
-      (s) => s.npsn === option.npsn || s.id === option.id
-    );
-    if (localMatch) {
-      onChangeSchool(localMatch);
-    }
+    fetchSchoolFromSupabase(option.id || option.npsn, option.jenjang)
+      .then((remote) => {
+        if (remote) {
+          onChangeSchool(remote);
+        }
+      })
+      .catch(() => {
+        // ignore
+      });
 
     setIsSearchingSchool(false);
     setIsSchoolDropdownOpen(false);
@@ -996,7 +977,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                   {submissionSuccess.ticketCode}
                 </div>
                 <p className="text-xs text-[#475569]">
-                  Simpan kode tiket ini untuk melihat perkembangan laporan dan membalas pesan petugas secara anonim.
+                  Simpan kode tiket ini dengan teliti (perhatikan kombinasi huruf besar, huruf kecil, dan angka) untuk memantau laporan secara terenkripsi.
                 </p>
               </div>
 

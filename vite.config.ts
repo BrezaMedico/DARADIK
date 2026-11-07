@@ -21,6 +21,14 @@ async function getServerModule() {
 function bospChatbotMiddlewarePlugin(): Plugin {
   const attachMiddleware = (middlewares: any) => {
     middlewares.use(async (req: any, res: any, next: any) => {
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader(
+        'Permissions-Policy',
+        'geolocation=(), camera=(), microphone=(), interest-cohort=()'
+      );
+
       if (req.method !== 'POST') return next();
       const url = (req.url || '').split('?')[0];
       if (url !== '/api/chat' && url !== '/api/tts') return next();
@@ -32,12 +40,13 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         }
         const rawBody = Buffer.concat(chunks).toString('utf8');
         const body = rawBody ? JSON.parse(rawBody) : {};
-        const clientIp = req.socket?.remoteAddress || '127.0.0.1';
-
         const serverMod = await getServerModule();
+        const maskedIp = serverMod.anonymizeClientIp
+          ? serverMod.anonymizeClientIp(req.socket?.remoteAddress || 'anonymous')
+          : 'anonymous';
 
         if (url === '/api/chat') {
-          const result = await serverMod.handleChatRequest(body, clientIp);
+          const result = await serverMod.handleChatRequest(body, maskedIp);
           res.statusCode = result.status;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.end(JSON.stringify(result.payload));
@@ -45,7 +54,7 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         }
 
         if (url === '/api/tts') {
-          const result = await serverMod.handleTtsRequest(body, clientIp);
+          const result = await serverMod.handleTtsRequest(body, maskedIp);
           if (result.isAudio && result.wavBuffer) {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'audio/wav');
@@ -85,4 +94,9 @@ function bospChatbotMiddlewarePlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), bospChatbotMiddlewarePlugin()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 });
