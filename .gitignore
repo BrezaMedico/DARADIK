@@ -3,5 +3,6 @@
 /AGENTS.md
 /skills-lock.json
 *.png
+*.log
 .env
 

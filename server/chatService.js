@@ -70,8 +70,9 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
   }
 
   const candidateModels = [
-    'gemini-3-flash-preview',
-    'gemini-3.8-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-3.5-flash',
     GEMINI_MODEL,
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
@@ -107,7 +108,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           required: ['teks', 'emosi'],
         },
         temperature: 0.7,
-        maxOutputTokens: 1000,
+        maxOutputTokens: 600,
       };
 
       const response = await Promise.race([
@@ -117,7 +118,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           config: genConfig,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 3_500)
+          setTimeout(() => reject(new Error('Model timeout')), 6_000)
         ),
       ]);
 

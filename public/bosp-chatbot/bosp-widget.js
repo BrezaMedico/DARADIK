@@ -569,6 +569,7 @@
   };
 
   const clientAudioCache = new Map();
+  let piperAvailable = true;
   let audioCtx = null;
   let analyserNode = null;
   let analyserData = null;
@@ -1122,6 +1123,10 @@
       const normalized = normalizeTextForSpeech(sentence);
       if (!normalized) return null;
 
+      if (!piperAvailable) {
+        return { blobUrl: null, normalizedText: normalized };
+      }
+
       if (clientAudioCache.has(normalized)) {
         return {
           blobUrl: clientAudioCache.get(normalized),
@@ -1133,7 +1138,7 @@
         const controller = new AbortController();
         const tId = setTimeout(function () {
           controller.abort();
-        }, 2500);
+        }, 1500);
 
         const res = await fetch(CONFIG.apiBaseUrl + '/api/tts', {
           method: 'POST',
@@ -1155,8 +1160,13 @@
           }
           clientAudioCache.set(normalized, blobUrl);
           return { blobUrl: blobUrl, normalizedText: normalized };
+        } else {
+          // Jika Piper tidak terpasang di host server, tandai agar kalimat selanjutnya langsung Web Speech tanpa latency
+          piperAvailable = false;
         }
-      } catch {}
+      } catch {
+        piperAvailable = false;
+      }
 
       return { blobUrl: null, normalizedText: normalized };
     }
@@ -1247,32 +1257,32 @@
             utter.lang = 'id-ID';
           }
 
-          // Atur intonasi (pitch) dan tempo (rate) sesuai emosi agar suaranya merdu & berekspresi
-          let emotionPitch = 1.08;
-          let emotionRate = 1.0;
+          // Atur intonasi (pitch) dan tempo (rate) agar suara tenang, anggun, merdu, dan terdengar cantik
+          let emotionPitch = 1.02;
+          let emotionRate = 0.94;
 
           switch (state.currentEmotion) {
             case 'senang':
             case 'semangat':
             case 'menyapa':
-              emotionPitch = 1.15; // Ceria, manis, dan ramah
-              emotionRate = 1.04;
+              emotionPitch = 1.03; // Kalem, manis, ramah dan cantik
+              emotionRate = 0.95;
               break;
             case 'empati':
-              emotionPitch = 0.98; // Lembut, hangat, menenangkan
-              emotionRate = 0.93;
+              emotionPitch = 0.99; // Sangat lembut, teduh, menenangkan
+              emotionRate = 0.91;
               break;
             case 'berpikir':
-              emotionPitch = 1.04;
-              emotionRate = 0.96;
+              emotionPitch = 1.01; // Bijak, fokus, santun
+              emotionRate = 0.93;
               break;
             case 'bingung':
-              emotionPitch = 1.12; // Sedikit intonasi bertanya
-              emotionRate = 0.98;
+              emotionPitch = 1.03; // Lembut dengan nada sedikit bertanya
+              emotionRate = 0.93;
               break;
             default:
-              emotionPitch = 1.08;
-              emotionRate = 1.0;
+              emotionPitch = 1.02;
+              emotionRate = 0.94;
           }
 
           utter.pitch = emotionPitch;
@@ -1416,7 +1426,7 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(function () {
           controller.abort();
-        }, 3500);
+        }, 7000);
 
         const res = await fetch(CONFIG.apiBaseUrl + '/api/chat', {
           method: 'POST',
@@ -1454,9 +1464,9 @@
             const directController = new AbortController();
             const dTimeout = setTimeout(function () {
               directController.abort();
-            }, 3500);
+            }, 6000);
             const dRes = await fetch(
-              'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' +
+              'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=' +
                 encodeURIComponent(directKey),
               {
                 method: 'POST',
