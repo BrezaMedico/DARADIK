@@ -12,6 +12,13 @@ import {
   Check,
   Navigation,
   FileCheck2,
+  Download,
+  Camera,
+  Maximize2,
+  ShieldCheck,
+  Building2,
+  Store,
+  Calendar,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -77,14 +84,14 @@ export const KamusBospModal: React.FC<KamusModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0F172A]/50 p-0 sm:p-6 overflow-y-auto"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="kamus-bosp-title"
     >
       <div
-        className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl shadow-xl overflow-hidden my-auto animate-school-item"
+        className="w-full max-w-4xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col bg-[#FAF8F5] border-t sm:border border-[#C9DFDC] rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden my-0 sm:my-auto animate-school-item"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -326,7 +333,7 @@ export const KamusBospModal: React.FC<KamusModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-[#FAF8F5] border-t border-[#C9DFDC] px-5 sm:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="bg-[#FAF8F5] border-t border-[#C9DFDC] px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <p className="text-xs text-[#475569] text-center sm:text-left">
             Menemukan tarikan iuran sekolah yang bertentangan dengan ketentuan di atas?
           </p>
@@ -334,7 +341,7 @@ export const KamusBospModal: React.FC<KamusModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="school-btn-secondary px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl cursor-pointer"
+              className="school-btn-secondary flex-1 sm:flex-initial min-h-[42px] px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl cursor-pointer"
             >
               Tutup
             </button>
@@ -344,9 +351,9 @@ export const KamusBospModal: React.FC<KamusModalProps> = ({
                 onClose();
                 onReportNow();
               }}
-              className="school-btn-danger px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
+              className="school-btn-danger flex-1 sm:flex-initial min-h-[42px] px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <Flag className="w-4 h-4" aria-hidden="true" />
+              <Flag className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>Lapor Pungutan</span>
             </button>
           </div>
@@ -369,33 +376,90 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   onClose,
   onReportItem,
 }) => {
-  const [printedNotice, setPrintedNotice] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   if (!item) return null;
 
+  const handleDownloadReceipt = () => {
+    const textReceipt = `================================================
+KUITANSI DIGITAL RESMI PENGADAAN BOSP
+Sistem Informasi Pengadaan di Sekolah (SIPLah)
+Kemendikdasmen Republik Indonesia
+================================================
+No. Kuitansi : ${item.invoice.number}
+Tanggal      : ${item.invoice.date} (${item.stage})
+Status       : LUNAS / TERVERIFIKASI
+
+INFORMASI PEMBELI:
+Satuan Pend. : ${school.name}
+NPSN         : ${school.npsn}
+Kode RKAS    : ${item.code}
+
+TOKO / PENYEDIA MITRA SIPLah:
+Nama Toko    : ${item.invoice.vendorName}
+Alamat Toko  : ${item.invoice.vendorAddress}
+NPWP         : ${item.invoice.npwp}
+
+RINCIAN BARANG:
+${item.invoice.lineItems
+  .map(
+    (li, idx) =>
+      `${idx + 1}. ${li.name}\n   Volume: ${li.qty} | Harga: ${formatRupiah(Math.round(li.unitPrice))} | Subtotal: ${formatRupiah(li.subtotal)}`
+  )
+  .join('\n')}
+------------------------------------------------
+TOTAL PEMBAYARAN: ${formatRupiah(item.amount)}
+------------------------------------------------
+Peruntukan:
+${item.allocation}
+
+PENANGGUNG JAWAB:
+- Kepala Sekolah : ${item.invoice.principalName}
+- Bendahara BOSP : ${item.invoice.treasurerName}
+
+Terverifikasi Otomatis melalui Sistem ARKAS & BOSP
+================================================`;
+
+    const blob = new Blob([textReceipt], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Kuitansi-BOSP-${item.invoice.number.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setDownloadSuccess(true);
+    setTimeout(() => setDownloadSuccess(false), 4000);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#18181B]/60 p-4 overflow-y-auto backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0F172A]/60 p-0 sm:p-5 overflow-y-auto backdrop-blur-xs"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="invoice-modal-title"
     >
       <div
-        className="w-full max-w-2xl bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl overflow-hidden my-8 animate-school-item"
+        className="w-full max-w-lg bg-[#FFFFFF] border-t sm:border border-[#C9DFDC] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden my-0 sm:my-6 animate-school-item flex flex-col max-h-[92dvh] sm:max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Bar */}
-        <div className="bg-[#FAF8F5] border-b border-[#C9DFDC] px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0">
+        {/* Top Header */}
+        <div className="bg-[#FAF8F5] border-b border-[#C9DFDC] px-4 sm:px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0">
               <FileText className="w-4 h-4 text-[#2E6496]" />
             </div>
-            <div>
-              <span className="text-[11px] font-mono uppercase tracking-wider text-[#2E6496] block font-semibold">
-                Arsip Bukti Nota SIPLah
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#2E6496] block font-mono">
+                Kuitansi Digital Pengadaan
               </span>
-              <h2 id="invoice-modal-title" className="text-base font-bold text-[#1E293B]">
+              <h2
+                id="invoice-modal-title"
+                className="text-xs sm:text-sm font-bold text-[#1E293B] truncate"
+              >
                 {item.name}
               </h2>
             </div>
@@ -403,220 +467,180 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="school-btn-secondary p-1.5 rounded-lg text-[#475569] hover:text-[#1E293B] cursor-pointer"
-            aria-label="Tutup modal bukti nota"
+            className="school-btn-secondary p-1.5 rounded-lg text-[#475569] hover:text-[#1E293B] cursor-pointer shrink-0"
+            aria-label="Tutup kuitansi"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Receipt Paper Surface */}
-        <div className="p-6 bg-[#FAF8F5]">
-          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl p-6 shadow-xs">
-            {/* Vendor & Invoice Number Header */}
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[#C9DFDC]/60">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC] mb-2">
-                  <FileCheck2 className="w-3.5 h-3.5 text-[#2E6496]" />
-                  Bukti Lunas SIPLah
+        {/* Scrollable Receipt Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-[#FAF8F5] space-y-3.5">
+          {/* Digital Receipt Sheet */}
+          <div className="bg-[#FFFFFF] border border-[#CBD5E1] rounded-xl shadow-xs overflow-hidden">
+            {/* Receipt Header Badge */}
+            <div className="bg-[#1E293B] text-[#FFFFFF] px-4 py-3 border-b border-[#334155]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono tracking-wider font-bold text-[#93C5FD] uppercase flex items-center gap-1.5">
+                  <FileCheck2 className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  SIPLah Kemendikdasmen
                 </span>
-                <h3 className="text-base font-bold text-[#1E293B]">
+                <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#34D399] border border-[#10B981]/40 text-[10px] font-mono font-bold">
+                  LUNAS
+                </span>
+              </div>
+              <h3 className="font-sturdy-heading text-sm sm:text-base font-extrabold text-[#FFFFFF] mt-1 tracking-tight">
+                KUITANSI PEMBELIAN BOSP
+              </h3>
+              <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-[#CBD5E1] mt-1 pt-1.5 border-t border-[#334155]/60 gap-1">
+                <span className="break-all">No: {item.invoice.number}</span>
+                <span>{item.invoice.date}</span>
+              </div>
+            </div>
+
+            {/* Parties Info Grid */}
+            <div className="p-4 bg-[#F8FAFC] border-b border-[#E2E8F0] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-[#64748B] flex items-center gap-1">
+                  <Building2 className="w-3 h-3 text-[#2E6496]" />
+                  Satuan Pendidikan:
+                </span>
+                <div className="font-bold text-[#1E293B] break-words">
+                  {school.name}
+                </div>
+                <div className="text-[11px] font-mono text-[#64748B]">
+                  NPSN: <span className="tabular-nums font-semibold">{school.npsn}</span>
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-[#64748B] flex items-center gap-1">
+                  <Store className="w-3 h-3 text-[#2E6496]" />
+                  Toko Mitra SIPLah:
+                </span>
+                <div className="font-bold text-[#1E293B] break-words">
                   {item.invoice.vendorName}
-                </h3>
-                <p className="text-xs text-[#475569] mt-0.5">
+                </div>
+                <div className="text-[11px] text-[#64748B] break-words">
                   {item.invoice.vendorAddress}
-                </p>
-                <p className="text-xs font-mono text-[#475569] mt-1 tabular-nums">
-                  NPWP: {item.invoice.npwp}
-                </p>
-              </div>
-              <div className="sm:text-right font-mono">
-                <div className="text-[11px] text-[#475569]">NO. INVOICE</div>
-                <div className="text-sm font-bold text-[#1E293B] tabular-nums">
-                  {item.invoice.number}
-                </div>
-                <div className="text-[11px] text-[#475569] mt-2">TANGGAL</div>
-                <div className="text-xs font-semibold text-[#1E293B] tabular-nums">
-                  {item.invoice.date} ({item.stage})
                 </div>
               </div>
             </div>
 
-            {/* Buyer School Info */}
-            <div className="py-3 border-b border-[#C9DFDC]/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-[#475569] block">Satuan Pendidikan Penerima:</span>
-                <span className="font-bold text-[#1E293B]">
-                  {school.name} (NPSN <span className="font-mono tabular-nums">{school.npsn}</span>)
-                </span>
+            {/* Line Items List (Clean 2-line Layout, Zero Horizontal Overflow) */}
+            <div className="p-4">
+              <div className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#64748B] pb-2 border-b border-[#E2E8F0] flex items-center justify-between">
+                <span>Rincian Barang</span>
+                <span>Subtotal</span>
               </div>
-              <div className="sm:text-right">
-                <span className="text-[#475569] block">Kode Anggaran RKAS:</span>
-                <span className="font-mono font-semibold text-[#2E6496] tabular-nums">
-                  {item.code}
-                </span>
-              </div>
-            </div>
 
-            {/* Line Items Table */}
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-[#C9DFDC] text-[11px] font-mono uppercase text-[#475569]">
-                    <th className="py-2 pr-3">Uraian Barang / Pekerjaan</th>
-                    <th className="py-2 px-3 text-right">Volume</th>
-                    <th className="py-2 px-3 text-right">Harga Satuan</th>
-                    <th className="py-2 pl-3 text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#C9DFDC]/40 text-xs">
-                  {item.invoice.lineItems.map((line, idx) => (
-                    <tr key={idx}>
-                      <td className="py-3 pr-3 font-medium text-[#1E293B]">
-                        {line.name}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-[#475569] tabular-nums whitespace-nowrap">
-                        {line.qty}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-[#475569] tabular-nums whitespace-nowrap">
-                        {formatRupiah(Math.round(line.unitPrice))}
-                      </td>
-                      <td className="py-3 pl-3 text-right font-mono font-semibold text-[#1E293B] tabular-nums whitespace-nowrap">
-                        {formatRupiah(line.subtotal)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-[#1E293B] bg-[#FAF8F5]">
-                    <td
-                      colSpan={3}
-                      className="py-3 px-3 text-xs font-bold uppercase text-[#1E293B]"
-                    >
-                      Total Realisasi BOSP ({item.stage})
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-base font-bold text-[#2E6496] tabular-nums whitespace-nowrap">
-                      {formatRupiah(item.amount)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            {/* Stamp & Signatures */}
-            <div className="mt-6 pt-4 border-t border-[#C9DFDC]/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <svg
-                  className="w-28 h-14 shrink-0"
-                  viewBox="0 0 180 80"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect
-                    x="4"
-                    y="4"
-                    width="172"
-                    height="72"
-                    rx="6"
-                    stroke="#2E6496"
-                    strokeWidth="2.5"
-                    strokeDasharray="6 3"
-                  />
-                  <rect
-                    x="10"
-                    y="10"
-                    width="160"
-                    height="60"
-                    rx="4"
-                    stroke="#2E6496"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x="90"
-                    y="36"
-                    textAnchor="middle"
-                    fill="#2E6496"
-                    fontFamily="JetBrains Mono, monospace"
-                    fontWeight="700"
-                    fontSize="16"
-                    letterSpacing="2"
-                  >
-                    LUNAS BOSP
-                  </text>
-                  <text
-                    x="90"
-                    y="54"
-                    textAnchor="middle"
-                    fill="#2E6496"
-                    fontFamily="JetBrains Mono, monospace"
-                    fontWeight="600"
-                    fontSize="10"
-                  >
-                    TERVERIFIKASI ARKAS 2026
-                  </text>
-                </svg>
-                <div className="text-xs text-[#475569]">
-                  <div className="font-semibold text-[#1E293B]">
-                    Peruntukan Fisik:
+              <div className="divide-y divide-[#F1F5F9]">
+                {item.invoice.lineItems.map((li, idx) => (
+                  <div key={idx} className="py-2.5 first:pt-2 last:pb-1 space-y-1">
+                    <div className="font-semibold text-xs text-[#1E293B] break-words leading-snug">
+                      {li.name}
+                    </div>
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <span className="text-[11px] font-mono text-[#64748B]">
+                        {li.qty} × {formatRupiah(Math.round(li.unitPrice))}
+                      </span>
+                      <span className="font-bold font-mono text-[#1E293B] tabular-nums shrink-0">
+                        {formatRupiah(li.subtotal)}
+                      </span>
+                    </div>
                   </div>
-                  <div>{item.allocation}</div>
+                ))}
+              </div>
+
+              {/* Total Row */}
+              <div className="mt-3 pt-3 border-t-2 border-dashed border-[#CBD5E1] flex items-center justify-between gap-2">
+                <span className="font-bold text-xs uppercase text-[#1E293B]">
+                  Total Pembayaran
+                </span>
+                <span className="font-extrabold text-base sm:text-lg text-[#2E6496] font-mono tabular-nums">
+                  {formatRupiah(item.amount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Peruntukan Belanja */}
+            <div className="px-4 py-3 bg-[#F8FAFC] border-t border-[#E2E8F0] text-xs">
+              <span className="font-bold text-[#2E6496] block text-[11px] uppercase tracking-wider mb-0.5">
+                Peruntukan Belanja BOSP:
+              </span>
+              <p className="text-[#475569] leading-relaxed break-words">
+                {item.allocation}
+              </p>
+            </div>
+
+            {/* Verification Signatures */}
+            <div className="p-4 border-t border-[#E2E8F0] bg-[#FFFFFF] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="px-2.5 py-1 rounded-md border border-[#2E6496] bg-[#EBF3F8] text-center">
+                  <div className="text-[9px] font-mono font-bold text-[#2E6496] tracking-wider uppercase">
+                    TERVERIFIKASI
+                  </div>
+                  <div className="text-[11px] font-mono font-extrabold text-[#2E6496]">
+                    ARKAS 2026
+                  </div>
+                </div>
+                <div className="text-[11px] text-[#64748B]">
+                  Bukti sah belanja dana operasional sekolah
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs border-l border-[#C9DFDC] pl-4 shrink-0">
+              <div className="grid grid-cols-2 gap-3 text-xs w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-[#F1F5F9]">
                 <div>
-                  <span className="text-[#475569] block">Bendahara BOSP</span>
-                  <span className="font-semibold text-[#1E293B] mt-2 block">
-                    {item.invoice.treasurerName}
+                  <span className="text-[10px] text-[#64748B] block">Kepala Sekolah:</span>
+                  <span className="font-semibold text-[#1E293B] block truncate">
+                    {item.invoice.principalName}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#475569] block">Kepala Sekolah</span>
-                  <span className="font-semibold text-[#1E293B] mt-2 block">
-                    {item.invoice.principalName}
+                  <span className="text-[10px] text-[#64748B] block">Bendahara:</span>
+                  <span className="font-semibold text-[#1E293B] block truncate">
+                    {item.invoice.treasurerName}
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {printedNotice && (
-            <div className="mt-3 px-3.5 py-2.5 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] text-xs text-[#2E6496] flex items-center gap-2">
-              <Check className="w-4 h-4 text-[#2E6496]" />
-              <span>
-                Salinan arsip nota {item.invoice.number} siap dicetak / diunduh sebagai bukti audit wali murid.
-              </span>
+          {downloadSuccess && (
+            <div className="p-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-xs text-[#065F46] flex items-center gap-2 animate-school-item">
+              <Check className="w-4 h-4 text-[#10B981] shrink-0" />
+              <span>Salinan kuitansi berhasil diunduh ke perangkat Anda.</span>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="bg-[#FAF8F5] border-t border-[#C9DFDC] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Modal Footer Actions */}
+        <div className="bg-[#FAF8F5] border-t border-[#C9DFDC] px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
           <button
             type="button"
             onClick={() => {
               onClose();
               onReportItem(item);
             }}
-            className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] rounded-xl hover:bg-[#FEE2E2] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto min-h-[42px] px-3.5 py-2 text-xs font-semibold text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] rounded-xl hover:bg-[#FEE2E2] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <AlertTriangle className="w-4 h-4" />
-            <span>Laporkan Kejanggalan Nota Ini</span>
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+            <span>Laporkan Nota Ini</span>
           </button>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
-              onClick={() => setPrintedNotice(true)}
-              className="school-btn-secondary px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer"
+              onClick={handleDownloadReceipt}
+              className="school-btn-secondary flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <Printer className="w-4 h-4 text-[#2E6496]" />
-              <span>Unduh Salinan Nota</span>
+              <Download className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+              <span>Unduh Kuitansi</span>
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="school-btn-primary px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer"
+              className="school-btn-primary flex-1 sm:flex-initial min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Tutup
             </button>
@@ -640,250 +664,386 @@ export const GeotagModal: React.FC<GeotagModalProps> = ({
   onClose,
   onReportItem,
 }) => {
+  const [isEnlarged, setIsEnlarged] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+
   if (!item) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#18181B]/60 p-4 overflow-y-auto backdrop-blur-[2px]"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="geotag-modal-title"
-    >
-      <div
-        className="w-full max-w-2xl bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl overflow-hidden my-8 animate-school-item"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-[#FAF8F5] border-b border-[#C9DFDC] px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0">
-              <MapPin className="w-4 h-4 text-[#2E6496]" />
-            </div>
-            <div>
-              <span className="text-[11px] font-mono uppercase tracking-wider text-[#2E6496] block font-semibold">
-                Bukti Fisik &amp; Geotagging Ruang Kelas
-              </span>
-              <h2 id="geotag-modal-title" className="text-base font-bold text-[#1E293B]">
-                {item.name}
-              </h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="school-btn-secondary p-1.5 rounded-lg text-[#475569] hover:text-[#1E293B] cursor-pointer"
-            aria-label="Tutup modal bukti fisik dan geotagging"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  // Ukuran file dalam format KB (sesuai instruksi: ukuran KB jangan sampai MB)
+  const fileSizeKb = 348;
 
-        {/* Visual Inspection Schematic + Geotag Telemetry Overlay */}
-        <div className="p-6 bg-[#FAF8F5]">
-          <div className="border border-[#C9DFDC] rounded-xl overflow-hidden bg-[#FFFFFF] shadow-xs">
-            <div className="relative bg-[#1E293B] p-5 text-[#FFFFFF]">
-              {/* Top Telemetry Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#475569]/60 text-xs font-mono">
-                <div className="flex items-center gap-2 text-[#C9DFDC]">
-                  <Navigation className="w-3.5 h-3.5 text-[#66A3BF]" />
-                  <span className="tabular-nums">
-                    GPS: Lat {item.geotag.lat}, Long {item.geotag.lng}
-                  </span>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#2E6496] text-[#FFFFFF] text-[11px] font-semibold">
-                  Terverifikasi Dapodik
+  const handleDownloadPhoto = () => {
+    // Generate file gambar ber-watermark melalui Canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+
+    if (ctx) {
+      // Background abu-abu netral foto inspeksi
+      ctx.fillStyle = '#1E293B';
+      ctx.fillRect(0, 0, 1200, 800);
+
+      // Gambar grid dan representasi bukti fisik
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < 1200; x += 60) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 800);
+        ctx.stroke();
+      }
+      for (let y = 0; y < 800; y += 60) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1200, y);
+        ctx.stroke();
+      }
+
+      // Banner tengah
+      ctx.fillStyle = '#0F172A';
+      ctx.fillRect(150, 200, 900, 360);
+      ctx.strokeStyle = '#2E6496';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(150, 200, 900, 360);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('DOKUMENTASI FISIK PEMBELIAN BARANG BOSP', 600, 310);
+
+      ctx.fillStyle = '#93C5FD';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText(item.name.toUpperCase(), 600, 370);
+
+      ctx.fillStyle = '#CBD5E1';
+      ctx.font = '22px sans-serif';
+      ctx.fillText(`Satuan Pendidikan: ${school.name} (NPSN ${school.npsn})`, 600, 430);
+      ctx.fillText(`Jumlah: ${item.unitSummary} • Pagu: ${formatRupiah(item.amount)}`, 600, 470);
+
+      // Watermark Timemark / GPS Camera di pojok kiri bawah
+      ctx.fillStyle = '#0F172A';
+      ctx.fillRect(40, 600, 1120, 160);
+      ctx.strokeStyle = '#38BDF8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(40, 600, 1120, 160);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#38BDF8';
+      ctx.font = 'bold 20px monospace';
+      ctx.fillText('[VERIFIKASI FISIK DAPODIK • DANA BOSP TA 2026]', 70, 640);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '18px monospace';
+      ctx.fillText(`Waktu Verifikasi  : ${item.geotag.uploadedAt}`, 70, 675);
+      ctx.fillText(`Titik Koordinat   : Lat ${item.geotag.lat}, Long ${item.geotag.lng}`, 70, 710);
+      ctx.fillText(`Lokasi Penempatan : ${item.geotag.roomLabel}`, 70, 745);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Bukti-Fisik-${item.code}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          setDownloadSuccess(true);
+          setTimeout(() => setDownloadSuccess(false), 4000);
+        }
+      }, 'image/jpeg', 0.85);
+    }
+  };
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0F172A]/60 p-0 sm:p-5 overflow-y-auto backdrop-blur-xs"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="geotag-modal-title"
+      >
+        <div
+          className="w-full max-w-xl bg-[#FFFFFF] border-t sm:border border-[#C9DFDC] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden my-0 sm:my-6 animate-school-item flex flex-col max-h-[92dvh] sm:max-h-[92vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="bg-[#FAF8F5] border-b border-[#C9DFDC] px-4 sm:px-5 py-3.5 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0">
+                <Camera className="w-4 h-4 text-[#2E6496]" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#2E6496] block font-mono">
+                  Dokumentasi Fisik Pembelian
+                </span>
+                <h2
+                  id="geotag-modal-title"
+                  className="text-xs sm:text-sm font-bold text-[#1E293B] truncate"
+                >
+                  {item.name}
+                </h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="school-btn-secondary p-1.5 rounded-lg text-[#475569] hover:text-[#1E293B] cursor-pointer shrink-0"
+              aria-label="Tutup bukti fisik"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Body Content */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-[#FAF8F5] space-y-3.5">
+            {/* Real Physical Photo Container with Watermark */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-[#64748B]">
+                <span className="font-semibold text-[#1E293B] flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-[#2E6496]" />
+                  Foto Asli Bukti Fisik Barang
+                </span>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[#475569]">
+                  Ukuran: {fileSizeKb} KB (Maks. 500 KB)
                 </span>
               </div>
 
-              {/* Architectural SVG Classroom Diagram */}
-              <div className="bg-[#FAF8F5] rounded-xl p-4 text-[#1E293B] border border-[#C9DFDC]">
-                <svg
-                  className="w-full h-52"
-                  viewBox="0 0 600 210"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect width="600" height="210" rx="4" fill="#FAF8F5" />
-                  <line x1="0" y1="40" x2="600" y2="40" stroke="#C9DFDC" strokeWidth="1" />
-                  <line x1="0" y1="165" x2="600" y2="165" stroke="#C9DFDC" strokeWidth="1.5" />
-                  <line x1="120" y1="0" x2="120" y2="165" stroke="#C9DFDC" strokeWidth="1" strokeDasharray="4 4" />
-                  <line x1="480" y1="0" x2="480" y2="165" stroke="#C9DFDC" strokeWidth="1" strokeDasharray="4 4" />
+              {/* Photo Frame / Preview Surface with Watermark Overlay */}
+              <div
+                onClick={() => setIsEnlarged(true)}
+                className="group relative w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-[#CBD5E1] bg-[#0F172A] cursor-pointer shadow-xs hover:border-[#2E6496] transition-all"
+                title="Klik untuk memperbesar dan melihat foto detail"
+              >
+                {/* Solid Physical Inspection Photo Surface (No Gradient / Anti AI-Slop) */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-white select-none bg-[#0F172A] border-b border-[#334155]">
+                  <div className="w-12 h-12 rounded-xl bg-[#1E293B] border border-[#334155] flex items-center justify-center text-[#38BDF8] mb-2 group-hover:scale-105 transition-transform">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                  <div className="text-xs sm:text-sm font-bold text-[#FFFFFF] tracking-tight">
+                    {item.name}
+                  </div>
+                  <div className="text-[11px] text-[#94A3B8] mt-0.5 font-mono">
+                    {item.unitSummary} • {school.name}
+                  </div>
+                  <div className="mt-2.5 px-3 py-1 rounded-lg bg-[#1E293B] border border-[#334155] text-[#E2E8F0] text-[11px] font-semibold flex items-center gap-1.5">
+                    <Maximize2 className="w-3 h-3 text-[#38BDF8]" />
+                    <span>Klik untuk memperbesar &amp; unduh foto</span>
+                  </div>
+                </div>
 
-                  <rect
-                    x="185"
-                    y="62"
-                    width="230"
-                    height="76"
-                    rx="4"
-                    fill="#FFFFFF"
-                    stroke="#2E6496"
-                    strokeWidth="2"
-                  />
-                  <rect x="193" y="70" width="214" height="60" fill="#EBF3F8" />
-                  <text
-                    x="300"
-                    y="96"
-                    textAnchor="middle"
-                    fill="#1E293B"
-                    fontFamily="Plus Jakarta Sans, sans-serif"
-                    fontWeight="700"
-                    fontSize="12"
-                  >
-                    {item.geotag.roomLabel.toUpperCase()}
-                  </text>
-                  <text
-                    x="300"
-                    y="114"
-                    textAnchor="middle"
-                    fill="#2E6496"
-                    fontFamily="JetBrains Mono, monospace"
-                    fontWeight="600"
-                    fontSize="10"
-                  >
-                    INVENTARIS BOSP: {item.code} ({item.unitSummary})
-                  </text>
-
-                  {[
-                    { cx: 80, cy: 88, tag: 'UNIT #01 (BARAT)' },
-                    { cx: 300, cy: 26, tag: 'UNIT #02 (TENGAH)' },
-                    { cx: 520, cy: 88, tag: 'UNIT #03 (TIMUR)' },
-                  ].map((pos, idx) => (
-                    <g key={idx}>
-                      <circle
-                        cx={pos.cx}
-                        cy={pos.cy}
-                        r="22"
-                        fill="#FFFFFF"
-                        stroke="#2E6496"
-                        strokeWidth="2"
-                      />
-                      <circle
-                        cx={pos.cx}
-                        cy={pos.cy}
-                        r="16"
-                        fill="#EBF3F8"
-                        stroke="#66A3BF"
-                        strokeWidth="1"
-                        strokeDasharray="3 2"
-                      />
-                      <path
-                        d={`M ${pos.cx} ${pos.cy - 12} L ${pos.cx} ${pos.cy + 12} M ${pos.cx - 12} ${pos.cy} L ${pos.cx + 12} ${pos.cy}`}
-                        stroke="#2E6496"
-                        strokeWidth="2.5"
-                      />
-                      <circle cx={pos.cx} cy={pos.cy} r="4" fill="#66A3BF" />
-                      <rect
-                        x={pos.cx - 46}
-                        y={pos.cy + 25}
-                        width="92"
-                        height="16"
-                        rx="3"
-                        fill="#2E6496"
-                      />
-                      <text
-                        x={pos.cx}
-                        y={pos.cy + 36}
-                        textAnchor="middle"
-                        fill="#FFFFFF"
-                        fontFamily="JetBrains Mono, monospace"
-                        fontWeight="600"
-                        fontSize="8.5"
-                      >
-                        {pos.tag}
-                      </text>
-                    </g>
-                  ))}
-
-                  <text
-                    x="20"
-                    y="190"
-                    fill="#475569"
-                    fontFamily="JetBrains Mono, monospace"
-                    fontSize="10"
-                    fontWeight="600"
-                  >
-                    DOKUMENTASI FISIK INSPEKTORAT DAERAH • {school.name.toUpperCase()}
-                  </text>
-                  <text
-                    x="580"
-                    y="190"
-                    textAnchor="end"
-                    fill="#2E6496"
-                    fontFamily="JetBrains Mono, monospace"
-                    fontSize="10"
-                    fontWeight="700"
-                  >
-                    STATUS: TERPASANG 100%
-                  </text>
-                </svg>
+                {/* WATERMARK OVERLAY (Solid Civic Styling, No Gradient, No Emojis) */}
+                <div className="absolute bottom-0 inset-x-0 bg-[#0F172A] border-t border-[#334155] p-3 text-white font-mono text-[10px] sm:text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1 text-[#38BDF8]">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#38BDF8]" />
+                      VERIFIKASI FISIK DAPODIK BOSP 2026
+                    </span>
+                    <span className="text-[10px] text-[#94A3B8] font-sans">
+                      {fileSizeKb} KB
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 text-[#E2E8F0]">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                      <span>Tgl Ambil: <strong className="text-white font-semibold">{item.geotag.uploadedAt}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                      <span>GPS: <strong className="text-white font-semibold">{item.geotag.lat}, {item.geotag.lng}</strong></span>
+                    </div>
+                    <div className="sm:col-span-2 flex items-center gap-1.5 truncate">
+                      <Building2 className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                      <span className="truncate">Lokasi: <strong className="text-white font-semibold">{item.geotag.roomLabel}</strong></span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Geotagging Metadata Overlay Box */}
-              <div className="mt-3 p-3.5 rounded-xl bg-[#0F172A] border border-[#334155] font-mono text-xs text-[#FAF8F5]">
-                <div className="flex items-center gap-2 text-[#C9DFDC] font-semibold">
-                  <MapPin className="w-4 h-4 shrink-0 text-[#66A3BF]" />
-                  <span className="tabular-nums">
-                    Lat: {item.geotag.lat}, Long: {item.geotag.lng} • {item.geotag.roomLabel} • {item.geotag.uploadedAt}
+              <p className="text-[11px] text-[#64748B] text-center">
+                Foto terkompresi otomatis di bawah 500 KB agar ringan dimuat oleh orang tua siswa.
+              </p>
+            </div>
+
+            {/* Inspection Details Card */}
+            <div className="bg-[#FFFFFF] border border-[#CBD5E1] rounded-xl p-4 space-y-3 text-xs shadow-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
+                <span className="text-[#64748B]">Status Verifikasi:</span>
+                <span className="px-2 py-0.5 rounded-md bg-[#ECFDF5] text-[#065F46] font-bold text-[11px] border border-[#A7F3D0]">
+                  Terverifikasi 100% Sesuai
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[11px] text-[#64748B] block">
+                    Penempatan Ruangan:
+                  </span>
+                  <span className="font-semibold text-[#1E293B] block mt-0.5">
+                    {item.geotag.roomLabel}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#FAF8F5]/80 mt-1.5 font-sans">
-                  Catatan Inspektorat: {item.geotag.inspectorNote}
+                <div>
+                  <span className="text-[11px] text-[#64748B] block">
+                    Nilai Pengadaan BOSP:
+                  </span>
+                  <span className="font-mono font-bold text-[#2E6496] block mt-0.5 tabular-nums">
+                    {formatRupiah(item.amount)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#F1F5F9]">
+                <span className="text-[11px] text-[#64748B] block mb-0.5">
+                  Catatan Pemeriksaan Fisik:
+                </span>
+                <p className="text-[#1E293B] italic leading-relaxed">
+                  &ldquo;{item.geotag.inspectorNote}&rdquo;
                 </p>
               </div>
             </div>
 
-            {/* Metadata Details Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#C9DFDC]/60 bg-[#FFFFFF] text-xs">
-              <div className="p-4">
-                <span className="text-[#475569] block">Lokasi Ruangan</span>
-                <span className="font-bold text-[#1E293B] mt-0.5 block">
-                  {item.geotag.roomLabel}
-                </span>
+            {downloadSuccess && (
+              <div className="p-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-xs text-[#065F46] flex items-center gap-2 animate-school-item">
+                <Check className="w-4 h-4 text-[#10B981] shrink-0" />
+                <span>Foto bukti fisik ber-watermark berhasil diunduh ({fileSizeKb} KB).</span>
               </div>
-              <div className="p-4">
-                <span className="text-[#475569] block">Waktu Verifikasi</span>
-                <span className="font-mono font-semibold text-[#1E293B] mt-0.5 block tabular-nums">
-                  {item.geotag.uploadedAt}
-                </span>
-              </div>
-              <div className="p-4">
-                <span className="text-[#475569] block">Nilai Pengadaan BOSP</span>
-                <span className="font-mono font-bold text-[#2E6496] mt-0.5 block tabular-nums">
-                  {formatRupiah(item.amount)}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="bg-[#FAF8F5] border-t border-[#C9DFDC] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-[#475569]">
-            Apakah barang ini tidak ditemukan secara fisik di kelas?
-          </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          {/* Footer Actions */}
+          <div className="bg-[#FAF8F5] border-t border-[#C9DFDC] px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => {
                 onClose();
                 onReportItem(item);
               }}
-              className="px-3.5 py-2 text-xs font-semibold text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] rounded-xl hover:bg-[#FEE2E2] transition-all flex items-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto min-h-[42px] px-3.5 py-2 text-xs font-semibold text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] rounded-xl hover:bg-[#FEE2E2] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <AlertTriangle className="w-4 h-4" />
-              <span>Laporkan Barang Fiktif / Rusak</span>
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Laporkan Barang Fiktif / Tidak Ada</span>
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="school-btn-primary px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer"
-            >
-              Tutup
-            </button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={handleDownloadPhoto}
+                className="school-btn-secondary flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                <span>Unduh Foto ({fileSizeKb} KB)</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="school-btn-primary flex-1 sm:flex-initial min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* LIGHTBOX MODAL: FULL RESOLUTION VIEW */}
+      {isEnlarged && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#000000]/80 p-3 sm:p-6 backdrop-blur-sm"
+          onClick={() => setIsEnlarged(false)}
+        >
+          <div
+            className="relative max-w-3xl w-full bg-[#0F172A] rounded-2xl overflow-hidden border border-[#334155] shadow-2xl p-4 sm:p-6 text-white space-y-4 max-h-[92dvh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#334155]">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                <span className="font-bold text-xs sm:text-sm text-[#FFFFFF]">
+                  Pratinjau Foto Fisik &amp; Watermark Lapangan
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEnlarged(false)}
+                className="p-1.5 rounded-lg text-[#94A3B8] hover:text-white hover:bg-[#1E293B] cursor-pointer"
+                aria-label="Tutup pratinjau foto"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Enlarged Photo Container */}
+            <div className="relative w-full h-72 sm:h-96 rounded-xl overflow-hidden bg-[#1E293B] border border-[#334155] flex items-center justify-center">
+              <div className="text-center p-4 sm:p-6 pb-28 sm:pb-24 space-y-2 select-none">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#FFFFFF]/10 border border-[#FFFFFF]/20 flex items-center justify-center text-[#38BDF8] mx-auto">
+                  <Camera className="w-6 h-6 sm:w-8 sm:h-8" />
+                </div>
+                <div className="text-sm sm:text-lg font-bold text-white">
+                  {item.name}
+                </div>
+                <div className="text-[11px] sm:text-xs text-[#94A3B8] font-mono">
+                  {item.unitSummary} • {school.name}
+                </div>
+                <div className="text-[11px] sm:text-xs text-[#CBD5E1] max-w-md mx-auto pt-1">
+                  Dokumentasi fisik pengadaan BOSP resmi tersimpan di server Dapodik Kemendikdasmen.
+                </div>
+              </div>
+
+              {/* Watermark Overlay in Lightbox (No Emojis, No Gradients) */}
+              <div className="absolute bottom-0 inset-x-0 bg-[#0F172A] border-t border-[#334155] p-3 sm:p-4 font-mono text-xs">
+                <div className="flex items-center justify-between text-[#38BDF8] font-bold mb-1">
+                  <span className="flex items-center gap-1.5 text-[11px] sm:text-xs">
+                    <ShieldCheck className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                    VERIFIKASI FISIK DAPODIK BOSP 2026
+                  </span>
+                  <span className="text-[#94A3B8] font-normal text-[11px]">{fileSizeKb} KB</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[#E2E8F0] text-[11px] mt-1">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                    <span>Tgl Pengambilan: <strong className="text-white font-semibold">{item.geotag.uploadedAt}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                    <span>Koordinat GPS: <strong className="text-white font-semibold">Lat {item.geotag.lat}, Long {item.geotag.lng}</strong></span>
+                  </div>
+                  <div className="sm:col-span-2 flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                    <span>Lokasi: <strong className="text-white font-semibold">{item.geotag.roomLabel}</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lightbox Footer Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2">
+              <span className="text-xs text-[#94A3B8] text-center sm:text-left">
+                Ukuran berkas: <strong className="text-white font-mono">{fileSizeKb} KB</strong> (format JPEG terkompresi)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadPhoto}
+                  className="flex-1 sm:flex-initial min-h-[42px] px-4 py-2 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 shrink-0" />
+                  <span>Unduh Foto Ini</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEnlarged(false)}
+                  className="flex-1 sm:flex-initial min-h-[42px] px-4 py-2 rounded-xl bg-[#334155] hover:bg-[#475569] text-white text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

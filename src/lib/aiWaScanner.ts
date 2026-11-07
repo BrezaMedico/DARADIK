@@ -1377,13 +1377,17 @@ async function runOptionalVisionAiPass(
     const base64Data = imageDataUrl.split(',')[1];
     if (!base64Data) return [];
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(
         apiKey
       )}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [
             {
@@ -1406,6 +1410,7 @@ async function runOptionalVisionAiPass(
         }),
       }
     );
+    clearTimeout(timeoutId);
 
     if (!response.ok) return [];
     const json = await response.json();
@@ -2535,11 +2540,7 @@ export async function runAdvancedWaOcrPipeline(
   }
 
   // Optional Hybrid Vision AI pass if explicitly enabled & configured
-  const configuredApiKey =
-    adjustments?.visionApiKey?.trim() ||
-    (typeof import.meta !== 'undefined' &&
-      (import.meta as any).env?.VITE_GEMINI_API_KEY) ||
-    '';
+  const configuredApiKey = adjustments?.visionApiKey?.trim() || '';
   let privacyMode: AiScanAnalysisResult['privacyMode'] = 'local-browser';
 
   if (adjustments?.enableVisionAi && configuredApiKey) {

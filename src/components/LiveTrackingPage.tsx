@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -10,266 +10,57 @@ import {
   History,
   Trash2,
   ArrowRight,
-  FileCheck,
+  ChevronRight,
   FileText,
   RefreshCw,
-  FileBadge2,
   CheckCircle2,
-  ShieldCheck,
+  MessageSquare,
+  Upload,
+  Send,
+  Paperclip,
+  X,
+  ExternalLink,
+  Info,
 } from 'lucide-react';
-import { SchoolData, SMK_TI_BAZMA } from '../data/schoolsData';
 import {
   supabase,
-  getSavedReportsFromStorage,
-  fetchAnonymousReportByTicket,
-  AdminReviewDocument,
-  InspectionLog,
+  PublicReportTrackingPayload,
+  ReportAttachmentMeta,
+  fetchPublicReportTrackingRpc,
+  submitReporterAdditionalInfoRpc,
+  uploadReportEvidenceFile,
 } from '../lib/supabase';
+import {
+  buildParentTimelineStages,
+  formatWibDateTime,
+  getInspectionMethodLabel,
+  getParentStatusLabel,
+  getResolutionOutcomeOption,
+} from '../lib/reportTracking';
 
-export interface TrackedReportItem {
+interface TicketBookmarkItem {
   ticketCode: string;
   schoolName: string;
   schoolNpsn?: string;
   category: string;
-  date: string;
-  createdAtRaw?: string;
-  status: string;
-  notes?: string;
-  attachments?: { name: string; sizeFormatted: string }[];
-  letterDocument?: AdminReviewDocument | null;
-}
-
-export interface TrackingStage {
-  step: number;
-  key: string;
-  label: string;
-  sublabel: string;
-  description: string;
-}
-
-export const TRACKING_STAGES: TrackingStage[] = [
-  {
-    step: 1,
-    key: 'LAPORAN_TERKIRIM',
-    label: 'Laporan Terkirim',
-    sublabel: 'Terenkripsi',
-    description: 'Laporan warga berhasil masuk dengan enkripsi dan kode tiket terverifikasi.',
-  },
-  {
-    step: 2,
-    key: 'MENUNGGU_VERIFIKASI',
-    label: 'Menunggu Verifikasi',
-    sublabel: 'Antrean Dinas',
-    description: 'Berkas masuk antrean telaah oleh tim verifikator Dinas Pendidikan & Inspektorat.',
-  },
-  {
-    step: 3,
-    key: 'VERIFIKASI_LAPORAN',
-    label: 'Verifikasi Laporan',
-    sublabel: 'Telaah Bukti',
-    description: 'Tim auditor menelaah kesesuaian bukti laporan dengan SPJ dan juknis BOSP.',
-  },
-  {
-    step: 4,
-    key: 'PEMERIKSAAN_LAPANGAN',
-    label: 'Pemeriksaan Lapangan',
-    sublabel: 'Sidak & BAP',
-    description: 'Pengawas pembina dan auditor meminta klarifikasi langsung kepada pihak sekolah.',
-  },
-  {
-    step: 5,
-    key: 'TINDAK_LANJUT_SELESAI',
-    label: 'Tindak Lanjut Selesai',
-    sublabel: 'Putusan Resmi',
-    description: 'Pemeriksaan tuntas dan berita acara resmi dinas telah diterbitkan.',
-  },
-];
-
-// Opsi Putusan Resmi Dinas Pendidikan ketika tahap 5 selesai:
-// Merah jika terbukti ada pelanggaran (Instruksi Pengembalian Dana), Hijau jika aman / sesuai ketentuan
-export const DINAS_VERDICTS = {
-  TERBUKTI: {
-    type: 'TERBUKTI',
-    isViolation: true,
-    badge: 'Tindak Lanjut Selesai • Instruksi Pengembalian Dana',
-    badgeColor: 'text-[#DC2626] border border-[#DC2626]/40 bg-[#FEF2F2]',
-    headerBadgeColor: 'text-[#DC2626] border border-[#DC2626]/40 bg-transparent',
-    cardBorder: 'border-[#DC2626]/40',
-    iconBg: 'bg-[#FEE2E2] text-[#DC2626]',
-    title: 'Berita Acara Pemeriksaan BOSP No. 421.5/BAP-BOSP/2026',
-    actionText: 'Instruksi Pengembalian Dana 100% & Peringatan Tertulis',
-    text: 'Berdasarkan hasil audit lapangan dan verifikasi bukti bersama tim pemeriksa BOSP, laporan dugaan pungutan terbukti melanggar Permendikbudristek No. 63/2022. Pihak sekolah telah menandatangani Berita Acara Pemeriksaan dan diwajibkan mengembalikan seluruh dana kepada orang tua siswa selambat-lambatnya 7 hari kerja di bawah pengawasan Inspektorat Daerah.',
-  },
-  TIDAK_TERBUKTI: {
-    type: 'TIDAK_TERBUKTI',
-    isViolation: false,
-    badge: 'Tindak Lanjut Selesai • Sesuai Ketentuan & Aman',
-    badgeColor: 'text-[#16A34A] border border-[#16A34A]/40 bg-[#F0FDF4]',
-    headerBadgeColor: 'text-[#16A34A] border border-[#16A34A]/40 bg-transparent',
-    cardBorder: 'border-[#16A34A]/40',
-    iconBg: 'bg-[#DCFCE7] text-[#16A34A]',
-    title: 'Berita Acara Klarifikasi No. 421.5/BAK-KOMITE/2026',
-    actionText: 'Pungutan Dinyatakan Sesuai Prosedur & Laporan Ditutup',
-    text: 'Tim Verifikator Dinas Pendidikan bersama Inspektorat Daerah telah meneliti dokumen SPJ dan pembukuan komite sekolah. Berdasarkan Berita Acara Klarifikasi, kegiatan tersebut merupakan sumbangan sukarela hasil kesepakatan musyawarah komite yang tidak mengikat sesuai Permendikbud No. 75/2016, serta tidak ada paksaan atau penahanan hak belajar siswa. Laporan dinyatakan selesai dan diarsipkan secara tertib.',
-  },
-};
-
-export function getStageNumber(status: string): number {
-  const norm = (status || '').trim().toUpperCase();
-  switch (norm) {
-    case 'TINDAK_LANJUT_SELESAI':
-    case 'SELESAI':
-    case 'SELESAI_DIKLARIFIKASI':
-      return 5;
-    case 'PEMERIKSAAN_LAPANGAN':
-    case 'KLARIFIKASI_SEKOLAH':
-    case 'AUDIT_LAPANGAN':
-      return 4;
-    case 'VERIFIKASI_LAPORAN':
-    case 'DITELAAH_DINAS':
-      return 3;
-    case 'MENUNGGU_VERIFIKASI':
-      return 2;
-    case 'LAPORAN_TERKIRIM':
-    case 'TERKIRIM_TERENKRIPSI':
-    default:
-      return 1;
-  }
-}
-
-/**
- * Mengambil tahap status laporan murni berdasarkan konfirmasi status di database (resmi dari admin dinas).
- */
-export function calculateRealtimeStage(status?: string): number {
-  return getStageNumber(status || 'LAPORAN_TERKIRIM');
-}
-
-/**
- * Menghitung status dan catatan waktu setiap tahapan pada timeline secara rapi dan presisi.
- * Menghormati waktu verifikasi nyata yang dicatat oleh admin dinas.
- */
-export function getStageTimestamp(
-  stageStep: number,
-  currentStep: number,
-  baseCreatedAt?: string,
-  timelineLogs?: InspectionLog[]
-): {
-  isDone: boolean;
-  isCurrent: boolean;
-  timeText: string;
-  badgeText: string;
-} {
-  const isDone = stageStep < currentStep || (stageStep === 5 && currentStep === 5);
-  const isCurrent = stageStep === currentStep && currentStep !== 5;
-
-  let baseDateFormatted = 'Menunggu';
-  if (baseCreatedAt) {
-    const d = new Date(baseCreatedAt);
-    if (!isNaN(d.getTime())) {
-      const dayStr = d.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-      const hourStr = String(d.getHours()).padStart(2, '0');
-      const minStr = String(d.getMinutes()).padStart(2, '0');
-      baseDateFormatted = `${dayStr} • ${hourStr}:${minStr} WIB`;
-    }
-  }
-
-  // Jika tahap ini belum tercapai (menunggu tindakan admin dinas)
-  if (stageStep > currentStep) {
-    return {
-      isDone: false,
-      isCurrent: false,
-      timeText: 'Menunggu proses dinas',
-      badgeText: 'Menunggu Verifikasi Admin',
-    };
-  }
-
-  // Cari apakah ada catatan log audit dari dinas untuk tahap ini
-  const stageKey = TRACKING_STAGES[stageStep - 1]?.key;
-  const matchedLog = timelineLogs?.find((l) => l.stage === stageKey);
-  let timeText = baseDateFormatted;
-  if (matchedLog?.time) {
-    const ld = new Date(matchedLog.time);
-    if (!isNaN(ld.getTime())) {
-      const dayStr = ld.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-      const hourStr = String(ld.getHours()).padStart(2, '0');
-      const minStr = String(ld.getMinutes()).padStart(2, '0');
-      timeText = `${dayStr} • ${hourStr}:${minStr} WIB`;
-    }
-  }
-
-  if (isCurrent) {
-    return {
-      isDone: false,
-      isCurrent: true,
-      timeText,
-      badgeText: stageStep === 1 ? 'Laporan Diterima' : 'Dalam Proses Telaah',
-    };
-  }
-
-  return {
-    isDone: true,
-    isCurrent: false,
-    timeText,
-    badgeText: 'Selesai Diverifikasi',
-  };
-}
-
-// Format waktu dan tanggal aman untuk tampilan header
-export function formatReportDateTime(dateStrOrIso?: string): {
-  dateFormatted: string;
-  timeFormatted: string;
-} {
-  try {
-    const d = dateStrOrIso ? new Date(dateStrOrIso) : new Date();
-    if (isNaN(d.getTime())) {
-      const now = new Date();
-      return {
-        dateFormatted: now.toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        }),
-        timeFormatted: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`,
-      };
-    }
-
-    return {
-      dateFormatted: d.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      }),
-      timeFormatted: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} WIB`,
-    };
-  } catch {
-    return {
-      dateFormatted: 'Hari ini',
-      timeFormatted: '10:00 WIB',
-    };
-  }
+  createdAt?: string;
 }
 
 interface LiveTrackingPageProps {
   ticketCode?: string;
-  school?: SchoolData;
-  reportCategory?: string;
-  reporterNote?: string;
   onBackToHome: () => void;
-  onBackToSchoolProfile: () => void;
   onOpenAnonymousReport?: () => void;
-  onOpenDinasPortal?: () => void;
   onShowToast: (message: string) => void;
 }
 
-// Cookie Riwayat
+interface PendingReplyFile {
+  id: string;
+  name: string;
+  sizeFormatted: string;
+  blob: Blob;
+  previewUrl?: string;
+}
+
 const TRACKED_COOKIE_KEY = 'daradik_tracked_tickets';
 
 function getCookie(name: string): string | null {
@@ -287,861 +78,1338 @@ function setCookie(name: string, value: string, days: number = 60) {
   )};expires=${date.toUTCString()};path=/;SameSite=Lax`;
 }
 
-function getStoredTrackedHistory(): TrackedReportItem[] {
+function readTicketBookmarksFromCookie(): TicketBookmarkItem[] {
   try {
-    const fromCookie = getCookie(TRACKED_COOKIE_KEY);
-    const fromStorage =
-      typeof localStorage !== 'undefined'
-        ? localStorage.getItem(TRACKED_COOKIE_KEY)
-        : null;
-    const raw = fromCookie || fromStorage;
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.filter((item) => {
-          const code = String(item.ticketCode || '');
-          const notes = String(item.notes || '').toLowerCase();
-          const isTest = /^(test|testing|coba|percobaan|uji coba|dummy|asdf)/i.test(notes.trim());
-          return code.startsWith('CHK-') && !isTest;
-        });
-      }
-    }
+    const raw = getCookie(TRACKED_COOKIE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => String(item?.ticketCode || '').toUpperCase().startsWith('CHK-'))
+      .map((item) => ({
+        ticketCode: String(item.ticketCode).toUpperCase(),
+        schoolName: String(item.schoolName || 'Sekolah Terlapor'),
+        schoolNpsn: item.schoolNpsn ? String(item.schoolNpsn) : undefined,
+        category: String(item.category || 'Laporan Pengaduan'),
+        createdAt: String(item.createdAt || item.createdAtRaw || item.date || ''),
+      }));
   } catch {
-    // fallback
+    return [];
   }
-  return [];
 }
 
-function saveTrackedItemToHistory(item: TrackedReportItem) {
+function writeTicketBookmarkToCookie(bookmark: TicketBookmarkItem) {
   try {
-    const existing = getStoredTrackedHistory();
-    const filtered = existing.filter((i) => i.ticketCode !== item.ticketCode);
-    const updated = [item, ...filtered].slice(0, 10);
-    const str = JSON.stringify(updated);
-    setCookie(TRACKED_COOKIE_KEY, str, 60);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TRACKED_COOKIE_KEY, str);
-    }
-  } catch (err) {
-    console.warn('[Tracking History] Gagal menyimpan cookie riwayat:', err);
+    const current = readTicketBookmarksFromCookie();
+    const next = [
+      bookmark,
+      ...current.filter((b) => b.ticketCode !== bookmark.ticketCode),
+    ].slice(0, 12);
+    setCookie(TRACKED_COOKIE_KEY, JSON.stringify(next), 60);
+  } catch {
+    // ignore
   }
+}
+
+function compressReplyAttachment(file: File): Promise<PendingReplyFile> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) {
+      resolve({
+        id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+        blob: file,
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_DIM = 1280;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve({
+                  id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                  name: file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+                  sizeFormatted: `${Math.max(1, Math.round(blob.size / 1024))} KB`,
+                  blob,
+                  previewUrl: URL.createObjectURL(blob),
+                });
+              } else {
+                resolve({
+                  id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                  name: file.name,
+                  sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+                  blob: file,
+                });
+              }
+            },
+            'image/jpeg',
+            0.78
+          );
+        } else {
+          resolve({
+            id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: file.name,
+            sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+            blob: file,
+          });
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   ticketCode = '',
-  school = SMK_TI_BAZMA,
-  reportCategory = 'Pungutan Seragam & Buku',
-  reporterNote = '',
   onBackToHome,
-  onBackToSchoolProfile,
   onOpenAnonymousReport,
-  onOpenDinasPortal,
   onShowToast,
 }) => {
-  // 1. State Input & Pencarian
   const [ticketInput, setTicketInput] = useState<string>(ticketCode || '');
-  const [activeTicket, setActiveTicket] = useState<string>(ticketCode || '');
-  const [ticketError, setTicketError] = useState<string | null>(null);
+  const [activeTicket, setActiveTicket] = useState<string>(
+    ticketCode ? ticketCode.trim().toUpperCase() : ''
+  );
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>(ticketCode ? 'detail' : 'list');
+  const [trackingPayload, setTrackingPayload] =
+    useState<PublicReportTrackingPayload | null>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
+  const [notFoundTicket, setNotFoundTicket] = useState<string | null>(null);
   const [copiedTicket, setCopiedTicket] = useState<boolean>(false);
-  const [isLoadingReport, setIsLoadingReport] = useState<boolean>(false);
+  const [isRealtimeSubscribed, setIsRealtimeSubscribed] = useState<boolean>(false);
 
-  // 2. State Riwayat Cookie Pengguna (Hanya tampil di perangkat masing-masing)
-  const [historyList, setHistoryList] = useState<TrackedReportItem[]>([]);
+  const [bookmarks, setBookmarks] = useState<TicketBookmarkItem[]>(() =>
+    readTicketBookmarksFromCookie()
+  );
 
-  // 3. State Data Laporan Aktif
-  const [currentReportData, setCurrentReportData] =
-    useState<TrackedReportItem | null>(null);
+  // Komunikasi dua arah & unggah bukti tambahan pelapor
+  const [replyMessage, setReplyMessage] = useState<string>('');
+  const [replyFiles, setReplyFiles] = useState<PendingReplyFile[]>([]);
+  const [isCompressingReply, setIsCompressingReply] = useState<boolean>(false);
+  const [isSendingReply, setIsSendingReply] = useState<boolean>(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const replyFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 4. State Tahapan Saat Ini (1 sampai 5) — Mengikuti data database realtime
-  const [currentStageStep, setCurrentStageStep] = useState<number>(1);
+  // Lightbox pratinjau bukti gambar
+  const [lightboxImage, setLightboxImage] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
-  // 5. State Putusan Dinas (TERBUKTI / TIDAK_TERBUKTI)
-  // TERBUKTI = Merah (ada pelanggaran & instruksi pengembalian dana)
-  // TIDAK_TERBUKTI = Hijau (aman & sesuai ketentuan komite)
-  const [verdictType, setVerdictType] = useState<'TERBUKTI' | 'TIDAK_TERBUKTI'>('TERBUKTI');
+  const loadTrackingData = useCallback(
+    async (codeToFetch: string, silentRefresh: boolean = false) => {
+      const clean = codeToFetch.trim().toUpperCase();
+      if (!clean) {
+        setTrackingPayload(null);
+        setNotFoundTicket(null);
+        setQueryError(null);
+        return;
+      }
 
-  // Load Riwayat Cookie Pengguna saat Mount
+      if (silentRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+        setQueryError(null);
+        setNotFoundTicket(null);
+      }
+
+      try {
+        const result = await fetchPublicReportTrackingRpc(clean);
+        if (!result) {
+          setTrackingPayload(null);
+          setNotFoundTicket(clean);
+        } else {
+          setTrackingPayload(result);
+          setNotFoundTicket(null);
+          setQueryError(null);
+
+          const bookmark: TicketBookmarkItem = {
+            ticketCode: result.report.ticket_code,
+            schoolName: result.report.school_name,
+            schoolNpsn: result.report.school_npsn,
+            category: result.report.category,
+            createdAt: result.report.created_at,
+          };
+          writeTicketBookmarkToCookie(bookmark);
+          setBookmarks(readTicketBookmarksFromCookie());
+        }
+      } catch (err: unknown) {
+        if (!silentRefresh) {
+          setTrackingPayload(null);
+        }
+        setQueryError(
+          err instanceof Error
+            ? err.message
+            : 'Terjadi gangguan koneksi saat mengambil status laporan dari server.'
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
-    loadLocalCookieData();
-  }, [ticketCode]);
+    const incoming = ticketCode ? ticketCode.trim().toUpperCase() : '';
+    if (incoming) {
+      setTicketInput(incoming);
+      setActiveTicket(incoming);
+      setViewMode('detail');
+      loadTrackingData(incoming, false);
+    }
+  }, [ticketCode, loadTrackingData]);
 
-  // Realtime Supabase Subscription: mendengarkan pembaruan status laporan secara langsung
+  // Supabase Realtime pada sinyal kode tiket aktif
   useEffect(() => {
-    if (!activeTicket) return;
+    if (!activeTicket) {
+      setIsRealtimeSubscribed(false);
+      return;
+    }
 
+    const clean = activeTicket.trim().toUpperCase();
     const channel = supabase
-      .channel(`realtime-tracking-${activeTicket}`)
+      .channel(`public-report-signal-${clean}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'anonymous_reports',
-          filter: `ticket_code=eq.${activeTicket.trim().toUpperCase()}`,
+          table: 'report_tracking_signals',
+          filter: `ticket_code=eq.${clean}`,
         },
-        (payload) => {
-          if (payload.new) {
-            const row = payload.new as Record<string, unknown>;
-            const newStatus = String(row.status || 'LAPORAN_TERKIRIM');
-            const newStep = getStageNumber(newStatus);
-            setCurrentStageStep(newStep);
-
-            let parsedDoc: AdminReviewDocument | null = null;
-            if (row.letter_document) {
-              try {
-                parsedDoc =
-                  typeof row.letter_document === 'string'
-                    ? JSON.parse(row.letter_document)
-                    : (row.letter_document as AdminReviewDocument);
-              } catch {
-                // ignore
-              }
-            }
-
-            if (parsedDoc?.verdict_type === 'TERBUKTI' || parsedDoc?.verdict_type === 'TIDAK_TERBUKTI') {
-              setVerdictType(parsedDoc.verdict_type);
-            }
-
-            setCurrentReportData((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    status: newStatus,
-                    letterDocument: parsedDoc,
-                  }
-                : null
-            );
-          }
+        () => {
+          loadTrackingData(clean, true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsRealtimeSubscribed(status === 'SUBSCRIBED');
+      });
 
     return () => {
+      setIsRealtimeSubscribed(false);
       supabase.removeChannel(channel);
     };
-  }, [activeTicket]);
+  }, [activeTicket, loadTrackingData]);
 
-  // Memuat data riwayat murni dari Cookie dan LocalStorage perangkat masing-masing
-  const loadLocalCookieData = () => {
-    const cookieHistory = getStoredTrackedHistory();
-    const savedReports = getSavedReportsFromStorage();
-
-    const mergedMap = new Map<string, TrackedReportItem>();
-
-    savedReports.forEach((r: Record<string, unknown>) => {
-      const code = String(r.ticket_code || '');
-      if (code) {
-        mergedMap.set(code, {
-          ticketCode: code,
-          schoolName: String(r.school_name || 'Sekolah Terpilih'),
-          schoolNpsn: String(r.school_npsn || ''),
-          category: String(r.category || 'Pungutan Sekolah'),
-          date: r.created_at ? String(r.created_at) : new Date().toISOString(),
-          createdAtRaw: r.created_at ? String(r.created_at) : new Date().toISOString(),
-          status: String(r.status || 'LAPORAN_TERKIRIM'),
-          notes: String(r.notes || ''),
-        });
-      }
-    });
-
-    cookieHistory.forEach((item) => {
-      if (!mergedMap.has(item.ticketCode)) {
-        mergedMap.set(item.ticketCode, item);
-      }
-    });
-
-    const localItems = Array.from(mergedMap.values());
-    setHistoryList(localItems);
-
-    if (ticketCode) {
-      setTicketInput(ticketCode);
-      setActiveTicket(ticketCode);
-      resolveTicketData(ticketCode, localItems);
-    } else {
-      setTicketInput('');
-      setActiveTicket('');
-      setCurrentReportData(null);
-    }
+  const handleBackToList = () => {
+    setViewMode('list');
+    setTrackingPayload(null);
+    setActiveTicket('');
+    setTicketInput('');
+    setQueryError(null);
+    setNotFoundTicket(null);
   };
 
-  // Resolusi data tiket pelaporan langsung dari database realtime
-  const resolveTicketData = async (
-    code: string,
-    fallbackList?: TrackedReportItem[]
-  ) => {
-    setIsLoadingReport(true);
-    const cleaned = code.trim().toUpperCase();
-
-    // Reset default putusan (hanya berubah jika diatur resmi oleh dinas)
-    setVerdictType('TIDAK_TERBUKTI');
-
-    try {
-      const remote = await fetchAnonymousReportByTicket(cleaned);
-      if (remote) {
-        let parsedDoc: AdminReviewDocument | null = null;
-        if (remote.letter_document) {
-          try {
-            parsedDoc =
-              typeof remote.letter_document === 'string'
-                ? JSON.parse(remote.letter_document)
-                : remote.letter_document;
-          } catch {
-            // ignore
-          }
-        }
-
-        if (parsedDoc?.verdict_type === 'TERBUKTI' || parsedDoc?.verdict_type === 'TIDAK_TERBUKTI') {
-          setVerdictType(parsedDoc.verdict_type);
-        }
-
-        let parsedAttachments: { name: string; sizeFormatted: string }[] = [];
-        if (remote.attachments_json) {
-          try {
-            parsedAttachments =
-              typeof remote.attachments_json === 'string'
-                ? JSON.parse(remote.attachments_json)
-                : remote.attachments_json;
-          } catch {
-            // ignore
-          }
-        }
-
-        // Ambil tahap status resmi yang tersimpan di basis data
-        const calculatedStep = getStageNumber(remote.status);
-        const resolvedStatus =
-          TRACKING_STAGES[calculatedStep - 1]?.key || remote.status || 'LAPORAN_TERKIRIM';
-
-        const resolvedItem: TrackedReportItem = {
-          ticketCode: remote.ticket_code,
-          schoolName: remote.school_name || 'Sekolah Terpilih',
-          schoolNpsn: remote.school_npsn || '',
-          category: remote.category || 'Pungutan Sekolah',
-          date: remote.created_at || new Date().toISOString(),
-          createdAtRaw: remote.created_at || new Date().toISOString(),
-          status: resolvedStatus,
-          notes: remote.notes || remote.notes_encrypted || '',
-          attachments: parsedAttachments,
-          letterDocument: parsedDoc,
-        };
-
-        setCurrentReportData(resolvedItem);
-        setCurrentStageStep(calculatedStep);
-        saveTrackedItemToHistory(resolvedItem);
-        setIsLoadingReport(false);
-        return;
-      }
-    } catch (err) {
-      console.warn('[Resolve Ticket Remote]', err);
-    }
-
-    const currentList = fallbackList || historyList;
-    const found = currentList.find(
-      (i) => i.ticketCode.toUpperCase() === cleaned
-    );
-
-    if (found) {
-      const calculatedStep = getStageNumber(found.status);
-      const resolvedStatus =
-        TRACKING_STAGES[calculatedStep - 1]?.key || found.status || 'LAPORAN_TERKIRIM';
-      const updatedFound: TrackedReportItem = {
-        ...found,
-        status: resolvedStatus,
-      };
-      setCurrentReportData(updatedFound);
-      setCurrentStageStep(calculatedStep);
-      saveTrackedItemToHistory(updatedFound);
-    } else {
-      setCurrentReportData(null);
-      setTicketError(`Nomor tiket ${cleaned} tidak ditemukan dalam basis data resmi. Pastikan kode tiket yang Anda masukkan sudah benar.`);
-    }
-
-    setIsLoadingReport(false);
-  };
-
-  // Submit Pencarian Tiket
-  const handleCheckTicket = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleaned = ticketInput.trim().toUpperCase();
-
-    if (!cleaned) {
-      setTicketError('Ketik kode tiket pelacakan Anda.');
+    const clean = ticketInput.trim().toUpperCase();
+    if (!clean) {
+      setQueryError('Masukkan kode tiket laporan terlebih dahulu (contoh: CHK-2026-5266-KOT).');
       return;
     }
+    setActiveTicket(clean);
+    setViewMode('detail');
+    loadTrackingData(clean, false);
+  };
 
-    if (!cleaned.startsWith('CHK-') && cleaned.length < 8) {
-      setTicketError('Format tiket tidak sesuai. Contoh: CHK-2026-8849-BGR');
-      return;
+  const handleSelectBookmark = (code: string) => {
+    setTicketInput(code);
+    setActiveTicket(code);
+    setViewMode('detail');
+    loadTrackingData(code, false);
+  };
+
+  const handleDeleteBookmark = (code: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = bookmarks.filter((b) => b.ticketCode !== code);
+    setBookmarks(next);
+    setCookie(TRACKED_COOKIE_KEY, JSON.stringify(next), 60);
+    if (activeTicket === code) {
+      handleBackToList();
     }
-
-    setTicketError(null);
-    setActiveTicket(cleaned);
-    resolveTicketData(cleaned);
-    onShowToast(`Memuat status pelaporan untuk kode ${cleaned}`);
   };
 
-  // Pilih Tiket dari Riwayat
-  const handleSelectTicket = (item: TrackedReportItem) => {
-    setTicketInput(item.ticketCode);
-    setActiveTicket(item.ticketCode);
-    setTicketError(null);
-    resolveTicketData(item.ticketCode);
-    onShowToast(`Melacak tiket ${item.ticketCode}`);
-  };
-
-  // Hapus Riwayat Cookie
-  const handleClearHistory = () => {
-    setHistoryList([]);
-    setCookie(TRACKED_COOKIE_KEY, '', -1);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(TRACKED_COOKIE_KEY);
-      localStorage.removeItem('daradik_saved_reports');
-    }
-    onShowToast('Riwayat pelacakan di perangkat ini telah dihapus.');
-  };
-
-  // Salin Kode Tiket
-  const handleCopyTicket = async () => {
-    if (!activeTicket) return;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(activeTicket);
-      }
-    } catch {
-      // fallback
+  const handleCopyTicket = (code: string) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code);
     }
     setCopiedTicket(true);
-    onShowToast(`Kode tiket ${activeTicket} disalin.`);
-    setTimeout(() => setCopiedTicket(false), 2000);
+    onShowToast(`Kode tiket ${code} berhasil disalin.`);
+    setTimeout(() => setCopiedTicket(false), 2200);
   };
 
-  const activeStageInfo =
-    TRACKING_STAGES.find((s) => s.step === currentStageStep) ||
-    TRACKING_STAGES[0];
+  const handleReplyFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-  const selectedVerdict = DINAS_VERDICTS[verdictType];
+    const remaining = 3 - replyFiles.length;
+    if (remaining <= 0) {
+      setReplyError('Maksimal 3 berkas bukti tambahan per pengiriman.');
+      return;
+    }
+
+    const slice = Array.from(files).slice(0, remaining);
+    setIsCompressingReply(true);
+    setReplyError(null);
+    try {
+      const processed = await Promise.all(slice.map((f) => compressReplyAttachment(f)));
+      setReplyFiles((prev) => [...prev, ...processed]);
+    } finally {
+      setIsCompressingReply(false);
+      if (replyFileInputRef.current) {
+        replyFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveReplyFile = (id: string) => {
+    setReplyFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((f) => f.id !== id);
+    });
+  };
+
+  const handleSendAdditionalInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackingPayload || isSendingReply) return;
+
+    if (!replyMessage.trim() && replyFiles.length === 0) {
+      setReplyError('Tuliskan pesan penjelasan atau lampirkan bukti foto tambahan.');
+      return;
+    }
+
+    setIsSendingReply(true);
+    setReplyError(null);
+
+    try {
+      const uploadedMeta: ReportAttachmentMeta[] = [];
+      for (const f of replyFiles) {
+        const uploaded = await uploadReportEvidenceFile(f.blob, f.name, 'followup');
+        uploadedMeta.push(uploaded);
+      }
+
+      await submitReporterAdditionalInfoRpc(
+        trackingPayload.report.ticket_code,
+        replyMessage.trim(),
+        uploadedMeta
+      );
+
+      replyFiles.forEach((f) => {
+        if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+      });
+      setReplyMessage('');
+      setReplyFiles([]);
+      onShowToast('Informasi tambahan berhasil dikirim ke petugas pemeriksa.');
+      await loadTrackingData(trackingPayload.report.ticket_code, true);
+    } catch (err: unknown) {
+      setReplyError(
+        err instanceof Error
+          ? err.message
+          : 'Gagal mengirim informasi tambahan. Silakan coba lagi.'
+      );
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
+
+  const report = trackingPayload?.report || null;
+  const history = trackingPayload?.history || [];
+  const messages = trackingPayload?.messages || [];
+
+  const timelineStages = report
+    ? buildParentTimelineStages(
+        report.status,
+        report.created_at,
+        report.opened_at,
+        report.resolved_at,
+        report.skip_inspection_reason,
+        history
+      )
+    : [];
+
+  const outcomeOption = report
+    ? getResolutionOutcomeOption(report.resolution_outcome)
+    : null;
+
+  const canReplyAdditionalInfo =
+    report &&
+    (report.status === 'PEMERIKSAAN_LANJUTAN' || report.waiting_additional_info);
 
   return (
-    <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8 animate-view-enter">
-      {/* Container Bersih Sederhana Max-W-3XL */}
-      <div className="max-w-3xl mx-auto space-y-6 sm:space-y-7">
-        {/* Navigasi Atas */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="px-4 py-2 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-all flex items-center gap-2 cursor-pointer active:translate-y-[1px]"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-            <span>Kembali ke Beranda</span>
-          </button>
-
-          {activeTicket && (
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTicket('');
-                setTicketInput('');
-                setCurrentReportData(null);
-              }}
-              className="px-3.5 py-1.5 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#E4E0D8] text-xs font-semibold text-[#475569] hover:text-[#1E293B] cursor-pointer transition-colors"
-            >
-              Lacak Tiket Lain
-            </button>
-          )}
-        </div>
-
-        {/* Form Pencarian Tiket (Sederhana & Bersih) */}
-        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-7 shadow-xs space-y-3">
-          <div className="space-y-1">
-            <h1 className="font-sturdy-heading text-xl sm:text-2xl font-extrabold text-[#1E293B] tracking-tight">
-              Lacak Status Penanganan Laporan
-            </h1>
-            <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-              Masukkan kode tiket untuk memantau status pemeriksaan dinas secara langsung.
-            </p>
-          </div>
-
-          <form onSubmit={handleCheckTicket} className="space-y-3 pt-1">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#2E6496] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={ticketInput}
-                  onChange={(e) => {
-                    setTicketInput(e.target.value);
-                    setTicketError(null);
-                  }}
-                  placeholder="Contoh: CHK-2026-8849-BGR"
-                  className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] placeholder:text-[#94A3B8] font-mono focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
-                />
-              </div>
-
+    <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-6 animate-view-enter">
+        {viewMode === 'list' ? (
+          <div className="space-y-6">
+            {/* Navigasi Atas List View */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
               <button
-                type="submit"
-                disabled={isLoadingReport}
-                className="px-5 py-2.5 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-2xs active:translate-y-[1px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                type="button"
+                onClick={onBackToHome}
+                className="min-h-[40px] px-3.5 sm:px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
               >
-                {isLoadingReport ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Cek Status</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                <ArrowLeft className="w-4 h-4 text-[#2E6496] shrink-0" />
+                <span>Kembali ke Pencarian</span>
               </button>
-            </div>
 
-            {ticketError && (
-              <div className="p-3 rounded-xl bg-[#FDF2F2] border border-[#F5C6CB] text-[#C24136] text-xs font-medium flex items-center gap-2 animate-view-enter">
-                <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
-                <span>{ticketError}</span>
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* ===================================================================
-            KONDISI A: DEFAULT KOSONG (Belum Membuka Tiket)
-           =================================================================== */}
-        {!activeTicket ? (
-          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4 animate-view-enter">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-[#2E6496]" />
-                <h2 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
-                  Riwayat Laporan Terakhir
-                </h2>
-              </div>
-
-              {historyList.length > 0 && (
+              {onOpenAnonymousReport && (
                 <button
                   type="button"
-                  onClick={handleClearHistory}
-                  className="text-[11px] text-[#64748B] hover:text-[#DC2626] flex items-center gap-1 cursor-pointer transition-colors"
+                  onClick={onOpenAnonymousReport}
+                  className="min-h-[40px] px-3.5 sm:px-4 py-2 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-xs sm:text-sm font-bold text-[#FFFFFF] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Hapus</span>
+                  <FileText className="w-4 h-4 shrink-0" />
+                  <span>Buat Laporan Baru</span>
                 </button>
               )}
             </div>
 
-            <div className="space-y-2.5">
-              {historyList.slice(0, 6).map((item) => (
-                <div
-                  key={item.ticketCode}
-                  className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] hover:border-[#2E6496]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2 py-0.5 rounded-md">
-                        {item.ticketCode}
-                      </span>
-                      <span className="text-[#64748B] text-[11px] font-mono tabular-nums">
-                        {formatReportDateTime(item.date).dateFormatted}
-                      </span>
-                    </div>
-                    <div className="font-bold text-[#1E293B] text-xs sm:text-sm">
-                      {item.schoolName}
-                    </div>
-                    <div className="text-[11px] text-[#475569]">
-                      {item.category}
-                    </div>
-                  </div>
+            {/* Kartu Pencarian Kode Tiket */}
+            <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs space-y-5">
+              <div className="space-y-1.5">
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496]">
+                  Pelacakan Pengaduan Warga
+                </span>
+                <h1 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
+                  Pantau Perkembangan Laporan
+                </h1>
+                <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+                  Masukkan kode tiket unik Anda untuk melihat perkembangan pemeriksaan oleh petugas Dinas Pendidikan, atau pilih laporan tersimpan di bawah ini.
+                </p>
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleSelectTicket(item)}
-                    className="px-4 py-2 rounded-lg bg-[#FFFFFF] hover:bg-[#2E6496] hover:text-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] transition-all cursor-pointer shadow-2xs self-start sm:self-auto"
-                  >
-                    Buka Lacak
-                  </button>
-                </div>
-              ))}
-
-              {historyList.length === 0 && (
-                <div className="p-8 text-center space-y-2">
-                  <p className="text-xs text-[#64748B]">
-                    Belum ada riwayat pelaporan pada cookie perangkat ini.
-                  </p>
-                  {onOpenAnonymousReport && (
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+              >
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-[#475569] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={ticketInput}
+                    onChange={(e) => {
+                      setTicketInput(e.target.value.toUpperCase());
+                      if (queryError) setQueryError(null);
+                    }}
+                    placeholder="Masukkan kode tiket (contoh: CHK-2026-5266-KOT)"
+                    aria-label="Kode tiket pelacakan laporan"
+                    className="w-full min-h-[46px] pl-10 pr-9 py-2.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] font-mono text-sm font-bold text-[#1E293B] placeholder:font-sans placeholder:font-normal placeholder:text-[#64748B] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
+                  />
+                  {ticketInput && (
                     <button
                       type="button"
-                      onClick={onOpenAnonymousReport}
-                      className="text-xs font-bold text-[#2E6496] hover:underline cursor-pointer"
+                      onClick={() => {
+                        setTicketInput('');
+                        setQueryError(null);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#1E293B] p-1 cursor-pointer"
+                      aria-label="Kosongkan kode tiket"
                     >
-                      Buat Laporan Baru
+                      <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="min-h-[46px] px-6 py-2.5 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-60"
+                >
+                  <span>{isLoading ? 'Memeriksa...' : 'Cek Status Laporan'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              {queryError && (
+                <div className="p-3 bg-[#FEF2F2] border border-[#FECACA] rounded-xl flex items-center gap-2 text-xs font-semibold text-[#991B1B]">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{queryError}</span>
+                </div>
               )}
-            </div>
+            </section>
+
+            {/* List Tabel Sederhana: Riwayat Laporan dari Perangkat Ini */}
+            <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+              <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#E4E0D8]">
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-[#2E6496]" />
+                  <h2 className="text-sm sm:text-base font-bold text-[#1E293B]">
+                    Riwayat Laporan dari Perangkat Ini
+                  </h2>
+                </div>
+                <span className="text-xs font-semibold text-[#64748B] tabular-nums">
+                  {bookmarks.length} laporan tersimpan
+                </span>
+              </div>
+
+              {bookmarks.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-xs sm:text-sm text-[#475569]">
+                    Belum ada riwayat laporan tersimpan di perangkat ini.
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-[#64748B]">
+                    Laporan yang Anda kirimkan dari peramban ini akan otomatis tercatat di sini agar mudah dipantau kapan saja.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#E4E0D8] border border-[#E4E0D8] rounded-xl overflow-hidden">
+                  {bookmarks.map((bm) => (
+                    <div
+                      key={bm.ticketCode}
+                      onClick={() => handleSelectBookmark(bm.ticketCode)}
+                      className="p-3.5 sm:p-4 hover:bg-[#F8FAFC] transition-colors flex items-center justify-between gap-3 cursor-pointer group"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-xs sm:text-sm text-[#1D4F7A] group-hover:text-[#2E6496]">
+                            {bm.ticketCode}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#C9DFDC] text-[10px] sm:text-[11px] font-semibold text-[#475569]">
+                            {bm.category}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-[#475569] truncate">
+                          <Building2 className="w-3.5 h-3.5 shrink-0 text-[#64748B]" />
+                          <span className="font-semibold text-[#1E293B] truncate">
+                            {bm.schoolName}
+                          </span>
+                          {bm.schoolNpsn && (
+                            <span className="text-[#64748B] font-mono text-[11px] shrink-0">
+                              (NPSN: {bm.schoolNpsn})
+                            </span>
+                          )}
+                        </div>
+                        {bm.createdAt && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-mono">
+                            <Clock className="w-3 h-3 text-[#64748B]" />
+                            <span>{formatWibDateTime(bm.createdAt)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectBookmark(bm.ticketCode);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#EBF3F8] hover:bg-[#2E6496] text-[#2E6496] hover:text-[#FFFFFF] text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <span className="hidden sm:inline">Lihat Isi</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteBookmark(bm.ticketCode, e)}
+                          className="p-1.5 rounded-lg text-[#64748B] hover:text-[#991B1B] hover:bg-[#FEE2E2]/50 transition-colors cursor-pointer"
+                          title="Hapus dari riwayat perangkat ini"
+                          aria-label={`Hapus tiket ${bm.ticketCode} dari riwayat perangkat`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         ) : (
-          /* ===================================================================
-              KONDISI B: TIKET AKTIF DITEMUKAN
-              STATUS REALTIME BERSIH + TIMELINE AKURAT + PUTUSAN RESMI
-             =================================================================== */
-          <div className="space-y-6 animate-view-enter">
-            {/* 1. KARTU INFORMASI UTAMA & STATUS */}
-            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-4">
-              {/* Header: Kode Tiket & Status Badge (Merah jika terbukti salah, Hijau jika aman) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E4E0D8]">
+          <div className="space-y-6">
+            {/* Navigasi Atas Detail View */}
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleBackToList}
+                className="min-h-[40px] px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
+                <span>Kembali ke Riwayat Laporan</span>
+              </button>
+
+              {report && (
+                <button
+                  type="button"
+                  onClick={() => loadTrackingData(report.ticket_code, true)}
+                  disabled={isRefreshing || isLoading}
+                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#FFFFFF] hover:bg-[#FAF8F5] border border-[#C9DFDC] text-xs font-semibold text-[#1E293B] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 text-[#2E6496] ${
+                      isRefreshing ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>{isRefreshing ? 'Memuat...' : 'Perbarui Status'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-10 text-center space-y-3">
+                <RefreshCw className="w-6 h-6 text-[#2E6496] animate-spin mx-auto" />
+                <p className="text-sm font-semibold text-[#1E293B]">
+                  Mengambil data status laporan dari server...
+                </p>
+              </div>
+            )}
+
+            {/* Error State Jelas (Tanpa Data Dummy) */}
+            {!isLoading && queryError && (
+              <div
+                role="alert"
+                className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-[#991B1B] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h2 className="text-sm font-bold text-[#991B1B]">
+                      Tidak Dapat Memuat Data Laporan
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#7F1D1D] leading-relaxed">
+                      {queryError}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeTicket && (
+                    <button
+                      type="button"
+                      onClick={() => loadTrackingData(activeTicket, false)}
+                      className="min-h-[40px] px-4 py-2 rounded-xl bg-[#FFFFFF] border border-[#FECACA] text-xs font-bold text-[#991B1B] hover:bg-[#FEE2E2]/40 cursor-pointer shrink-0"
+                    >
+                      Coba Lagi
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleBackToList}
+                    className="min-h-[40px] px-4 py-2 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#1E293B] hover:bg-[#FAF8F5] cursor-pointer shrink-0"
+                  >
+                    Kembali
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Not Found State */}
+            {!isLoading && !queryError && notFoundTicket && (
+              <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-8 text-center space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-[#475569] flex items-center justify-center mx-auto">
+                  <Search className="w-5 h-5" />
+                </div>
                 <div className="space-y-1">
-                  <span className="text-[11px] font-mono text-[#2E6496] font-bold block uppercase tracking-wider">
-                    KODE TIKET PELAPORAN
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-2xl font-extrabold text-[#1E293B] tracking-tight">
-                      {activeTicket}
+                  <h2 className="text-base sm:text-lg font-bold text-[#1E293B]">
+                    Kode Tiket {notFoundTicket} Tidak Ditemukan
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#475569] max-w-md mx-auto leading-relaxed">
+                    Pastikan kode tiket diketik lengkap beserta tanda hubung (misalnya CHK-2026-5266-KOT).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleBackToList}
+                  className="min-h-[40px] px-5 py-2 rounded-xl bg-[#2E6496] text-[#FFFFFF] text-xs font-bold hover:bg-[#245385] cursor-pointer inline-flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Kembali ke Riwayat Laporan</span>
+                </button>
+              </div>
+            )}
+
+            {/* ===================================================================
+                DETAIL PELACAKAN LAPORAN AKTUAL DARI DATABASE SUPABASE
+               =================================================================== */}
+            {!isLoading && report && (
+              <div className="space-y-6">
+            {/* 1. Ringkasan Utama Laporan */}
+            <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-[#E4E0D8]">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#475569]">
+                      Kode Tiket Laporan
+                    </span>
+                    {isRealtimeSubscribed && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#DCFCE7] text-[#166534]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#166534]" />
+                        <span>Pembaruan Langsung Aktif</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="font-mono text-lg sm:text-2xl font-extrabold text-[#2E6496] tabular-nums break-all">
+                      {report.ticket_code}
                     </span>
                     <button
                       type="button"
-                      onClick={handleCopyTicket}
-                      className="p-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBF3F8] border border-[#E4E0D8] text-[#2E6496] cursor-pointer transition-colors"
-                      title="Salin Kode Tiket"
+                      onClick={() => handleCopyTicket(report.ticket_code)}
+                      className="min-h-[34px] px-2.5 py-1 rounded-lg border border-[#C9DFDC] bg-[#FAF8F5] hover:bg-[#EBF3F8] text-xs font-semibold text-[#1E293B] inline-flex items-center gap-1.5 cursor-pointer"
                     >
                       {copiedTicket ? (
-                        <Check className="w-4 h-4 text-[#16A34A]" />
+                        <>
+                          <Check className="w-3.5 h-3.5 text-[#166534]" />
+                          <span className="text-[#166534]">Tersalin</span>
+                        </>
                       ) : (
-                        <Copy className="w-4 h-4" />
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-[#2E6496]" />
+                          <span>Salin</span>
+                        </>
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* Status Badge: Hijau jika Aman, Merah jika Terbukti Bersalah */}
-                <div className="self-start sm:self-auto">
-                  <div
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 ${
-                      currentStageStep === 5
-                        ? selectedVerdict.headerBadgeColor
-                        : currentStageStep >= 3
-                        ? 'bg-[#FFF8E6] text-[#D97706] border border-[#FCE8B2]'
-                        : 'bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC]'
+                {/* Badge Status Utama */}
+                <div className="self-start">
+                  <span
+                    className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-bold border ${
+                      report.status === 'COMPLETED'
+                        ? 'bg-[#DCFCE7] text-[#166534] border-[#86EFAC]'
+                        : report.status === 'TIDAK_DAPAT_DITINDAKLANJUTI'
+                        ? 'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA]'
+                        : report.waiting_additional_info
+                        ? 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                        : 'bg-[#EBF3F8] text-[#1D4F7A] border-[#C9DFDC]'
                     }`}
                   >
-                    {currentStageStep === 5 ? (
-                      selectedVerdict.isViolation ? (
-                        <AlertCircle className="w-4 h-4 text-[#DC2626] shrink-0" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
-                      )
-                    ) : (
-                      <span className="w-2.5 h-2.5 rounded-full bg-current shrink-0" />
-                    )}
-                    <span>
-                      {currentStageStep === 5
-                        ? selectedVerdict.isViolation
-                          ? 'Tindak Lanjut Selesai (Terbukti Pelanggaran)'
-                          : 'Tindak Lanjut Selesai (Aman & Ditutup)'
-                        : activeStageInfo.label}
-                    </span>
+                    {getParentStatusLabel(report.status, report.waiting_additional_info)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Informasi Sekolah & Waktu */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] space-y-1">
+                  <span className="text-[11px] font-medium text-[#475569] block">
+                    Sekolah yang Dilaporkan
+                  </span>
+                  <div className="font-bold text-[#1E293B] flex items-start gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#2E6496] shrink-0 mt-0.5" />
+                    <span>{report.school_name}</span>
                   </div>
+                  <span className="font-mono text-[11px] text-[#475569] tabular-nums block">
+                    NPSN: {report.school_npsn}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] space-y-1">
+                  <span className="text-[11px] font-medium text-[#475569] block">
+                    Kategori Laporan
+                  </span>
+                  <span className="font-bold text-[#1E293B] block">
+                    {report.category}
+                  </span>
+                  <span className="text-[11px] text-[#475569] block">
+                    Pihak terkait: {report.requester_role}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] space-y-1">
+                  <span className="text-[11px] font-medium text-[#475569] block">
+                    Waktu Pengiriman
+                  </span>
+                  <span className="font-mono font-bold text-[#1E293B] tabular-nums block">
+                    {formatWibDateTime(report.created_at)}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] space-y-1">
+                  <span className="text-[11px] font-medium text-[#475569] block">
+                    Terakhir Diperbarui
+                  </span>
+                  <span className="font-mono font-bold text-[#1E293B] tabular-nums block">
+                    {formatWibDateTime(report.updated_at)}
+                  </span>
                 </div>
               </div>
+            </section>
 
-              {/* Rincian Rapi: 2 Kolom Lega (Sekolah Terlapor & Kategori Pengaduan) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs">
-                <div className="space-y-1">
-                  <span className="text-[11px] text-[#64748B] block font-medium">
-                    Sekolah Terlapor:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onBackToSchoolProfile}
-                    className="font-bold text-[#2E6496] hover:underline flex items-center gap-1.5 truncate max-w-full text-left cursor-pointer"
-                  >
-                    <Building2 className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">
-                      {currentReportData?.schoolName || school.name}
-                    </span>
-                  </button>
+            {/* 2. Banner Kondisi Alternatif: Perlu Informasi Tambahan / Diteruskan / Tidak Dapat Ditindaklanjuti */}
+            {report.waiting_additional_info && report.status === 'PEMERIKSAAN_LANJUTAN' && (
+              <section
+                aria-label="Permintaan Informasi Tambahan"
+                className="bg-[#FFFBEB] border border-[#FDE68A] rounded-2xl p-5 sm:p-6 space-y-2"
+              >
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#92400E]">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Perlu Informasi Tambahan</span>
                 </div>
+                <h2 className="text-base font-bold text-[#1E293B]">
+                  Petugas Membutuhkan Keterangan atau Bukti Tambahan dari Kamu
+                </h2>
+                <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+                  Baca pesan petugas pada bagian Komunikasi Pemeriksaan di bawah ini, lalu kirimkan penjelasan atau unggah bukti tambahan tanpa perlu mencantumkan identitas pribadi.
+                </p>
+              </section>
+            )}
 
+            {report.is_forwarded && (
+              <section className="bg-[#EBF3F8] border border-[#C9DFDC] rounded-2xl p-5 flex items-start gap-3">
+                <Info className="w-5 h-5 text-[#1D4F7A] shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <span className="text-[11px] text-[#64748B] block font-medium">
-                    Kategori Pengaduan:
-                  </span>
-                  <span className="font-bold text-[#1E293B] block truncate">
-                    {currentReportData?.category || reportCategory}
-                  </span>
+                  <h2 className="text-sm font-bold text-[#1E293B]">
+                    Proses Diteruskan ke Instansi Terkait
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+                    Laporan ini sedang dikoordinasikan atau diteruskan kepada{' '}
+                    <strong className="text-[#1E293B]">
+                      {report.forwarded_to || 'instansi pengawasan terkait'}
+                    </strong>{' '}
+                    sesuai kewenangan pemeriksaan.
+                  </p>
                 </div>
-              </div>
+              </section>
+            )}
 
-              {/* Bukti Dokumen Terlampir jika ada */}
-              {currentReportData?.attachments &&
-                currentReportData.attachments.length > 0 && (
-                  <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] space-y-1.5">
-                    <span className="text-[11px] font-bold text-[#1E293B] uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#2E6496]" />
-                      <span>
-                        Dokumen Bukti ({currentReportData.attachments.length})
-                      </span>
+            {report.status === 'TIDAK_DAPAT_DITINDAKLANJUTI' && (
+              <section className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-6 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#991B1B]">
+                    Status Akhir Laporan: Tidak Dapat Ditindaklanjuti
+                  </span>
+                  {report.resolved_at && (
+                    <span className="font-mono text-xs text-[#991B1B] tabular-nums">
+                      {formatWibDateTime(report.resolved_at)}
                     </span>
-                    <div className="flex flex-wrap gap-2">
-                      {currentReportData.attachments.map((att, idx) => (
-                        <div
-                          key={idx}
-                          className="px-2.5 py-1 rounded-lg bg-[#FAF8F5] border border-[#E4E0D8] text-[11px] text-[#1E293B] flex items-center gap-1.5"
-                        >
-                          <FileCheck className="w-3 h-3 text-[#16A34A]" />
-                          <span className="font-medium truncate max-w-[200px]">
-                            {att.name}
-                          </span>
-                          <span className="text-[#64748B] font-mono tabular-nums">
-                            ({att.sizeFormatted})
-                          </span>
-                        </div>
-                      ))}
+                  )}
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-[#1E293B]">
+                  Keterangan dari Petugas Dinas Pendidikan
+                </h2>
+                <p className="text-xs sm:text-sm text-[#1E293B] bg-[#FFFFFF] border border-[#FECACA] rounded-xl p-4 leading-relaxed">
+                  {report.rejection_reason ||
+                    'Laporan belum memenuhi persyaratan informasi awal untuk dilanjutkan ke tahap pemeriksaan.'}
+                </p>
+                <p className="text-xs text-[#475569]">
+                  Apabila kamu memiliki bukti atau rincian informasi baru yang lebih lengkap, kamu tetap dapat mengirimkan laporan baru melalui kanal pelaporan DARADIK.
+                </p>
+              </section>
+            )}
+
+            {/* 3. Kartu Hasil Penanganan (Tahap 5 Selesai) */}
+            {report.status === 'COMPLETED' && (
+              <section className="bg-[#FFFFFF] border-2 border-[#2E6496] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#E4E0D8]">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#2E6496]">
+                      Tahap 5 • Hasil Penanganan Dinas Pendidikan
+                    </span>
+                    <h2 className="font-sturdy-heading text-lg sm:text-xl font-extrabold text-[#1E293B]">
+                      {outcomeOption?.label || 'Pemeriksaan Selesai'}
+                    </h2>
+                  </div>
+
+                  {report.resolved_at && (
+                    <div className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-[#1E293B] bg-[#FAF8F5] border border-[#E4E0D8] px-3 py-1.5 rounded-lg tabular-nums">
+                      <Clock className="w-3.5 h-3.5 text-[#2E6496]" />
+                      <span>{formatWibDateTime(report.resolved_at)}</span>
                     </div>
+                  )}
+                </div>
+
+                {outcomeOption && (
+                  <div
+                    className={`p-3.5 rounded-xl border text-xs sm:text-sm font-medium ${
+                      outcomeOption.code === 'HAS_INDICATION'
+                        ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]'
+                        : outcomeOption.code === 'NO_INDICATION'
+                        ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]'
+                        : 'bg-[#FAF8F5] border-[#C9DFDC] text-[#1E293B]'
+                    }`}
+                  >
+                    {outcomeOption.parentSummary}
                   </div>
                 )}
-            </div>
 
-            {/* ===============================================================
-                2. TIMELINE PENANGANAN DENGAN PENEMPATAN WAKTU PRESISI & RAPI
-               =============================================================== */}
-            <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
-                <div className="space-y-0.5">
-                  <h3 className="font-sturdy-heading text-sm sm:text-base font-bold text-[#1E293B]">
-                    Kronologi & Linimasa Penanganan
-                  </h3>
-                  <p className="text-[11px] text-[#64748B]">
-                    Status dan catatan waktu setiap tahapan pemeriksaan secara berkala.
-                  </p>
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold text-[#1E293B] block">
+                    Catatan Hasil Penanganan untuk Pelapor:
+                  </span>
+                  <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs sm:text-sm text-[#1E293B] leading-relaxed whitespace-pre-wrap">
+                    {report.public_resolution_note ||
+                      'Pemeriksaan atas laporan telah diselesaikan oleh petugas Dinas Pendidikan.'}
+                  </div>
                 </div>
-                <span className="text-xs font-mono font-bold text-[#2E6496] bg-[#EBF3F8] px-2.5 py-1 rounded-lg shrink-0">
-                  Tahap {currentStageStep} / 5
-                </span>
+
+                <p className="text-[11px] text-[#475569] leading-relaxed">
+                  Catatan: Hasil penanganan di atas merupakan kesimpulan pemeriksaan administratif Dinas Pendidikan sesuai kewenangannya, bukan merupakan putusan pengadilan atau penegakan hukum pidana.
+                </p>
+              </section>
+            )}
+
+            {/* 4. Timeline 5 Tahapan Utama */}
+            <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="space-y-1">
+                <h2 className="font-sturdy-heading text-lg sm:text-xl font-extrabold text-[#1E293B]">
+                  Tahapan Pemeriksaan Laporan
+                </h2>
+                <p className="text-xs sm:text-sm text-[#475569]">
+                  Seluruh status dan waktu di bawah ini tercatat otomatis berdasarkan tindakan nyata petugas di sistem Dinas Pendidikan.
+                </p>
               </div>
 
-              {/* Daftar Linimasa Vertikal Terstruktur */}
-              <div className="relative pl-2 sm:pl-3">
-                {/* Garis vertikal pembimbing linimasa */}
-                <div className="absolute left-6 sm:left-7 top-4 bottom-6 w-0.5 bg-[#E4E0D8]" />
+              <ol className="space-y-4">
+                {timelineStages.map((stage, idx) => {
+                  const isLast = idx === timelineStages.length - 1;
+                  const isDone = stage.state === 'done';
+                  const isCurrent = stage.state === 'current';
+                  const isStopped = stage.state === 'stopped';
+                  const isSkipped = stage.state === 'skipped';
 
-                <div className="space-y-4 sm:space-y-5">
-                  {TRACKING_STAGES.map((st, idx) => {
-                    const timeMeta = getStageTimestamp(
-                      st.step,
-                      currentStageStep,
-                      currentReportData?.createdAtRaw || currentReportData?.date,
-                      currentReportData?.letterDocument?.timeline
-                    );
-                    const isLastStep = idx === TRACKING_STAGES.length - 1;
-
-                    // Konfigurasi visual lingkaran tahapan
-                    let circleStyle = 'bg-[#FFFFFF] text-[#94A3B8] border-2 border-[#CBD5E1]';
-                    let titleStyle = 'text-[#64748B]';
-
-                    if (timeMeta.isDone) {
-                      if (isLastStep) {
-                        // Tahap 5: Merah jika terbukti ada pelanggaran, Hijau jika aman
-                        if (selectedVerdict.isViolation) {
-                          circleStyle = 'bg-[#DC2626] text-white border-2 border-[#DC2626] shadow-2xs';
-                          titleStyle = 'text-[#DC2626] font-extrabold';
-                        } else {
-                          circleStyle = 'bg-[#16A34A] text-white border-2 border-[#16A34A] shadow-2xs';
-                          titleStyle = 'text-[#16A34A] font-extrabold';
-                        }
-                      } else {
-                        circleStyle = 'bg-[#16A34A] text-white border-2 border-[#16A34A] shadow-2xs';
-                        titleStyle = 'text-[#16A34A] font-bold';
-                      }
-                    } else if (timeMeta.isCurrent) {
-                      circleStyle = 'bg-[#2E6496] text-white border-2 border-[#2E6496] shadow-xs';
-                      titleStyle = 'text-[#2E6496] font-extrabold';
-                    }
-
-                    return (
-                      <div key={st.step} className="relative flex items-start gap-3.5 sm:gap-4 z-10">
-                        {/* Lingkaran Indikator Tahap */}
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${circleStyle}`}
-                        >
-                          {timeMeta.isDone ? (
-                            isLastStep && selectedVerdict.isViolation ? (
-                              <AlertCircle className="w-4 h-4 text-white stroke-[2.5]" />
-                            ) : (
-                              <Check className="w-4 h-4 text-white stroke-[3]" />
-                            )
-                          ) : (
-                            <span className="font-mono">{st.step}</span>
-                          )}
-                        </div>
-
-                        {/* Kotak Rincian Tahap & Penempatan Waktu yang Rapi */}
-                        <div
-                          className={`flex-1 min-w-0 p-3.5 sm:p-4 rounded-xl border transition-all ${
-                            timeMeta.isCurrent
-                              ? 'bg-[#FFFFFF] border-[#2E6496]/50 shadow-xs'
-                              : timeMeta.isDone
-                              ? isLastStep && selectedVerdict.isViolation
-                                ? 'bg-[#FFFBFB] border-[#DC2626]/30'
-                                : 'bg-[#FAF8F5] border-[#E4E0D8]'
-                              : 'bg-[#FAF8F5]/60 border-[#E4E0D8]/60 opacity-75'
+                  return (
+                    <li key={stage.statusKey} className="relative pl-9">
+                      {!isLast && (
+                        <span
+                          aria-hidden="true"
+                          className={`absolute left-[13px] top-8 bottom-[-18px] w-[2px] ${
+                            isDone ? 'bg-[#2E6496]' : 'bg-[#E2E8F0]'
                           }`}
-                        >
-                          {/* Baris Atas: Judul Tahap + Status Badge + Penempatan Waktu Presisi */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 pb-1.5 border-b border-[#E4E0D8]/60">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs sm:text-sm tracking-tight ${titleStyle}`}>
-                                {st.label}
-                              </span>
-                              {timeMeta.badgeText && (
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                    timeMeta.isDone
-                                      ? isLastStep && selectedVerdict.isViolation
-                                        ? 'bg-[#FEE2E2] text-[#DC2626]'
-                                        : 'bg-[#DCFCE7] text-[#16A34A]'
-                                      : timeMeta.isCurrent
-                                      ? 'bg-[#EBF3F8] text-[#2E6496]'
-                                      : 'bg-[#F1F5F9] text-[#64748B]'
-                                  }`}
-                                >
-                                  {timeMeta.badgeText}
-                                </span>
-                              )}
-                            </div>
+                        />
+                      )}
 
-                            {/* Waktu Linimasa: Format Bersih, Tabular Nums, Tidak Pernah Terpotong */}
-                            <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#64748B] tabular-nums shrink-0 self-start sm:self-auto">
-                              <Clock className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
-                              <span>{timeMeta.timeText}</span>
-                            </div>
+                      {/* Indikator Lingkaran Tahap */}
+                      <span
+                        aria-hidden="true"
+                        className={`absolute left-0 top-1 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
+                          isDone
+                            ? 'bg-[#2E6496] border-[#2E6496] text-[#FFFFFF]'
+                            : isCurrent
+                            ? 'bg-[#EBF3F8] border-[#2E6496] text-[#1D4F7A]'
+                            : isStopped
+                            ? 'bg-[#FEF2F2] border-[#991B1B] text-[#991B1B]'
+                            : 'bg-[#FAF8F5] border-[#CBD5E1] text-[#475569]'
+                        }`}
+                      >
+                        {isDone ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : stage.step}
+                      </span>
+
+                      <div
+                        className={`p-4 rounded-xl border space-y-2 ${
+                          isCurrent
+                            ? 'bg-[#EBF3F8]/45 border-[#2E6496]'
+                            : isStopped
+                            ? 'bg-[#FEF2F2]/60 border-[#FECACA]'
+                            : isDone
+                            ? 'bg-[#FFFFFF] border-[#C9DFDC]'
+                            : 'bg-[#FAF8F5] border-[#E4E0D8]'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm sm:text-base font-bold text-[#1E293B]">
+                              {stage.step}. {stage.label}
+                            </h3>
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                                isDone
+                                  ? 'bg-[#DCFCE7] text-[#166534]'
+                                  : isCurrent
+                                  ? 'bg-[#2E6496] text-[#FFFFFF]'
+                                  : isStopped
+                                  ? 'bg-[#FEE2E2] text-[#991B1B]'
+                                  : isSkipped
+                                  ? 'bg-[#E2E8F0] text-[#1E293B]'
+                                  : 'bg-[#E2E8F0]/70 text-[#475569]'
+                              }`}
+                            >
+                              {stage.stateLabel}
+                            </span>
                           </div>
 
-                          <p className="text-xs text-[#475569] leading-relaxed pt-2">
-                            {st.description}
-                          </p>
+                          <span className="font-mono text-[11px] sm:text-xs text-[#475569] tabular-nums">
+                            {stage.timestampWib || 'Belum dimulai'}
+                          </span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
 
-            {/* ===============================================================
-                3. BALASAN & PUTUSAN RESMI DARI DINAS PENDIDIKAN
-                (HANYA MUNCUL KETIKA TAHAP 5 / TINDAK LANJUT SELESAI)
-               =============================================================== */}
-            {currentStageStep === 5 ? (
-              <div
-                className={`bg-[#FFFFFF] border rounded-2xl p-6 shadow-xs space-y-4 animate-view-enter ${selectedVerdict.cardBorder}`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E0D8]">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold shrink-0 ${selectedVerdict.iconBg}`}
+                        <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
+                          {stage.description}
+                        </p>
+
+                        {/* Tampilkan metode pemeriksaan aktual jika tahap 4 memiliki catatan kegiatan nyata */}
+                        {stage.step === 4 &&
+                          report.inspection_methods &&
+                          report.inspection_methods.length > 0 && (
+                            <div className="pt-1 flex flex-wrap gap-1.5">
+                              {report.inspection_methods.map((methodCode) => (
+                                <span
+                                  key={methodCode}
+                                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] text-[#1E293B]"
+                                >
+                                  {getInspectionMethodLabel(methodCode)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+
+            {/* 5. Komunikasi Anonim Dua Arah & Permintaan Informasi Tambahan */}
+            {(messages.length > 0 || canReplyAdditionalInfo) && (
+              <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-[#2E6496]" />
+                    <h2 className="font-sturdy-heading text-lg sm:text-xl font-extrabold text-[#1E293B]">
+                      Komunikasi Pemeriksaan Anonim
+                    </h2>
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#475569]">
+                    Riwayat pesan klarifikasi dan bukti tambahan antara petugas Dinas Pendidikan dan pelapor tanpa menampilkan identitas pribadi.
+                  </p>
+                </div>
+
+                {messages.length > 0 ? (
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                    {messages.map((msg) => {
+                      const isOfficer = msg.sender_type === 'OFFICER';
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`p-4 rounded-2xl border space-y-2 ${
+                            isOfficer
+                              ? 'bg-[#EBF3F8]/60 border-[#C9DFDC]'
+                              : 'bg-[#FAF8F5] border-[#E4E0D8]'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                            <span
+                              className={`font-bold ${
+                                isOfficer ? 'text-[#1D4F7A]' : 'text-[#1E293B]'
+                              }`}
+                            >
+                              {msg.sender_label}
+                            </span>
+                            <span className="font-mono text-[11px] text-[#475569] tabular-nums">
+                              {formatWibDateTime(msg.created_at)}
+                            </span>
+                          </div>
+
+                          <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed whitespace-pre-wrap">
+                            {msg.message}
+                          </p>
+
+                          {msg.attachments_json && msg.attachments_json.length > 0 && (
+                            <div className="pt-1 flex flex-wrap gap-2">
+                              {msg.attachments_json.map((att, i) =>
+                                att.url ? (
+                                  <button
+                                    key={`${msg.id}-att-${i}`}
+                                    type="button"
+                                    onClick={() =>
+                                      setLightboxImage({
+                                        url: att.url!,
+                                        title: att.name,
+                                      })
+                                    }
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-semibold text-[#2E6496] hover:bg-[#EBF3F8] cursor-pointer"
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5" />
+                                    <span>{att.name}</span>
+                                  </button>
+                                ) : (
+                                  <span
+                                    key={`${msg.id}-att-${i}`}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFFFFF] border border-[#E4E0D8] text-xs text-[#475569]"
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5" />
+                                    <span>{att.name}</span>
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#475569] bg-[#FAF8F5] border border-[#E4E0D8] rounded-xl p-4">
+                    Belum ada pesan komunikasi pada laporan ini.
+                  </p>
+                )}
+
+                {canReplyAdditionalInfo && (
+                  <form
+                    onSubmit={handleSendAdditionalInfo}
+                    className="pt-4 border-t border-[#E4E0D8] space-y-3"
+                  >
+                    <label
+                      htmlFor="reporter-reply-textarea"
+                      className="block text-xs sm:text-sm font-bold text-[#1E293B]"
                     >
-                      <FileBadge2 className="w-4 h-4" />
+                      Balas Pesan atau Tambah Bukti Pendukung Secara Anonim
+                    </label>
+
+                    {replyError && (
+                      <div
+                        role="alert"
+                        className="p-3 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-semibold text-[#991B1B]"
+                      >
+                        {replyError}
+                      </div>
+                    )}
+
+                    <textarea
+                      id="reporter-reply-textarea"
+                      rows={3}
+                      value={replyMessage}
+                      onChange={(e) => {
+                        setReplyMessage(e.target.value);
+                        if (replyError) setReplyError(null);
+                      }}
+                      placeholder="Tuliskan informasi tambahan untuk membantu pemeriksaan petugas (hindari menuliskan nama pribadi atau nomor HP)..."
+                      className="w-full p-3.5 rounded-xl bg-[#FAF8F5] focus:bg-[#FFFFFF] border border-[#C9DFDC] text-xs sm:text-sm text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496]"
+                    />
+
+                    {replyFiles.length > 0 && (
+                      <div className="space-y-2">
+                        {replyFiles.map((rf) => (
+                          <div
+                            key={rf.id}
+                            className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex items-center justify-between gap-2 text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Paperclip className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                              <span className="font-semibold text-[#1E293B] truncate">
+                                {rf.name}
+                              </span>
+                              <span className="text-[#475569] shrink-0">
+                                ({rf.sizeFormatted})
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveReplyFile(rf.id)}
+                              className="p-1 text-[#475569] hover:text-[#991B1B] cursor-pointer"
+                              aria-label={`Hapus berkas ${rf.name}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <input
+                      ref={replyFileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      onChange={handleReplyFileSelect}
+                      className="hidden"
+                    />
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => replyFileInputRef.current?.click()}
+                        disabled={isCompressingReply || replyFiles.length >= 3 || isSendingReply}
+                        className="min-h-[42px] px-4 py-2 rounded-xl border border-[#C9DFDC] bg-[#FAF8F5] hover:bg-[#EBF3F8] text-xs font-bold text-[#1E293B] inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-[#2E6496]" />
+                        <span>
+                          {isCompressingReply
+                            ? 'Memproses Berkas...'
+                            : `Unggah Bukti Tambahan (${replyFiles.length}/3)`}
+                        </span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={isSendingReply || isCompressingReply}
+                        className="min-h-[42px] px-5 py-2.5 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>
+                          {isSendingReply ? 'Mengirim Balasan...' : 'Kirim Informasi Tambahan'}
+                        </span>
+                      </button>
                     </div>
-                    <div>
-                      <h3 className="font-sturdy-heading text-sm sm:text-base font-extrabold text-[#1E293B]">
-                        Putusan & Berita Acara Dinas Pendidikan
-                      </h3>
-                      <span className="text-[11px] text-[#64748B]">
-                        Hasil Resmi Pemeriksaan Lapangan & Audit Inspektorat Daerah
+                  </form>
+                )}
+              </section>
+            )}
+
+            {/* 6. Ringkasan Isi Laporan & Bukti yang Dikirim Pelapor */}
+            <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#2E6496]" />
+                <h2 className="font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]">
+                  Arsip Kronologi &amp; Bukti yang Kamu Kirimkan
+                </h2>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs sm:text-sm text-[#1E293B] leading-relaxed whitespace-pre-wrap">
+                {report.notes}
+              </div>
+
+              {report.attachments_json && report.attachments_json.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-[#475569] block">
+                    Lampiran Bukti ({report.attachments_json.length} berkas):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {report.attachments_json.map((att, idx) => (
+                      <div
+                        key={`rep-att-${idx}`}
+                        className="p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Paperclip className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                          <div className="truncate">
+                            <span className="font-semibold text-[#1E293B] block truncate">
+                              {att.name}
+                            </span>
+                            <span className="text-[11px] text-[#475569]">
+                              {att.sizeFormatted}
+                            </span>
+                          </div>
+                        </div>
+
+                        {att.url && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setLightboxImage({ url: att.url!, title: att.name })
+                            }
+                            className="px-2.5 py-1.5 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] font-semibold hover:bg-[#EBF3F8] inline-flex items-center gap-1 cursor-pointer shrink-0"
+                          >
+                            <span>Lihat</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* 7. Riwayat Perubahan Status Kronologis (Tanpa Catatan Internal) */}
+            {history.length > 0 && (
+              <section className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+                <h2 className="font-sturdy-heading text-base sm:text-lg font-bold text-[#1E293B]">
+                  Catatan Waktu Perubahan Status
+                </h2>
+
+                <div className="divide-y divide-[#E4E0D8] border border-[#E4E0D8] rounded-xl overflow-hidden">
+                  {history.map((h) => (
+                    <div
+                      key={h.id}
+                      className="p-3.5 sm:p-4 bg-[#FFFFFF] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-[#1E293B] flex items-center gap-2 flex-wrap">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                          <span>{getParentStatusLabel(h.new_status)}</span>
+                          <span className="text-[11px] font-normal text-[#475569]">
+                            • {h.actor_label}
+                          </span>
+                        </div>
+                        {h.note && (
+                          <p className="text-[#475569] pl-5 leading-relaxed">{h.note}</p>
+                        )}
+                      </div>
+
+                      <span className="font-mono text-[11px] text-[#475569] tabular-nums pl-5 sm:pl-0 shrink-0">
+                        {formatWibDateTime(h.created_at)}
                       </span>
                     </div>
-                  </div>
-
-                  {/* Badge Putusan: Merah jika Terbukti Pelanggaran, Hijau jika Aman */}
-                  <span
-                    className={`px-3 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 self-start sm:self-auto ${selectedVerdict.badgeColor}`}
-                  >
-                    {selectedVerdict.isViolation ? (
-                      <AlertCircle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
-                    )}
-                    <span>{selectedVerdict.badge}</span>
-                  </span>
+                  ))}
                 </div>
-
-                {/* Surat Hasil Putusan Resmi */}
-                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] space-y-3">
-                  <div className="flex items-center justify-between text-[11px] text-[#64748B] border-b border-[#E4E0D8] pb-2">
-                    <span className="font-bold text-[#1E293B]">
-                      {selectedVerdict.title}
-                    </span>
-                    <span className="font-mono tabular-nums">
-                      {formatReportDateTime(currentReportData?.createdAtRaw || currentReportData?.date).dateFormatted}
-                    </span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-[#1E293B] leading-relaxed font-normal">
-                    {selectedVerdict.text}
-                  </p>
-
-                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] border-t border-[#E4E0D8]">
-                    <span
-                      className={`font-semibold ${
-                        selectedVerdict.isViolation ? 'text-[#DC2626]' : 'text-[#16A34A]'
-                      }`}
-                    >
-                      Tindak Lanjut: {selectedVerdict.actionText}
-                    </span>
-                    <span className="font-mono text-[#64748B]">
-                      No. Tiket: {activeTicket}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tombol Pengganti Variasi Putusan (Merah Terbukti vs Hijau Aman) */}
-                <div className="pt-1 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVerdictType((prev) =>
-                        prev === 'TERBUKTI' ? 'TIDAK_TERBUKTI' : 'TERBUKTI'
-                      )
-                    }
-                    className="text-[11px] text-[#64748B] hover:text-[#2E6496] flex items-center gap-1.5 cursor-pointer transition-colors"
-                    title="Klik untuk melihat skenario putusan lainnya"
-                  >
-                    <RefreshCw className="w-3 h-3 text-[#2E6496]" />
-                    <span>Ubah Skenario Hasil:</span>
-                    <span
-                      className={`font-bold underline ${
-                        verdictType === 'TERBUKTI' ? 'text-[#16A34A]' : 'text-[#DC2626]'
-                      }`}
-                    >
-                      {verdictType === 'TERBUKTI'
-                        ? 'Tampilkan Jika Aman (Hijau)'
-                        : 'Tampilkan Jika Terbukti Bersalah (Merah)'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* KETIKA BELUM TAHAP 5: TAMPILKAN STATUS PENJELASAN RINGKAS */
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] text-xs text-[#475569] flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-2.5">
-                  <Clock className="w-4 h-4 text-[#2E6496] shrink-0" />
-                  <div>
-                    <span className="font-bold text-[#1E293B] block">
-                      Pemeriksaan Berkas Sedang Berjalan
-                    </span>
-                    <span className="text-[11px] text-[#64748B]">
-                      Balasan resmi dan surat putusan dari Dinas Pendidikan akan diterbitkan di sini secara otomatis setelah tahapan tindak lanjut selesai.
-                    </span>
-                  </div>
-                </div>
-
-                <span className="text-[11px] font-mono text-[#2E6496] bg-[#EBF3F8] px-2 py-1 rounded-md shrink-0 font-semibold hidden sm:inline-block">
-                  Tahap {currentStageStep}/5
-                </span>
-              </div>
+              </section>
             )}
           </div>
         )}
       </div>
+      )}
+      </div>
+
+      {/* Modal Pratinjau Bukti */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            className="bg-[#FFFFFF] rounded-2xl max-w-2xl w-full p-4 space-y-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-[#E4E0D8]">
+              <span className="text-sm font-bold text-[#1E293B] truncate">
+                {lightboxImage.title}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLightboxImage(null)}
+                className="p-1.5 rounded-lg text-[#475569] hover:text-[#1E293B] cursor-pointer"
+                aria-label="Tutup pratinjau berkas"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-[#FAF8F5] rounded-xl p-2">
+              {lightboxImage.url.toLowerCase().endsWith('.pdf') ? (
+                <a
+                  href={lightboxImage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 rounded-xl bg-[#2E6496] text-[#FFFFFF] text-xs font-bold inline-flex items-center gap-2"
+                >
+                  <span>Buka Dokumen PDF di Tab Baru</span>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              ) : (
+                <img
+                  src={lightboxImage.url}
+                  alt={lightboxImage.title}
+                  className="max-h-[65vh] w-auto object-contain rounded-lg"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

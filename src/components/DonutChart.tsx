@@ -290,17 +290,17 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
         </p>
       </div>
 
-      {/* RIGHT 7 COLS: Clean, Scrollable List Matching Donut Height */}
+      {/* RIGHT 7 COLS: Clean, Scrollable List Matching Donut Height on Desktop, Full Natural List on Mobile */}
       <div className="md:col-span-7 flex flex-col justify-start relative">
         <div className="flex items-center justify-between text-[11px] text-[#64748B] font-medium mb-1.5 px-0.5">
           <span>{slices.length} Komponen Penggunaan</span>
-          <span className="text-[#2E6496] font-semibold">Dapat digulir / scroll</span>
+          <span className="hidden md:inline text-[#2E6496] font-semibold">Dapat digulir / scroll</span>
         </div>
 
         <div
           ref={scrollContainerRef}
           onScroll={checkScroll}
-          className="max-h-[285px] sm:max-h-[305px] md:max-h-[300px] overflow-y-auto pr-1.5 space-y-2 school-custom-scroll pb-6"
+          className="max-h-none overflow-visible md:max-h-[305px] md:overflow-y-auto md:pr-1.5 space-y-2.5 sm:space-y-2 school-custom-scroll md:pb-6"
         >
           {slices.map((comp) => {
             const isSelected = activeIndex === comp.idx;
@@ -312,13 +312,37 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
                 onClick={() =>
                   setActiveIndex(activeIndex === comp.idx ? null : comp.idx)
                 }
-                className={`p-3 rounded-xl border transition-colors duration-150 cursor-pointer ${
+                className={`p-3 sm:p-3.5 rounded-xl border transition-colors duration-150 cursor-pointer ${
                   isSelected
                     ? 'bg-[#EBF3F8]/50 border-[#2E6496]'
                     : 'bg-[#FFFFFF] border-[#C9DFDC]/80 hover:border-[#66A3BF]'
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
+                {/* Mobile Stacked Header: Badge on Left, Amount on Right, Full-Width Title Below (<640px) */}
+                <div className="sm:hidden space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="px-2 py-0.5 rounded-md text-[#FFFFFF] text-xs font-extrabold shrink-0 tabular-nums"
+                      style={{ backgroundColor: comp.color }}
+                    >
+                      {comp.percentage}%
+                    </span>
+                    <span className="text-xs font-mono font-extrabold text-[#1E293B] tabular-nums">
+                      {formatRupiah(Math.round(comp.amount * animProgress))}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-[#1E293B] leading-snug">
+                      {comp.label}
+                    </h4>
+                    <p className="mt-0.5 text-[11px] text-[#64748B] leading-relaxed">
+                      {comp.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tablet & Desktop Horizontal Layout (>=640px) */}
+                <div className="hidden sm:flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2.5 min-w-0">
                     <span
                       className="px-2 py-0.5 rounded-md text-[#FFFFFF] text-xs font-extrabold shrink-0 tabular-nums mt-0.5"
@@ -327,7 +351,7 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
                       {comp.percentage}%
                     </span>
                     <div className="min-w-0">
-                      <h4 className="text-xs sm:text-sm font-bold text-[#1E293B] leading-snug">
+                      <h4 className="text-sm font-bold text-[#1E293B] leading-snug">
                         {comp.label}
                       </h4>
                       <p className="mt-1 text-xs text-[#64748B] leading-relaxed">
@@ -337,7 +361,7 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
                   </div>
 
                   <div className="text-right shrink-0 tabular-nums">
-                    <span className="text-xs sm:text-sm font-extrabold text-[#1E293B] block">
+                    <span className="text-sm font-extrabold text-[#1E293B] block">
                       {formatRupiah(Math.round(comp.amount * animProgress))}
                     </span>
                   </div>
@@ -347,12 +371,12 @@ export const InteractiveDonutChart: React.FC<DonutChartProps> = ({
           })}
         </div>
 
-        {/* Scroll Indicator Hint at Bottom */}
+        {/* Scroll Indicator Hint at Bottom (Desktop Only) */}
         {hasMoreToScroll && (
           <button
             type="button"
             onClick={handleScrollDown}
-            className="absolute bottom-0 left-0 right-1.5 pt-5 pb-1 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF]/90 to-transparent flex items-center justify-center gap-1 text-[11px] font-bold text-[#2E6496] hover:text-[#1E293B] cursor-pointer transition-colors z-10"
+            className="hidden md:flex absolute bottom-0 left-0 right-1.5 pt-5 pb-1 bg-gradient-to-t from-[#FFFFFF] via-[#FFFFFF]/90 to-transparent items-center justify-center gap-1 text-[11px] font-bold text-[#2E6496] hover:text-[#1E293B] cursor-pointer transition-colors z-10"
           >
             <span>Gulir ke bawah untuk rincian lainnya</span>
             <ChevronDown className="w-3.5 h-3.5 animate-bounce" />

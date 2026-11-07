@@ -412,6 +412,23 @@
   transform: translateY(0.5px);
 }
 
+/* Shake Animation for Empty Search Validation */
+@keyframes daradikShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-7px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(7px);
+  }
+}
+
+.animate-daradik-shake {
+  animation: daradikShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 /* Crisp, Clean & Subtle Light Sheen on Hover (Simple & Non-Distracting) */
 @keyframes cleanLightSweep {
   0% {
@@ -616,10 +633,28 @@
   }
 }
 
+@keyframes mobilePageEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .animate-view-enter {
   animation: concavePageEnter 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
   transform-origin: 50% 12%;
   will-change: transform, opacity, filter;
+}
+
+@media (max-width: 639px) {
+  .animate-view-enter {
+    animation: mobilePageEnter 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
+  }
 }
 
 /* Accessibility: Respect prefers-reduced-motion across all animations */
@@ -849,6 +884,64 @@
   animation-name: ccw-square-3;
 }
 
+.ccw-sq-4 {
+  background-color: #475569;
+  box-shadow: 0 1px 2px rgba(71, 85, 105, 0.14);
+  animation-name: ccw-square-4;
+}
+
+/* Sembunyikan penuh widget chatbot publik pada halaman /admin */
+body.is-admin-route .bosp-widget-root {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Native <dialog> modal scroll lock & backdrop (Modern Web Guidance) */
+html:has(dialog:modal) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+.daradik-modal-dialog,
+dialog.daradik-modal-dialog {
+  border: 1px solid #C9DFDC;
+  border-radius: 16px;
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  color: #1E293B;
+  max-width: min(560px, calc(100vw - 24px));
+  width: 100%;
+  overscroll-behavior: contain;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+}
+
+.daradik-modal-dialog::backdrop,
+dialog.daradik-modal-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+}
+
+/* Affordance & Focus-Visible Kontras Tinggi (WCAG AA) */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #2E6496;
+  outline-offset: 2px;
+}
+
 .school-custom-scroll {
   scrollbar-width: thin;
   scrollbar-color: #C9DFDC transparent;
@@ -868,3 +961,127 @@
 }
 
 
+
+/* =====================================================================
+   MOBILE SHELL (bottom navigation, safe area, keyboard & form comfort)
+   Hanya berlaku di bawah breakpoint sm (640px) kecuali dinyatakan lain,
+   sehingga tampilan desktop tidak berubah.
+   ===================================================================== */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --mobile-nav-h: 62px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* clip (bukan hidden) agar position: sticky di dalam halaman tetap bekerja */
+body {
+  overflow-x: clip;
+}
+
+/* Offset konten di bawah header tetap, termasuk notch */
+.app-top-offset {
+  padding-top: calc(5rem + var(--safe-top));
+}
+
+.app-header-fixed {
+  top: calc(0.5rem + var(--safe-top));
+}
+
+@media (min-width: 640px) {
+  .app-header-fixed {
+    top: calc(0.75rem + var(--safe-top));
+  }
+}
+
+/* Ruang cadangan agar konten terakhir tidak tertutup bottom nav */
+.has-mobile-nav {
+  padding-bottom: calc(var(--mobile-nav-h) + var(--safe-bottom));
+}
+
+@media (min-width: 640px) {
+  .has-mobile-nav {
+    padding-bottom: 0;
+  }
+}
+
+/* Bottom navigation: solid, tipis, mengikuti safe area */
+.mobile-nav {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  :root {
+    --mobile-nav-h: 48px;
+  }
+  .mobile-nav-item {
+    flex-direction: row;
+    gap: 0.375rem;
+    min-height: 48px;
+  }
+}
+
+/* Keyboard virtual terbuka: lepas elemen fixed bawah agar input & tombol kirim terlihat */
+body.kb-open .mobile-nav {
+  display: none;
+}
+
+body.kb-open .has-mobile-nav {
+  padding-bottom: 0;
+}
+
+/* Form nyaman di HP: font 16px mencegah zoom otomatis iOS, scroll-margin menjaga
+   field tidak tertutup keyboard / bottom nav saat fokus */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+input,
+select,
+textarea {
+  scroll-margin-top: 96px;
+  scroll-margin-bottom: 140px;
+}
+
+/* Target sentuh minimal 44px pada perangkat layar sentuh untuk kontrol umum */
+@media (pointer: coarse) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Scroll container horizontal yang jelas pada HP (tabel / chip) */
+.scroll-x-hint {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Widget chatbot: naik di atas bottom nav, turun lagi saat keyboard terbuka */
+@media (max-width: 639px) {
+  .bosp-widget-root {
+    bottom: calc(var(--mobile-nav-h) + var(--safe-bottom) + 12px) !important;
+    right: calc(14px + var(--safe-right)) !important;
+  }
+  body.kb-open .bosp-widget-root {
+    bottom: calc(14px + var(--safe-bottom)) !important;
+  }
+  body.is-admin-route .bosp-widget-root {
+    display: none !important;
+  }
+}

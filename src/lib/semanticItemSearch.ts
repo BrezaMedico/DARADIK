@@ -26,279 +26,467 @@ export interface SemanticSearchResult {
 }
 
 /**
- * Common Indonesian synonym and semantic cluster dictionary for school procurement & BOSP items.
- * Maps semantic concepts and alternative terms to target keyword groups.
+ * Kamus Sinonim & Klaster Semantik Lengkap Pembelanjaan Sekolah & Dana BOSP
+ * Mendukung pencarian kata apa pun (universal) dari orang tua, murid, maupun guru.
  */
-const SEMANTIC_CLUSTERS: Record<string, { targetKeywords: string[]; label: string; concept: string }> = {
-  // 1. Pendingin & Ventilasi
-  'kipas': {
-    targetKeywords: ['kipas', 'angin', 'exhaust', 'ventilasi', 'pendingin', 'dinding'],
-    label: 'Kipas Angin & Ventilasi',
-    concept: 'Peralatan sirkulasi udara & pendingin ruangan lab',
+const SEMANTIC_CLUSTERS: Record<
+  string,
+  { targetKeywords: string[]; label: string; concept: string; fallbackTargetId?: string }
+> = {
+  // 1. Buku, Modul & Literasi
+  buku: {
+    targetKeywords: ['buku', 'buku teks', 'buku paket', 'literasi', 'modul', 'perpustakaan', 'pelajaran', 'kurikulum'],
+    label: 'Buku Pelajaran & Literasi',
+    concept: 'Buku teks utama siswa dan bahan bacaan perpustakaan',
   },
-  'kipas angin': {
-    targetKeywords: ['kipas', 'angin', 'exhaust', 'ventilasi', 'pendingin'],
-    label: 'Kipas Angin Dinding',
-    concept: 'Sirkulasi udara ruangan lab',
+  'buku paket': {
+    targetKeywords: ['buku', 'buku teks', 'buku paket', 'literasi', 'kurikulum merdeka'],
+    label: 'Buku Paket Siswa',
+    concept: 'Buku pegangan wajib belajar siswa',
   },
-  'exhaust': {
-    targetKeywords: ['exhaust', 'kipas', 'ventilasi', 'sirkulasi', 'pendingin'],
-    label: 'Exhaust Fan Lab',
-    concept: 'Pengatur suhu & pembuangan udara panas server',
+  'buku teks': {
+    targetKeywords: ['buku', 'buku teks', 'pelajaran', 'kurikulum'],
+    label: 'Buku Teks Utama',
+    concept: 'Buku kurikulum wajib yang disediakan gratis oleh BOSP',
   },
-  'pendingin': {
-    targetKeywords: ['pendingin', 'kipas', 'exhaust', 'ventilasi', 'ac lab'],
-    label: 'Sistem Pendingin Ruang',
-    concept: 'Alat pengatur suhu ruang komputer',
+  modul: {
+    targetKeywords: ['modul', 'buku', 'materi', 'literasi', 'pelajaran'],
+    label: 'Modul Belajar Siswa',
+    concept: 'Bahan cetak materi pembelajaran siswa',
   },
-  'ac': {
-    targetKeywords: ['pendingin', 'kipas', 'exhaust', 'ventilasi'],
-    label: 'Alat Pendingin Ruang',
-    concept: 'Sirkulasi pendingin udara lab komputer',
+  lks: {
+    targetKeywords: ['modul', 'buku', 'kertas', 'atk', 'soal'],
+    label: 'Bahan Ajar / Lembar Kerja Siswa',
+    concept: 'Buku materi dan lembar penilaian siswa (tanpa pungutan LKS)',
   },
-  'gerah': {
-    targetKeywords: ['kipas', 'exhaust', 'pendingin', 'ventilasi'],
-    label: 'Kipas & Pendingin Lab',
-    concept: 'Solusi sirkulasi udara ruangan',
+  literasi: {
+    targetKeywords: ['literasi', 'buku', 'perpustakaan', 'bacaan'],
+    label: 'Program Literasi Sekolah',
+    concept: 'Buku bacaan pengayaan dan koleksi perpustakaan',
   },
-  'panas': {
-    targetKeywords: ['kipas', 'exhaust', 'pendingin', 'ventilasi'],
-    label: 'Pendingin Suhu Lab',
-    concept: 'Peredam suhu ruangan komputer',
+  perpustakaan: {
+    targetKeywords: ['perpustakaan', 'buku', 'literasi', 'bacaan'],
+    label: 'Fasilitas Perpustakaan',
+    concept: 'Pengadaan buku teks dan sarana baca siswa',
   },
-  'ventilasi': {
-    targetKeywords: ['ventilasi', 'exhaust', 'kipas', 'sirkulasi'],
-    label: 'Ventilasi & Exhaust Fan',
-    concept: 'Sirkulasi udara lab komputer',
-  },
-
-  // 2. Perangkat Jaringan & Internet
-  'switch': {
-    targetKeywords: ['switch', 'jaringan', 'kabel lan', 'hub', 'gigabit'],
-    label: 'Switch Gigabit Jaringan',
-    concept: 'Perangkat distribusi jaringan lab komputer',
-  },
-  'wifi': {
-    targetKeywords: ['wifi', 'access point', 'internet', 'router', 'jaringan'],
-    label: 'Access Point WiFi & Internet',
-    concept: 'Konektivitas nirkabel praktikum siswa',
-  },
-  'router': {
-    targetKeywords: ['switch', 'access point', 'jaringan', 'mikrotik', 'internet'],
-    label: 'Perangkat Routing & Jaringan',
-    concept: 'Infrastruktur komunikasi data sekolah',
-  },
-  'access point': {
-    targetKeywords: ['access point', 'wifi', 'internet', 'jaringan'],
-    label: 'Access Point WiFi-6',
-    concept: 'Penyedia sinyal nirkabel lab praktikum',
-  },
-  'lan': {
-    targetKeywords: ['kabel lan', 'switch', 'jaringan', 'hub'],
-    label: 'Kabel Jaringan & Switch LAN',
-    concept: 'Infrastruktur kabel jaringan lab SIJA',
-  },
-  'internet': {
-    targetKeywords: ['internet', 'fiber optik', 'bandwidth', 'langganan internet', 'wifi'],
-    label: 'Langganan Internet Dedicated',
-    concept: 'Akses broadband fiber optik 100 Mbps',
-  },
-  'kuota': {
-    targetKeywords: ['internet', 'wifi', 'langganan internet', 'bandwidth'],
-    label: 'Layanan Akses Internet',
-    concept: 'Konektivitas data pembelajaran sekolah',
-  },
-  'pulsa': {
-    targetKeywords: ['internet', 'langganan internet', 'kuota'],
-    label: 'Biaya Langganan Komunikasi/Internet',
-    concept: 'Akses internet sekolah',
-  },
-  'fiber': {
-    targetKeywords: ['fiber optik', 'internet', 'bandwidth'],
-    label: 'Koneksi Fiber Optik',
-    concept: 'Infrastruktur internet cepat 1:1',
+  kamus: {
+    targetKeywords: ['buku', 'literasi', 'perpustakaan'],
+    label: 'Buku Referensi & Kamus',
+    concept: 'Buku penunjang mata pelajaran di perpustakaan',
   },
 
-  // 3. Modul Pembelajaran & Buku
-  'buku': {
-    targetKeywords: ['buku', 'modul', 'materi', 'buku teks', 'perpustakaan', 'kurikulum merdeka'],
-    label: 'Modul Ajar & Buku Siswa',
-    concept: 'Materi pembelajaran cetak gratis bagi siswa',
+  // 2. Kertas, ATK, Ujian & Evaluasi
+  kertas: {
+    targetKeywords: ['kertas', 'hvs', 'atk', 'ujian', 'penilaian', 'fotokopi'],
+    label: 'Kertas HVS & Penggandaan',
+    concept: 'Kertas ujian dan administrasi belajar mengajar',
   },
-  'modul': {
-    targetKeywords: ['modul', 'buku', 'praktikum', 'buku ajar', 'kurikulum merdeka'],
-    label: 'Paket Modul Praktikum Kejuruan',
-    concept: 'Panduan kurikulum praktikum SIJA',
+  hvs: {
+    targetKeywords: ['hvs', 'kertas', 'atk', 'ujian', 'soal'],
+    label: 'Kertas HVS Ujian',
+    concept: 'Kertas HVS A4/F4 untuk lembar evaluasi siswa',
   },
-  'lks': {
-    targetKeywords: ['modul', 'buku', 'materi', 'praktikum'],
-    label: 'Modul Pembelajaran Siswa (Pengganti LKS)',
-    concept: 'Bahan ajar resmi sekolah yang dibiayai BOSP',
+  atk: {
+    targetKeywords: ['atk', 'kertas', 'alat tulis', 'spidol', 'pulpen', 'tinta'],
+    label: 'Alat Tulis Kantor & KBM',
+    concept: 'Perlengkapan alat tulis kegiatan belajar siswa',
   },
-  'lembar kerja': {
-    targetKeywords: ['modul', 'buku', 'praktikum'],
-    label: 'Modul Siswa Resmi',
-    concept: 'Bahan ajar praktikum siswa',
+  'alat tulis': {
+    targetKeywords: ['atk', 'kertas', 'spidol', 'pulpen', 'pensil'],
+    label: 'Perlengkapan Alat Tulis',
+    concept: 'Alat tulis pendukung pembelajaran siswa',
   },
-  'fotokopi': {
-    targetKeywords: ['modul', 'materi', 'buku'],
-    label: 'Bahan Ajar & Modul Cetak',
-    concept: 'Pengadaan materi pembelajaran gratis',
+  ujian: {
+    targetKeywords: ['ujian', 'penilaian', 'kertas', 'soal', 'asesmen', 'atk'],
+    label: 'Pelaksanaan Ujian / Asesmen',
+    concept: 'Kebutuhan penggandaan lembar soal dan ujian siswa',
   },
-  'perpustakaan': {
-    targetKeywords: ['perpustakaan', 'buku', 'modul', 'buku teks'],
-    label: 'Pengembangan Koleksi Buku & Modul',
-    concept: 'Sarana literasi & modul praktikum',
+  penilaian: {
+    targetKeywords: ['penilaian', 'ujian', 'asesmen', 'kertas', 'atk'],
+    label: 'Asesmen & Penilaian Belajar',
+    concept: 'Evaluasi hasil belajar siswa gratis dari BOSP',
   },
-
-  // 4. Multimedia & Presentasi
-  'proyektor': {
-    targetKeywords: ['proyektor', 'infocus', 'lcd', 'presentasi', 'layar proyektor'],
-    label: 'Proyektor Interaktif Lab',
-    concept: 'Perangkat visual presentasi koding & jaringan',
+  asesmen: {
+    targetKeywords: ['asesmen', 'ujian', 'anbk', 'kertas', 'internet'],
+    label: 'Asesmen Nasional & Sekolah',
+    concept: 'Pelaksanaan ANBK dan asesmen sumatif siswa',
   },
-  'infocus': {
-    targetKeywords: ['proyektor', 'lcd', 'presentasi', 'layar proyektor'],
-    label: 'Proyektor Interaktif (InFocus)',
-    concept: 'Display multimedia pembelajaran kelas',
+  spidol: {
+    targetKeywords: ['spidol', 'atk', 'papan tulis', 'tinta'],
+    label: 'Spidol & Alat Tulis Kelas',
+    concept: 'Alat tulis papan tulis dan sarana mengajar',
   },
-  'projector': {
-    targetKeywords: ['proyektor', 'infocus', 'lcd', 'presentasi'],
-    label: 'Interactive Projector',
-    concept: 'Media presentasi proyektor lab komputer',
+  fotokopi: {
+    targetKeywords: ['fotokopi', 'kertas', 'hvs', 'soal', 'ujian'],
+    label: 'Penggandaan Materi & Soal',
+    concept: 'Fotokopi lembar kerja dan soal evaluasi gratis',
   },
-  'lcd': {
-    targetKeywords: ['proyektor', 'layar proyektor', 'infocus'],
-    label: 'Proyektor LCD Pembelajaran',
-    concept: 'Perangkat display visual interaktif',
-  },
-  'layar': {
-    targetKeywords: ['proyektor', 'layar proyektor', 'infocus'],
-    label: 'Layar & Proyektor Presentasi',
-    concept: 'Media visual interaktif pembelajaran',
-  },
-  'hdmi': {
-    targetKeywords: ['kabel hdmi', 'proyektor', 'presentasi'],
-    label: 'Kabel Konektivitas Proyektor Lab',
-    concept: 'Instalasi multimedia display lab',
+  tinta: {
+    targetKeywords: ['tinta', 'printer', 'kertas', 'atk'],
+    label: 'Tinta Printer & Penggandaan',
+    concept: 'Tinta cetak soal ujian dan bahan belajar siswa',
   },
 
-  // 5. Fasilitas Sanitasi & Air Bersih
-  'toilet': {
-    targetKeywords: ['toilet', 'sanitasi', 'kamar mandi', 'wc', 'wastafel', 'air bersih'],
-    label: 'Fasilitas Sanitasi & Kamar Mandi',
-    concept: 'Sarana kebersihan & air bersih asrama',
+  // 3. Sanitasi, Toilet & Air Bersih
+  toilet: {
+    targetKeywords: ['toilet', 'wc', 'kamar mandi', 'sanitasi', 'wastafel', 'air'],
+    label: 'Toilet & Kamar Mandi Siswa',
+    concept: 'Fasilitas sanitasi bersih dan sehat untuk siswa',
+  },
+  wc: {
+    targetKeywords: ['wc', 'toilet', 'kamar mandi', 'sanitasi', 'kloset'],
+    label: 'Fasilitas WC Sekolah',
+    concept: 'Kloset dan sarana kebersihan toilet siswa',
   },
   'kamar mandi': {
-    targetKeywords: ['kamar mandi', 'sanitasi', 'toilet', 'wc', 'wastafel', 'keran'],
-    label: 'Perbaikan Kamar Mandi Asrama',
-    concept: 'Instalasi sanitasi dan pemeliharaan bilik asrama',
+    targetKeywords: ['kamar mandi', 'toilet', 'wc', 'sanitasi', 'air bersih'],
+    label: 'Kamar Mandi Siswa',
+    concept: 'Pemeliharaan bilik kamar mandi sekolah',
   },
-  'wc': {
-    targetKeywords: ['wc', 'toilet', 'kamar mandi', 'sanitasi', 'kloset'],
-    label: 'Sanitasi & Kloset Asrama',
-    concept: 'Perbaikan sarana sanitasi siswa',
+  sanitasi: {
+    targetKeywords: ['sanitasi', 'toilet', 'air bersih', 'wastafel', 'kebersihan'],
+    label: 'Sarana Sanitasi Sekolah',
+    concept: 'Saluran air bersih, toilet, dan fasilitas cuci tangan',
   },
-  'wastafel': {
-    targetKeywords: ['wastafel', 'cuci tangan', 'sanitasi', 'keran'],
-    label: 'Wastafel Cuci Tangan Keramik',
-    concept: 'Sarana cuci tangan higienis asrama siswa',
+  wastafel: {
+    targetKeywords: ['wastafel', 'cuci tangan', 'keran', 'sanitasi', 'sabun'],
+    label: 'Wastafel Cuci Tangan',
+    concept: 'Tempat cuci tangan higienis siswa',
   },
-  'air': {
-    targetKeywords: ['air bersih', 'pompa', 'toren', 'pipa', 'sanitasi'],
-    label: 'Instalasi Air Bersih & Pompa',
-    concept: 'Penyediaan air bersih gedung asrama',
+  keran: {
+    targetKeywords: ['keran', 'kran', 'wastafel', 'pipa', 'air'],
+    label: 'Keran Air & Wastafel',
+    concept: 'Kran air wudhu dan cuci tangan siswa',
   },
-  'keran': {
-    targetKeywords: ['keran', 'wastafel', 'pipa', 'sanitasi'],
-    label: 'Keran & Wastafel Sanitasi',
-    concept: 'Perlengkapan cuci tangan dan kamar mandi',
+  kran: {
+    targetKeywords: ['kran', 'keran', 'air', 'wastafel', 'pipa'],
+    label: 'Kran Air',
+    concept: 'Instalasi keran air bersih sekolah',
   },
-  'pompa': {
-    targetKeywords: ['pompa', 'toren', 'pipa', 'air bersih'],
-    label: 'Pompa Booster & Toren Air',
-    concept: 'Kelancaran pasokan air bersih asrama',
+  air: {
+    targetKeywords: ['air', 'air bersih', 'pipa', 'toren', 'pompa', 'sanitasi'],
+    label: 'Pasokan Air Bersih',
+    concept: 'Kelancaran pasokan air bersih toilet dan wastafel',
   },
-
-  // 6. Meubelair & Sarana Belajar
-  'meja': {
-    targetKeywords: ['meja', 'kursi', 'meja lab', 'meubelair', 'meja kelas', 'bangku'],
-    label: 'Set Meja Komputer Lab',
-    concept: 'Perabot meja praktikum berkerangka kokoh',
+  pompa: {
+    targetKeywords: ['pompa', 'toren', 'pipa', 'air', 'sanitasi'],
+    label: 'Pompa Air & Toren',
+    concept: 'Distribusi air bersih ke seluruh toilet sekolah',
   },
-  'kursi': {
-    targetKeywords: ['kursi', 'meja', 'bangku', 'kursi komputer', 'meubelair', 'kursi kelas'],
-    label: 'Kursi Komputer Ergonomis',
-    concept: 'Tempat duduk ergonomis praktikum koding',
+  toren: {
+    targetKeywords: ['toren', 'tandon', 'air', 'pipa', 'sanitasi'],
+    label: 'Toren / Tandon Penampung Air',
+    concept: 'Tangki penyimpan air bersih sekolah',
   },
-  'bangku': {
-    targetKeywords: ['bangku', 'kursi', 'meja', 'meubelair'],
-    label: 'Bangku & Kursi Praktikum',
-    concept: 'Meubelair fasilitas belajar siswa',
+  kloset: {
+    targetKeywords: ['kloset', 'toilet', 'wc', 'sanitasi'],
+    label: 'Kloset Toilet Siswa',
+    concept: 'Perbaikan kloset duduk/jongkok siswa',
   },
-  'mebel': {
-    targetKeywords: ['meubelair', 'meja', 'kursi', 'bangku'],
-    label: 'Pengadaan Meubelair Sekolah',
-    concept: 'Peremajaan meja kursi ruang kelas & lab',
+  sabun: {
+    targetKeywords: ['sabun', 'wastafel', 'sanitasi', 'kebersihan'],
+    label: 'Perlengkapan Kebersihan & Cuci Tangan',
+    concept: 'Sabun cuci tangan dan higienitas sekolah',
   },
-  'meubelair': {
-    targetKeywords: ['meubelair', 'meja', 'kursi', 'bangku'],
-    label: 'Pengadaan Meubelair Sekolah',
-    concept: 'Fasilitas sarana duduk dan meja praktikum',
+  sapu: {
+    targetKeywords: ['kebersihan', 'sanitasi', 'sarana'],
+    label: 'Alat Kebersihan Ruang Kelas',
+    concept: 'Perlengkapan sapu, pel, dan kebersihan ruang belajar',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
   },
-
-  // 7. Perangkat Komputer & Komputer Jinjing (Laptop / PC)
-  'komputer': {
-    targetKeywords: ['lab komputer', 'switch', 'meja komputer', 'kursi komputer', 'proyektor'],
-    label: 'Peralatan Fasilitas Lab Komputer',
-    concept: 'Perlengkapan workstation dan sarana pendukung praktikum',
-  },
-  'laptop': {
-    targetKeywords: ['lab komputer', 'komputer', 'workstation', 'switch'],
-    label: 'Fasilitas Komputer & Lab Praktikum',
-    concept: 'Sarana komputasi yang dialokasikan di lab jaringan',
-  },
-  'komputer jinjing': {
-    targetKeywords: ['lab komputer', 'komputer', 'workstation'],
-    label: 'Sarana Komputer & Praktikum Lab',
-    concept: 'Fasilitas komputasi dan ruang kerja digital siswa',
-  },
-  'pc': {
-    targetKeywords: ['lab komputer', 'workstation', 'switch', 'meja komputer'],
-    label: 'Perangkat PC & Workstation Lab',
-    concept: 'Fasilitas praktikum komputer kejuruan',
+  pel: {
+    targetKeywords: ['kebersihan', 'sanitasi', 'kamar mandi'],
+    label: 'Peralatan Kebersihan Lantai',
+    concept: 'Kain pel dan cairan pembersih ruang belajar',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
   },
 
-  // 8. Perlengkapan Tulis & Papan Tulis
+  // 4. Meja, Kursi & Meubelair Ruang Belajar
+  meja: {
+    targetKeywords: ['meja', 'kursi', 'bangku', 'meubelair', 'meja belajar'],
+    label: 'Meja Belajar Siswa',
+    concept: 'Meja belajar kokoh di ruang kelas',
+  },
+  kursi: {
+    targetKeywords: ['kursi', 'meja', 'bangku', 'meubelair', 'kursi belajar'],
+    label: 'Kursi Belajar Siswa',
+    concept: 'Tempat duduk belajar siswa standar sekolah',
+  },
+  bangku: {
+    targetKeywords: ['bangku', 'meja', 'kursi', 'meubelair'],
+    label: 'Bangku Ruang Kelas',
+    concept: 'Bangku dan meja kelas tempat belajar siswa',
+  },
+  meubelair: {
+    targetKeywords: ['meubelair', 'meja', 'kursi', 'bangku', 'perabot'],
+    label: 'Meubelair Ruang Belajar',
+    concept: 'Peremajaan perabot meja dan kursi kelas yang rusak',
+  },
+  mebel: {
+    targetKeywords: ['mebel', 'meubelair', 'meja', 'kursi'],
+    label: 'Perabot Mebel Kelas',
+    concept: 'Pengadaan mebel belajar siswa',
+  },
+  lemari: {
+    targetKeywords: ['meja', 'kursi', 'meubelair', 'ruang kelas'],
+    label: 'Lemari Kelas & Penyimpanan',
+    concept: 'Fasilitas penyimpanan buku dan perlengkapan kelas',
+    fallbackTargetId: 'item-meja-kursi-04',
+  },
   'papan tulis': {
-    targetKeywords: ['proyektor', 'modul', 'meja', 'lab komputer'],
-    label: 'Sarana Visual Pembelajaran Kelas',
-    concept: 'Media presentasi & pembelajaran interaktif ruang kelas',
+    targetKeywords: ['proyektor', 'layar', 'meja', 'ruang kelas', 'spidol'],
+    label: 'Papan Tulis & Media Belajar',
+    concept: 'Sarana penyampaian materi tatap muka di kelas',
+    fallbackTargetId: 'item-proyektor-lcd-07',
   },
-  'whiteboard': {
-    targetKeywords: ['proyektor', 'modul', 'meja', 'lab komputer'],
-    label: 'Media Presentasi & Tulis Kelas',
-    concept: 'Papan tulis dan display presentasi visual guru/siswa',
+  whiteboard: {
+    targetKeywords: ['papan tulis', 'proyektor', 'spidol', 'ruang kelas'],
+    label: 'Whiteboard Ruang Kelas',
+    concept: 'Papan tulis putih untuk pembelajaran visual',
+    fallbackTargetId: 'item-proyektor-lcd-07',
   },
-  'spidol': {
-    targetKeywords: ['modul', 'buku', 'bahan ajar'],
-    label: 'Alat Tulis & Bahan Ajar Habis Pakai',
-    concept: 'Perlengkapan administrasi dan bahan belajar kelas',
+
+  // 5. Kipas Angin, Ventilasi & Sirkulasi Udara
+  kipas: {
+    targetKeywords: ['kipas', 'kipas angin', 'angin', 'pendingin', 'ventilasi', 'sirkulasi'],
+    label: 'Kipas Angin Dinding',
+    concept: 'Alat penyejuk sirkulasi udara ruang kelas',
   },
-  'papan tulis putih': {
-    targetKeywords: ['proyektor', 'modul', 'meja', 'lab komputer'],
-    label: 'Sarana Visual Kelas',
-    concept: 'Fasilitas media mengajar di ruang kelas/lab',
+  'kipas angin': {
+    targetKeywords: ['kipas', 'kipas angin', 'angin', 'sirkulasi', 'pendingin'],
+    label: 'Kipas Angin Kelas',
+    concept: 'Sirkulasi udara sejuk saat jam belajar siswa',
   },
-  'papan untuk menulis dengan spidol': {
-    targetKeywords: ['proyektor', 'modul', 'meja', 'lab komputer'],
-    label: 'Media Tulis & Display Kelas',
-    concept: 'Alat bantu visual pembelajaran tatap muka',
+  angin: {
+    targetKeywords: ['kipas', 'kipas angin', 'ventilasi', 'pendingin'],
+    label: 'Sirkulasi Udara Ruang Kelas',
+    concept: 'Menjaga ruang kelas tetap sejuk dan tidak gerah',
+  },
+  exhaust: {
+    targetKeywords: ['exhaust', 'kipas', 'ventilasi', 'sirkulasi'],
+    label: 'Exhaust Fan & Ventilasi',
+    concept: 'Pembuangan udara panas dan sirkulasi ruangan',
+  },
+  ventilasi: {
+    targetKeywords: ['ventilasi', 'kipas', 'exhaust', 'sirkulasi'],
+    label: 'Ventilasi Udara Sekolah',
+    concept: 'Sirkulasi udara segar di ruang belajar siswa',
+  },
+  pendingin: {
+    targetKeywords: ['pendingin', 'kipas', 'ac', 'ventilasi'],
+    label: 'Alat Pendingin Ruang Belajar',
+    concept: 'Meredam suhu panas di ruang kelas',
+  },
+  ac: {
+    targetKeywords: ['kipas', 'pendingin', 'ventilasi', 'sirkulasi'],
+    label: 'Sistem Pendingin / Kipas Ruang',
+    concept: 'Pengatur suhu ruangan belajar siswa agar sejuk',
+    fallbackTargetId: 'item-kipas-angin-05',
+  },
+  gerah: {
+    targetKeywords: ['kipas', 'pendingin', 'angin', 'ventilasi'],
+    label: 'Kipas Ruang Kelas (Anti-Gerah)',
+    concept: 'Solusi ruang kelas agar siswa nyaman saat siang hari',
+  },
+  panas: {
+    targetKeywords: ['kipas', 'pendingin', 'ventilasi', 'sirkulasi'],
+    label: 'Pendingin Suhu Kelas',
+    concept: 'Kipas penyejuk ruangan belajar siswa',
+  },
+  lampu: {
+    targetKeywords: ['listrik', 'kipas', 'sarana'],
+    label: 'Penerangan & Kelistrikan Kelas',
+    concept: 'Penerangan ruang kelas dan instalasi listrik aman',
+    fallbackTargetId: 'item-kipas-angin-05',
+  },
+
+  // 6. Internet, WiFi & Komunikasi
+  internet: {
+    targetKeywords: ['internet', 'wifi', 'kuota', 'jaringan', 'anbk'],
+    label: 'Langganan Internet Sekolah',
+    concept: 'Akses broadband untuk asesmen online dan pembelajaran',
+  },
+  wifi: {
+    targetKeywords: ['wifi', 'internet', 'koneksi', 'jaringan', 'router'],
+    label: 'Koneksi WiFi Sekolah',
+    concept: 'Jaringan internet nirkabel untuk guru dan siswa',
+  },
+  kuota: {
+    targetKeywords: ['kuota', 'internet', 'pulsa', 'wifi'],
+    label: 'Kuota Internet Belajar',
+    concept: 'Biaya langganan data dan koneksi internet sekolah',
+  },
+  pulsa: {
+    targetKeywords: ['pulsa', 'internet', 'kuota', 'daya dan jasa'],
+    label: 'Biaya Komunikasi / Internet',
+    concept: 'Langganan jaringan komunikasi sekolah',
+  },
+  router: {
+    targetKeywords: ['router', 'wifi', 'internet', 'modem', 'jaringan'],
+    label: 'Router & Perangkat WiFi',
+    concept: 'Perangkat pemancar sinyal internet sekolah',
+  },
+  modem: {
+    targetKeywords: ['modem', 'internet', 'wifi', 'jaringan'],
+    label: 'Modem Akses Internet',
+    concept: 'Konektivitas internet sekolah',
+  },
+  jaringan: {
+    targetKeywords: ['jaringan', 'internet', 'wifi', 'lan'],
+    label: 'Jaringan Komputer & Internet',
+    concept: 'Infrastruktur komunikasi data sekolah',
+  },
+  anbk: {
+    targetKeywords: ['anbk', 'internet', 'proyektor', 'kertas', 'asesmen'],
+    label: 'Persiapan & Pelaksanaan ANBK',
+    concept: 'Dukungan internet dan sarana Asesmen Nasional',
+  },
+  dapodik: {
+    targetKeywords: ['dapodik', 'internet', 'atk', 'kertas'],
+    label: 'Sinkronisasi Dapodik Sekolah',
+    concept: 'Akses internet untuk pelaporan data siswa dan sekolah',
+  },
+
+  // 7. Proyektor, Multimedia & Komputer
+  proyektor: {
+    targetKeywords: ['proyektor', 'infocus', 'lcd', 'layar', 'presentasi'],
+    label: 'Proyektor LCD Pembelajaran',
+    concept: 'Alat proyeksi materi visual dan video di kelas',
+  },
+  projector: {
+    targetKeywords: ['proyektor', 'projector', 'infocus', 'lcd'],
+    label: 'Projector Pembelajaran',
+    concept: 'Media presentasi materi belajar siswa',
+  },
+  infocus: {
+    targetKeywords: ['infocus', 'proyektor', 'lcd', 'layar'],
+    label: 'Proyektor InFocus Kelas',
+    concept: 'Perangkat display multimedia ruang kelas',
+  },
+  lcd: {
+    targetKeywords: ['lcd', 'proyektor', 'layar', 'monitor'],
+    label: 'Layar LCD / Proyektor',
+    concept: 'Tampilan visual media presentasi guru',
+  },
+  layar: {
+    targetKeywords: ['layar', 'proyektor', 'screen', 'infocus'],
+    label: 'Layar Proyektor Gantung',
+    concept: 'Layar pantul proyektor untuk pembelajaran',
+  },
+  presentasi: {
+    targetKeywords: ['presentasi', 'proyektor', 'multimedia', 'layar'],
+    label: 'Sarana Presentasi Belajar',
+    concept: 'Media interaktif penyampaian materi pelajaran',
+  },
+  hdmi: {
+    targetKeywords: ['hdmi', 'kabel hdmi', 'proyektor', 'multimedia'],
+    label: 'Kabel Konektor Proyektor',
+    concept: 'Kabel display laptop guru ke proyektor kelas',
+  },
+  komputer: {
+    targetKeywords: ['komputer', 'proyektor', 'internet', 'anbk'],
+    label: 'Sarana Komputer & Digital Siswa',
+    concept: 'Fasilitas pembelajaran digital dan asesmen sekolah',
+    fallbackTargetId: 'item-proyektor-lcd-07',
+  },
+  laptop: {
+    targetKeywords: ['laptop', 'komputer', 'proyektor', 'internet'],
+    label: 'Perangkat Pembelajaran Digital',
+    concept: 'Alat kerja pembelajaran interaktif dan ANBK',
+    fallbackTargetId: 'item-proyektor-lcd-07',
+  },
+  speaker: {
+    targetKeywords: ['sound', 'multimedia', 'proyektor', 'alat peraga'],
+    label: 'Speaker & Sound System Belajar',
+    concept: 'Pengeras suara untuk video materi dan kegiatan upacara',
+    fallbackTargetId: 'item-proyektor-lcd-07',
+  },
+  sound: {
+    targetKeywords: ['speaker', 'multimedia', 'audio', 'proyektor'],
+    label: 'Tata Suara Pembelajaran',
+    concept: 'Peralatan audio pendukung pembelajaran visual',
+    fallbackTargetId: 'item-proyektor-lcd-07',
+  },
+  printer: {
+    targetKeywords: ['tinta', 'kertas', 'atk', 'fotokopi'],
+    label: 'Mesin Cetak & Penggandaan',
+    concept: 'Pencetakan lembar evaluasi dan laporan belajar siswa',
+    fallbackTargetId: 'item-atk-kertas-02',
+  },
+
+  // 8. Pemeliharaan Fisik & Kebersihan Bangunan
+  cat: {
+    targetKeywords: ['sarana', 'perawatan', 'ruang kelas', 'sanitasi'],
+    label: 'Pengecatan & Pemeliharaan Ruang',
+    concept: 'Perbaikan estetika dan kenyamanan dinding ruang kelas',
+    fallbackTargetId: 'item-meja-kursi-04',
+  },
+  renovasi: {
+    targetKeywords: ['pemeliharaan', 'sarana', 'sanitasi', 'toilet', 'ruang kelas'],
+    label: 'Pemeliharaan Ringan Gedung',
+    concept: 'Perbaikan sarana prasarana sekolah skala ringan sesuai juknis',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
+  },
+  atap: {
+    targetKeywords: ['pemeliharaan', 'sarana', 'ruang kelas'],
+    label: 'Perbaikan Plafon & Atap Kelas',
+    concept: 'Pemeliharaan genteng/atap ruang kelas agar tidak bocor',
+    fallbackTargetId: 'item-meja-kursi-04',
+  },
+  bocor: {
+    targetKeywords: ['sanitasi', 'pipa', 'atap', 'sarana'],
+    label: 'Penanganan Kebocoran Sarana',
+    concept: 'Perbaikan saluran air dan perlindungan ruang kelas',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
+  },
+  pintu: {
+    targetKeywords: ['sarana', 'ruang kelas', 'meja', 'toilet'],
+    label: 'Perbaikan Pintu Ruangan & Toilet',
+    concept: 'Kunci, engsel, dan daun pintu bilik toilet/kelas',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
+  },
+
+  // 9. Kesehatan, UKS & Olahraga
+  obat: {
+    targetKeywords: ['sanitasi', 'kesehatan', 'uks', 'kebersihan'],
+    label: 'Kotak P3K & Obat Darurat',
+    concept: 'Sarana pertolongan pertama kesehatan siswa di sekolah',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
+  },
+  p3k: {
+    targetKeywords: ['obat', 'sanitasi', 'kesehatan', 'kebersihan'],
+    label: 'Kotak Obat P3K UKS',
+    concept: 'Obat-obatan ringan pertolongan pertama bagi murid',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
+  },
+  uks: {
+    targetKeywords: ['kesehatan', 'sanitasi', 'kebersihan', 'toilet'],
+    label: 'Fasilitas Ruang UKS Siswa',
+    concept: 'Fasilitas kesehatan dan higienitas lingkungan belajar',
+    fallbackTargetId: 'item-sanitasi-toilet-03',
+  },
+  bola: {
+    targetKeywords: ['olahraga', 'ekstrakurikuler', 'buku', 'pembelajaran'],
+    label: 'Alat Peraga Olahraga & Ekskul',
+    concept: 'Peralatan aktivitas jasmani dan kesiswaan',
+    fallbackTargetId: 'item-atk-kertas-02',
+  },
+  olahraga: {
+    targetKeywords: ['kegiatan', 'pembelajaran', 'alat peraga'],
+    label: 'Sarana Olahraga & Jasmani',
+    concept: 'Aktivitas pembelajaran fisik dan ekstrakurikuler siswa',
+    fallbackTargetId: 'item-atk-kertas-02',
+  },
+  pramuka: {
+    targetKeywords: ['kegiatan', 'kesiswaan', 'ekstrakurikuler'],
+    label: 'Kegiatan Ekstrakurikuler Pramuka',
+    concept: 'Kegiatan kesiswaan wajib sekolah',
+    fallbackTargetId: 'item-atk-kertas-02',
   },
 };
 
 /**
- * Normalizes input text: lowercases, strips special characters, trims multiple whitespace.
+ * Menormalkan teks (membersihkan tanda baca, spasi ganda, dan karakter non-alfanumerik)
  */
 export function normalizeText(text: string): string {
   if (!text) return '';
@@ -312,7 +500,7 @@ export function normalizeText(text: string): string {
 }
 
 /**
- * Calculates Levenshtein Distance between two strings.
+ * Menghitung Jarak Levenshtein untuk mendeteksi salah ketik (typo)
  */
 export function levenshteinDistance(a: string, b: string): number {
   const an = a.length;
@@ -341,7 +529,7 @@ export function levenshteinDistance(a: string, b: string): number {
 }
 
 /**
- * Calculates fuzzy string similarity ratio between 0 and 1.
+ * Menghitung rasio kemiripan karakter antara 0 dan 1
  */
 export function fuzzySimilarity(a: string, b: string): number {
   if (a === b) return 1;
@@ -352,7 +540,7 @@ export function fuzzySimilarity(a: string, b: string): number {
 }
 
 /**
- * Checks if a word is close to any target in a list of words (handles typos like "papn", "kyfas", "proyktor").
+ * Mencari kecocokan typo terhadap daftar target kata
  */
 function findFuzzyMatchInList(
   word: string,
@@ -378,7 +566,22 @@ function findFuzzyMatchInList(
 }
 
 /**
- * Comprehensive AI Semantic Search & Similarity Ranking Engine
+ * Stemming ringan bahasa Indonesia untuk mencocokkan kata berimbuhan
+ * misal: "pembelian" -> "beli", "pendinginan" -> "dingin", "bermain" -> "main"
+ */
+function stripIndonesianAffixes(word: string): string {
+  if (word.length < 5) return word;
+  let root = word;
+  // Hilangkan awalan me-, pe-, per-, peng-, ber-, ter-, di-
+  root = root.replace(/^(peng|per|pem|pen|me|ber|ter|di)/, '');
+  // Hilangkan akhiran -an, -kan, -i, -nya
+  root = root.replace(/(kan|nya|an|i)$/, '');
+  return root.length >= 3 ? root : word;
+}
+
+/**
+ * Mesin Pencarian AI Semantik Universal untuk Pengadaan Sekolah BOSP
+ * Menjamin hasil relevan untuk barang apa pun dan kata apa pun yang diketik pengguna.
  */
 export function searchBospItems(
   rawQuery: string,
@@ -386,8 +589,17 @@ export function searchBospItems(
 ): SemanticSearchResult {
   const normalizedQuery = normalizeText(rawQuery);
 
+  const defaultSuggestions = [
+    'Buku Pelajaran',
+    'Kertas HVS & ATK',
+    'Perawatan Toilet',
+    'Meja Kursi Belajar',
+    'Kipas Angin Dinding',
+    'WiFi & Internet',
+    'Proyektor Pembelajaran',
+  ];
+
   if (!normalizedQuery) {
-    // Return all items in neutral order when query is empty
     return {
       query: rawQuery,
       normalizedQuery: '',
@@ -397,33 +609,29 @@ export function searchBospItems(
         item,
         score: 100,
         matchCategory: 'exact',
-        matchReason: 'Katalog Pengadaan Resmi',
+        matchReason: 'Katalog Pembelanjaan BOSP',
       })),
-      suggestedKeywords: [
-        'Kipas Angin Lab',
-        'Proyektor Interaktif',
-        'Modul Praktikum SIJA',
-        'Switch Gigabit',
-        'Meja Kursi Komputer',
-        'Sanitasi Asrama',
-        'Internet Fiber Optik',
-      ],
+      suggestedKeywords: defaultSuggestions,
     };
   }
 
   const queryTokens = normalizedQuery.split(' ').filter((t) => t.length > 1);
+  const stemmedTokens = queryTokens.map(stripIndonesianAffixes);
 
-  // Look up semantic cluster for query
+  // Cari klaster semantik yang paling cocok untuk query
   let clusterMatch = SEMANTIC_CLUSTERS[normalizedQuery];
+  let clusterMatchedKey = normalizedQuery;
+
   if (!clusterMatch) {
-    // Check if any cluster key is in query or matches query token
     for (const [key, cluster] of Object.entries(SEMANTIC_CLUSTERS)) {
       if (
         normalizedQuery.includes(key) ||
         key.includes(normalizedQuery) ||
-        queryTokens.some((tok) => tok === key || fuzzySimilarity(tok, key) > 0.78)
+        queryTokens.some((tok) => tok === key || fuzzySimilarity(tok, key) >= 0.78) ||
+        stemmedTokens.some((st) => key.includes(st) || st.includes(key))
       ) {
         clusterMatch = cluster;
+        clusterMatchedKey = key;
         break;
       }
     }
@@ -444,59 +652,66 @@ export function searchBospItems(
     let matchedTerm = '';
     let isAlternative = false;
 
-    // 1. EXACT PHRASE MATCH
+    // 1. EXACT & SUBSTRING MATCH PADA NAMA BARANG ATAU RINCIAN NOTA
     if (itemNameNorm === normalizedQuery) {
       score = 100;
       matchCategory = 'exact';
       matchReason = 'Nama barang cocok persis 100%';
       matchedTerm = item.name;
     } else if (itemNameNorm.includes(normalizedQuery)) {
-      score = 94;
+      score = 95;
       matchCategory = 'exact';
       matchReason = 'Frasa terdapat langsung dalam nama barang';
       matchedTerm = normalizedQuery;
     } else if (lineItemNames.some((li) => li.includes(normalizedQuery))) {
-      score = 90;
+      score = 92;
       matchCategory = 'exact';
-      matchReason = 'Tercantum persis pada rincian nota SIPLah';
+      matchReason = 'Tercantum langsung pada rincian nota belanja';
       matchedTerm = normalizedQuery;
     }
 
-    // 2. TOKEN OVERLAP & KEYWORD MATCH
-    if (score < 85) {
-      let matchingTokens = 0;
-      for (const tok of queryTokens) {
-        if (
-          itemNameNorm.includes(tok) ||
-          itemKeywordsNorm.some((kw) => kw.includes(tok) || tok.includes(kw)) ||
-          itemCatNorm.includes(tok) ||
-          itemAllocNorm.includes(tok)
-        ) {
-          matchingTokens++;
+    // 2. TOKEN MATCHING & KATA KUNCI HABIS
+    if (score < 88) {
+      let matchedCount = 0;
+      for (let i = 0; i < queryTokens.length; i++) {
+        const tok = queryTokens[i];
+        const stem = stemmedTokens[i];
+
+        const inName = itemNameNorm.includes(tok) || itemNameNorm.includes(stem);
+        const inKw = itemKeywordsNorm.some((kw) => kw.includes(tok) || tok.includes(kw) || kw.includes(stem));
+        const inCat = itemCatNorm.includes(tok) || itemCatNorm.includes(stem);
+        const inAlloc = itemAllocNorm.includes(tok) || itemAllocNorm.includes(stem);
+        const inLines = lineItemNames.some((li) => li.includes(tok) || li.includes(stem));
+
+        if (inName || inKw || inCat || inAlloc || inLines) {
+          matchedCount++;
         }
       }
 
-      if (matchingTokens === queryTokens.length && queryTokens.length > 0) {
-        score = Math.max(score, 86);
+      if (matchedCount === queryTokens.length && queryTokens.length > 0) {
+        score = Math.max(score, 88);
         matchCategory = 'term';
         matchReason = 'Semua kata kunci cocok dengan deskripsi barang';
         matchedTerm = queryTokens.join(', ');
-      } else if (matchingTokens > 0) {
-        const tokenRatio = matchingTokens / queryTokens.length;
-        score = Math.max(score, Math.round(65 + tokenRatio * 18));
+      } else if (matchedCount > 0) {
+        const ratio = matchedCount / queryTokens.length;
+        score = Math.max(score, Math.round(62 + ratio * 20));
         matchCategory = 'term';
-        matchReason = `Cocok ${matchingTokens} dari ${queryTokens.length} kata kunci`;
+        matchReason = `Cocok ${matchedCount} dari ${queryTokens.length} kata pencarian`;
+        matchedTerm = queryTokens.join(' ');
       }
     }
 
-    // 3. SYNONYM & SEMANTIC CLUSTER MATCH
+    // 3. SYNONYM & CLUSTER SEMANTIK
     if (clusterMatch) {
       let clusterHits = 0;
       for (const targetKw of clusterMatch.targetKeywords) {
         if (
           itemNameNorm.includes(targetKw) ||
           itemKeywordsNorm.includes(targetKw) ||
-          itemCatNorm.includes(targetKw)
+          itemCatNorm.includes(targetKw) ||
+          itemAllocNorm.includes(targetKw) ||
+          lineItemNames.some((li) => li.includes(targetKw))
         ) {
           clusterHits++;
         }
@@ -507,45 +722,64 @@ export function searchBospItems(
         if (clusterScore > score) {
           score = clusterScore;
           matchCategory = 'synonym';
-          matchReason = `Sinonim / Istilah Serupa: ${clusterMatch.label}`;
+          matchReason = `Istilah Serupa: ${clusterMatch.label}`;
           matchedTerm = clusterMatch.concept;
+        }
+      } else if (clusterMatch.fallbackTargetId === item.id) {
+        // Fallback langsung ke item induk jika kata dicari relevan (contoh: ac -> kipas, obat -> sanitasi)
+        const fallbackScore = 75;
+        if (fallbackScore > score) {
+          score = fallbackScore;
+          matchCategory = 'semantic';
+          matchReason = `Kategori Terkait: ${clusterMatch.label}`;
+          matchedTerm = clusterMatch.concept;
+          isAlternative = true;
         }
       }
     }
 
-    // 4. FUZZY & TYPO MATCH (e.g. "papn tulis" -> "papan", "kyfas" -> "kipas", "proyktor" -> "proyektor")
+    // 4. FUZZY & KOREKSI TYPO
     if (score < 70) {
       let typoFound = false;
       let matchedKeyword = '';
 
       for (const tok of queryTokens) {
-        const fuzzyHit = findFuzzyMatchInList(tok, itemKeywordsNorm, 0.74);
+        const fuzzyHit = findFuzzyMatchInList(tok, itemKeywordsNorm, 0.72);
         if (fuzzyHit) {
           typoFound = true;
           matchedKeyword = fuzzyHit.target;
-          score = Math.max(score, Math.round(fuzzyHit.similarity * 72));
+          score = Math.max(score, Math.round(fuzzyHit.similarity * 74));
           break;
         }
       }
 
       if (typoFound && score > 0) {
         matchCategory = 'fuzzy';
-        matchReason = `Koreksi Penulisan (Typo): "${matchedKeyword}"`;
+        matchReason = `Koreksi Penulisan: "${matchedKeyword}"`;
         matchedTerm = matchedKeyword;
       }
     }
 
-    // 5. SEMANTIC RELEVANCE FALLBACK (Alternative items when query is loosely related)
-    if (score === 0 && clusterMatch) {
-      // Suggest items that are part of standard classroom facilities
-      if (item.category.includes('Peralatan') || item.category.includes('Sarana')) {
-        score = 42;
-        matchCategory = 'semantic';
-        matchReason = 'Alternatif fasilitas sarana ruang kelas terkait';
-        isAlternative = true;
+    // 5. UNIVERSAL ANY-WORD FUZZY / SUBSTRING MATCHING PADA SELURUH DESKRIPSI
+    if (score < 55) {
+      for (const tok of queryTokens) {
+        if (tok.length >= 3) {
+          // Cari apakah 3 huruf atau lebih muncul dalam nama barang / kata kunci
+          if (
+            itemNameNorm.includes(tok) ||
+            itemKeywordsNorm.some((kw) => kw.includes(tok) || tok.includes(kw))
+          ) {
+            score = Math.max(score, 60);
+            matchCategory = 'semantic';
+            matchReason = `Kemiripan kata "${tok}" pada nama barang`;
+            matchedTerm = tok;
+            break;
+          }
+        }
       }
     }
 
+    // Hanya masukkan item yang memiliki relevansi (score >= 45)
     if (score >= 45) {
       rankedItems.push({
         item,
@@ -558,18 +792,25 @@ export function searchBospItems(
     }
   }
 
-  // Sort descending by score
-  rankedItems.sort((a, b) => b.score - a.score);
+  // Jika setelah semua pengecekan tidak ada yang cocok sama sekali (misal kata benar-benar bebas):
+  // AI tetap memberikan item alternatif sarana belajar yang paling umum agar orang tua tidak melihat layar kosong
+  if (rankedItems.length === 0 && items.length > 0) {
+    // Ambil 2 barang belanja utama sebagai rekomendasi alternatif
+    const generalAlternatives = items.slice(0, 3);
+    for (const altItem of generalAlternatives) {
+      rankedItems.push({
+        item: altItem,
+        score: 48,
+        matchCategory: 'semantic',
+        matchReason: `Alternatif belanja sarana umum sekolah untuk "${rawQuery.trim()}"`,
+        matchedTerm: 'Katalog Umum BOSP',
+        isAlternative: true,
+      });
+    }
+  }
 
-  const suggestedKeywords = [
-    'Kipas Angin Dinding',
-    'Proyektor Interaktif',
-    'Modul Praktikum SIJA',
-    'Switch Gigabit Lab',
-    'Meja Kursi Komputer',
-    'Sanitasi Asrama',
-    'Internet Dedicated 100 Mbps',
-  ];
+  // Urutkan nilai tertinggi di atas
+  rankedItems.sort((a, b) => b.score - a.score);
 
   return {
     query: rawQuery,
@@ -577,6 +818,6 @@ export function searchBospItems(
     hasMatch: rankedItems.length > 0,
     totalFound: rankedItems.length,
     results: rankedItems,
-    suggestedKeywords,
+    suggestedKeywords: defaultSuggestions,
   };
 }

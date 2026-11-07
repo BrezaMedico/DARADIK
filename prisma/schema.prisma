@@ -88,27 +88,108 @@ model SchoolSmk {
   @@map("schools_smk")
 }
 
+model OfficerProfile {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  fullName  String   @map("full_name")
+  jabatan   String   @default("Petugas Pemeriksa Pengaduan Dinas Pendidikan")
+  unitKerja String   @default("Dinas Pendidikan") @map("unit_kerja")
+  role      String   @default("officer")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("officer_profiles")
+}
+
 model AnonymousReport {
-  id                  String   @id @default(uuid())
-  ticketCode          String   @unique @map("ticket_code")
-  schoolId            String   @map("school_id")
-  schoolName          String   @map("school_name")
-  schoolNpsn          String   @map("school_npsn")
-  kabupaten           String
-  kecamatan           String
-  category            String
-  requesterRole       String   @map("requester_role")
-  notesEncrypted      String   @map("notes_encrypted")
-  encryptionIv        String?  @map("encryption_iv")
-  encryptionSalt      String?  @map("encryption_salt")
-  encryptionAlgorithm String?  @default("AES-GCM-256 / PBKDF2") @map("encryption_algorithm")
-  status              String   @default("LAPORAN_TERKIRIM")
-  attachmentCount     Int      @default(0) @map("attachment_count")
-  attachmentsJson     Json?    @map("attachments_json")
-  letterDocument      Json?    @map("letter_document")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+  id                       String                @id @default(uuid())
+  ticketCode               String                @unique @map("ticket_code")
+  schoolId                 String                @map("school_id")
+  schoolName               String                @map("school_name")
+  schoolNpsn               String                @map("school_npsn")
+  kabupaten                String
+  kecamatan                String
+  category                 String
+  requesterRole            String                @map("requester_role")
+  notesEncrypted           String                @map("notes_encrypted")
+  encryptionIv             String?               @map("encryption_iv")
+  encryptionSalt           String?               @map("encryption_salt")
+  encryptionAlgorithm      String?               @default("TLS-1.3 + PostgreSQL RLS") @map("encryption_algorithm")
+  status                   String                @default("QUEUED")
+  waitingAdditionalInfo    Boolean               @default(false) @map("waiting_additional_info")
+  isForwarded              Boolean               @default(false) @map("is_forwarded")
+  forwardedTo              String?               @map("forwarded_to")
+  ocrText                  String?               @map("ocr_text")
+  ocrBospFact              String?               @map("ocr_bosp_fact")
+  rejectionReason          String?               @map("rejection_reason")
+  resolutionOutcome        String?               @map("resolution_outcome")
+  publicResolutionNote     String?               @map("public_resolution_note")
+  skipInspectionReason     String?               @map("skip_inspection_reason")
+  fieldInspectionConducted Boolean               @default(false) @map("field_inspection_conducted")
+  inspectionMethods        Json                  @default("[]") @map("inspection_methods")
+  attachmentCount          Int                   @default(0) @map("attachment_count")
+  attachmentsJson          Json?                 @map("attachments_json")
+  letterDocument           Json?                 @map("letter_document")
+  openedAt                 DateTime?             @map("opened_at") @db.Timestamptz(6)
+  openedBy                 String?               @map("opened_by") @db.Uuid
+  openedByName             String?               @map("opened_by_name")
+  resolvedAt               DateTime?             @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy               String?               @map("resolved_by") @db.Uuid
+  resolvedByName           String?               @map("resolved_by_name")
+  version                  Int                   @default(1)
+  createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  statusHistory            ReportStatusHistory[]
+  internalNotes            ReportInternalNote[]
+  messages                 ReportMessage[]
 
   @@map("anonymous_reports")
 }
 
+model ReportStatusHistory {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId       String          @map("report_id")
+  previousStatus String?         @map("previous_status")
+  newStatus      String          @map("new_status")
+  changedByUid   String?         @map("changed_by_uid") @db.Uuid
+  changedByName  String          @map("changed_by_name")
+  note           String?
+  isInternal     Boolean         @default(false) @map("is_internal")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  report         AnonymousReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("report_status_history")
+}
+
+model ReportInternalNote {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId    String          @map("report_id")
+  officerUid  String          @map("officer_uid") @db.Uuid
+  officerName String          @map("officer_name")
+  note        String
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  report      AnonymousReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("report_internal_notes")
+}
+
+model ReportMessage {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId        String          @map("report_id")
+  senderType      String          @map("sender_type")
+  senderLabel     String          @map("sender_label")
+  message         String
+  attachmentsJson Json            @default("[]") @map("attachments_json")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  report          AnonymousReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("report_messages")
+}
+
+model ReportTrackingSignal {
+  ticketCode String   @id @map("ticket_code")
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("report_tracking_signals")
+}

@@ -280,7 +280,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           STATE 1: CLEAN INPUT (TAB TOGGLE: SCREENSHOT VS TEKS)
          ===================================================================== */}
       {!ocrScanResult && !isScanningWa && (
-        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-10 shadow-xs space-y-6 max-w-2xl mx-auto">
+        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 sm:p-10 shadow-xs space-y-5 sm:space-y-6 max-w-2xl mx-auto">
           {/* Header Ringkas */}
           <div className="text-center space-y-1.5">
             <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] tracking-tight">
@@ -293,30 +293,30 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
           {/* Segmented Control (Pilihan: Screenshot atau Teks) */}
           <div className="flex justify-center">
-            <div className="inline-flex p-1 bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl shadow-xs">
+            <div className="grid grid-cols-2 sm:inline-flex w-full sm:w-auto p-1 bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl shadow-xs gap-1">
               <button
                 type="button"
                 onClick={() => setInputMode('upload')}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+                className={`min-h-[42px] px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
                   inputMode === 'upload'
                     ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1E293B]'
                 }`}
               >
-                <Camera className="w-3.5 h-3.5" />
+                <Camera className="w-3.5 h-3.5 shrink-0" />
                 <span>Screenshot Gambar</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setInputMode('text')}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+                className={`min-h-[42px] px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
                   inputMode === 'text'
                     ? 'bg-[#2E6496] text-[#FFFFFF] shadow-xs'
                     : 'text-[#64748B] hover:text-[#1E293B]'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5" />
+                <FileText className="w-3.5 h-3.5 shrink-0" />
                 <span>Tempel Teks Pesan</span>
               </button>
             </div>
@@ -328,7 +328,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              className="border-2 border-dashed border-[#2E6496]/35 hover:border-[#2E6496] bg-[#FAF8F5] hover:bg-[#EBF3F8]/30 rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 group space-y-3"
+              className="border-2 border-dashed border-[#2E6496]/35 hover:border-[#2E6496] bg-[#FAF8F5] hover:bg-[#EBF3F8]/30 rounded-2xl p-6 sm:p-10 text-center cursor-pointer transition-all duration-200 group space-y-3"
             >
               <div className="w-12 h-12 rounded-xl bg-[#EBF3F8] group-hover:bg-[#FFFFFF] border border-[#C9DFDC] text-[#2E6496] flex items-center justify-center mx-auto shadow-xs transition-colors">
                 <Upload className="w-6 h-6" />
@@ -339,7 +339,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                   Pilih Screenshot WhatsApp
                 </div>
                 <p className="text-xs text-[#64748B] mt-0.5">
-                  Klik untuk memilih gambar atau tekan <kbd className="font-bold bg-[#EBF3F8] px-1.5 py-0.5 rounded text-[#2E6496]">Ctrl+V</kbd>
+                  Ketuk untuk memilih gambar dari HP atau tekan <kbd className="font-bold bg-[#EBF3F8] px-1.5 py-0.5 rounded text-[#2E6496]">Ctrl+V</kbd>
                 </p>
               </div>
 
@@ -350,7 +350,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                     e.stopPropagation();
                     fileInputRef.current?.click();
                   }}
-                  className="school-btn-primary px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs cursor-pointer"
+                  className="school-btn-primary w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                 >
                   <Camera className="w-4 h-4" />
                   <span>Buka Berkas Gambar</span>
@@ -361,13 +361,13 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
           {/* OPSI B: TEMPEL TEKS CHAT */}
           {inputMode === 'text' && (
-            <div className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-5 space-y-3 shadow-xs">
-              <div className="flex items-center justify-between">
+            <div className="bg-[#FAF8F5] border border-[#C9DFDC] rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-[#1E293B]">Teks Pesan Chat</span>
                 <button
                   type="button"
                   onClick={handlePasteFromClipboard}
-                  className="school-btn-secondary px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  className="school-btn-secondary min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <ClipboardPaste className="w-3.5 h-3.5 text-[#2E6496]" />
                   <span>Tempel</span>
@@ -387,7 +387,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
                   type="button"
                   disabled={!pastedText.trim()}
                   onClick={() => handleAnalyzeDirectText()}
-                  className="school-btn-primary px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-40"
+                  className="school-btn-primary w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-40"
                 >
                   <span>Periksa Teks Pesan</span>
                   <Send className="w-3.5 h-3.5" />
@@ -432,17 +432,17 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
       {ocrScanResult && !isScanningWa && (
         <div className="space-y-6 animate-school-item">
           {/* Bar Aksi Atas */}
-          <div className="flex items-center justify-between gap-3 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-3.5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-3 sm:p-3.5 shadow-xs">
             <button
               type="button"
               onClick={handleResetScan}
-              className="school-btn-secondary px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer"
+              className="school-btn-secondary min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-[#2E6496]" />
+              <RefreshCw className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
               <span>Periksa Screenshot / Teks Lain</span>
             </button>
 
-            <span className="text-xs font-medium text-[#64748B] truncate max-w-[240px]">
+            <span className="text-xs font-medium text-[#64748B] truncate max-w-full sm:max-w-[240px]">
               {displayedFileName || 'Pesan WhatsApp'}
             </span>
           </div>

@@ -66,9 +66,9 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
         </p>
 
         {/* Filter & Pencarian Sederhana */}
-        <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
           <div
-            className="flex items-center gap-5"
+            className="flex flex-wrap items-center gap-x-4 gap-y-1.5 sm:gap-5"
             role="tablist"
             aria-label="Filter bagian regulasi"
           >
@@ -77,7 +77,7 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
               role="tab"
               aria-selected={activeCategory === 'all'}
               onClick={() => setActiveCategory('all')}
-              className={`text-sm transition-colors cursor-pointer ${
+              className={`min-h-[38px] text-xs sm:text-sm transition-colors cursor-pointer ${
                 activeCategory === 'all'
                   ? 'text-[#1E293B] font-bold underline underline-offset-8 decoration-2 decoration-[#2E6496]'
                   : 'text-[#64748B] hover:text-[#1E293B]'
@@ -90,7 +90,7 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
               role="tab"
               aria-selected={activeCategory === 'allowed'}
               onClick={() => setActiveCategory('allowed')}
-              className={`text-sm transition-colors cursor-pointer ${
+              className={`min-h-[38px] text-xs sm:text-sm transition-colors cursor-pointer ${
                 activeCategory === 'allowed'
                   ? 'text-[#2E6496] font-bold underline underline-offset-8 decoration-2 decoration-[#2E6496]'
                   : 'text-[#64748B] hover:text-[#1E293B]'
@@ -103,7 +103,7 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
               role="tab"
               aria-selected={activeCategory === 'prohibited'}
               onClick={() => setActiveCategory('prohibited')}
-              className={`text-sm transition-colors cursor-pointer ${
+              className={`min-h-[38px] text-xs sm:text-sm transition-colors cursor-pointer ${
                 activeCategory === 'prohibited'
                   ? 'text-[#C24136] font-bold underline underline-offset-8 decoration-2 decoration-[#C24136]'
                   : 'text-[#64748B] hover:text-[#1E293B]'
@@ -115,7 +115,7 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
 
           <div className="relative w-full sm:w-56">
             <Search
-              className="w-4 h-4 text-[#64748B] absolute left-0 top-1/2 -translate-y-1/2"
+              className="w-4 h-4 text-[#64748B] absolute left-3 sm:left-0 top-1/2 -translate-y-1/2"
               aria-hidden="true"
             />
             <input
@@ -124,13 +124,13 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari ketentuan..."
               aria-label="Cari ketentuan BOSP"
-              className="w-full pl-6 pr-6 py-1 text-sm bg-transparent border-b border-[#C9DFDC] text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#2E6496]"
+              className="w-full min-h-[42px] sm:min-h-0 pl-9 sm:pl-6 pr-8 sm:pr-6 py-2 sm:py-1 text-sm bg-[#FFFFFF] sm:bg-transparent border sm:border-0 sm:border-b border-[#C9DFDC] rounded-xl sm:rounded-none text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#2E6496]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1E293B] cursor-pointer"
+                className="absolute right-2.5 sm:right-0 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1E293B] p-1 cursor-pointer"
                 aria-label="Hapus pencarian"
               >
                 <X className="w-3.5 h-3.5" />

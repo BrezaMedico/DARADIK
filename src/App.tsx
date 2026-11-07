@@ -5,8 +5,6 @@ import {
   CheckCircle2,
   X,
   Flag,
-  HelpCircle,
-  ShieldCheck,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -21,12 +19,20 @@ import {
   ProfileTab,
   SchoolProfilePage,
 } from './components/SchoolProfilePage';
+import {
+  SchoolSearchPage,
+  SchoolSearchFilterState,
+  parseSchoolSearchUrlParams,
+  buildSchoolSearchUrl,
+} from './components/SchoolSearchPage';
 import { AnonymousReportPage } from './components/AnonymousReportPage';
 import { LiveTrackingPage } from './components/LiveTrackingPage';
 import { KamusBospPage } from './components/KamusBospPage';
 import { DinasDashboardPage } from './components/DinasDashboardPage';
 import { IntroSplashScreen } from './components/IntroSplashScreen';
 import { OnboardingTour } from './components/OnboardingTour';
+import { Footer } from './components/Footer';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import {
   GeotagModal,
   InvoiceModal,
@@ -34,24 +40,93 @@ import {
 
 export type AppView =
   | 'landing'
+  | 'school-search'
   | 'school-profile'
   | 'anonymous-report'
   | 'live-tracking'
   | 'kamus-bosp'
   | 'dinas-dashboard';
 
+function detectInitialAdminRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const pathname = window.location.pathname.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  return (
+    pathname === '/admin' ||
+    pathname === '/admin/' ||
+    window.location.hash === '#admin' ||
+    params.get('admin') === 'true' ||
+    params.get('view') === 'dinas' ||
+    params.get('dinas') === 'true'
+  );
+}
+
+function detectInitialSearchRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const pathname = window.location.pathname.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  return (
+    pathname === '/search' ||
+    pathname === '/search/' ||
+    params.get('view') === 'search' ||
+    params.has('province') ||
+    params.has('city') ||
+    params.has('level') ||
+    params.has('status') ||
+    params.has('search')
+  );
+}
+
 export function App() {
-  const [showIntro, setShowIntro] = useState<boolean>(true);
-  const [currentView, setCurrentView] = useState<AppView>('landing');
-  const [viewHistory, setViewHistory] = useState<AppView[]>([]);
+  const [showIntro, setShowIntro] = useState<boolean>(
+    () => !detectInitialAdminRoute() && !detectInitialSearchRoute()
+  );
+  const [currentView, setCurrentView] = useState<AppView>(() => {
+    if (detectInitialAdminRoute()) return 'dinas-dashboard';
+    if (detectInitialSearchRoute()) return 'school-search';
+    return 'landing';
+  });
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+
+  const [searchPageFilters, setSearchPageFilters] = useState<
+    Partial<SchoolSearchFilterState>
+  >(() =>
+    typeof window !== 'undefined'
+      ? parseSchoolSearchUrlParams(window.location.search)
+      : {}
+  );
+  const [searchPageResetKey, setSearchPageResetKey] = useState<number>(0);
 
   const [selectedSchool, setSelectedSchool] = useState<SchoolData>(
     SCHOOLS_DATABASE[0]
   );
   const [profileTab, setProfileTab] = useState<ProfileTab>('summary');
 
-  // Pastikan saat refresh atau load awal selalu mulai dari paling atas layar & cek parameter URL (?npsn=...)
+  const isAdminRoute = currentView === 'dinas-dashboard';
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (isAdminRoute) {
+      document.body.classList.add('is-admin-route');
+      setIsTourOpen(false);
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      document.title = 'Dashboard Petugas Dinas Pendidikan | DARADIK';
+    } else {
+      document.body.classList.remove('is-admin-route');
+      if (currentView === 'live-tracking') {
+        document.title = 'Lacak Status Laporan | DARADIK';
+      } else if (currentView === 'anonymous-report') {
+        document.title = 'Kirim Laporan Anonim | DARADIK';
+      } else if (currentView === 'school-search') {
+        document.title = 'Pencarian Sekolah | DARADIK';
+      } else {
+        document.title = 'DARADIK | Transparansi Dana Pendidikan Indonesia';
+      }
+    }
+  }, [isAdminRoute, currentView]);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -59,22 +134,21 @@ export function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
     if (typeof window !== 'undefined') {
-      const pathname = window.location.pathname.toLowerCase();
       const params = new URLSearchParams(window.location.search);
       const npsnParam = params.get('npsn');
-      const viewParam = params.get('view');
-      const dinasParam = params.get('dinas');
-      const adminParam = params.get('admin');
+      const ticketParam = params.get('ticket');
 
-      if (
-        pathname === '/admin' ||
-        pathname === '/admin/' ||
-        window.location.hash === '#admin' ||
-        adminParam === 'true' ||
-        viewParam === 'dinas' ||
-        dinasParam === 'true'
-      ) {
+      if (detectInitialAdminRoute()) {
         setCurrentView('dinas-dashboard');
+        setShowIntro(false);
+      } else if (detectInitialSearchRoute()) {
+        setSearchPageFilters(parseSchoolSearchUrlParams(window.location.search));
+        setCurrentView('school-search');
+        setShowIntro(false);
+      } else if (ticketParam) {
+        setActiveTicketCode(ticketParam.trim().toUpperCase());
+        setCurrentView('live-tracking');
+        setShowIntro(false);
       } else if (npsnParam) {
         const matched = SCHOOLS_DATABASE.find(
           (s) => s.npsn.toLowerCase() === npsnParam.trim().toLowerCase()
@@ -96,7 +170,6 @@ export function App() {
     setShowIntro(false);
   }, []);
 
-  // Supabase Sync: Mengambil data sekolah dari Supabase jika database aktif
   useEffect(() => {
     async function loadSchoolFromSupabase() {
       try {
@@ -124,14 +197,16 @@ export function App() {
     useState<string>('');
   const [reportAttachmentPrefill, setReportAttachmentPrefill] =
     useState<string>('');
+  const [reportOcrTextPrefill, setReportOcrTextPrefill] =
+    useState<string>('');
+  const [reportOcrBospFactPrefill, setReportOcrBospFactPrefill] =
+    useState<string>('');
   const [preselectReportSchool, setPreselectReportSchool] =
     useState<boolean>(false);
   const [reportFormResetKey, setReportFormResetKey] = useState<number>(0);
 
-  // Live Tracking Ticket State (Default Kosong)
+  // Live Tracking Ticket State
   const [activeTicketCode, setActiveTicketCode] = useState<string>('');
-  const [submittedReporterNote, setSubmittedReporterNote] =
-    useState<string>('');
 
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -141,7 +216,6 @@ export function App() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Lebih dari 90px berarti sudah keluar dari area hero utama landing page
       setIsScrolled(window.scrollY > 90);
     };
 
@@ -150,8 +224,33 @@ export function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // True hanya ketika berada di area hero gelap di halaman beranda
   const isDarkBackground = currentView === 'landing' && !isScrolled;
+
+  // Keyboard virtual HP: saat field teks fokus, lepas elemen fixed bawah
+  // (bottom nav, chatbot) agar input dan tombol kirim tidak tertutup.
+  useEffect(() => {
+    const isTextField = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.tagName === 'TEXTAREA') return true;
+      if (target.tagName === 'INPUT') {
+        const type = (target as HTMLInputElement).type;
+        return !['checkbox', 'radio', 'file', 'button', 'submit', 'range', 'color'].includes(type);
+      }
+      return target.isContentEditable;
+    };
+    const handleFocusIn = (e: FocusEvent) => {
+      if (isTextField(e.target)) document.body.classList.add('kb-open');
+    };
+    const handleFocusOut = () => document.body.classList.remove('kb-open');
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      document.body.classList.remove('kb-open');
+    };
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -160,15 +259,21 @@ export function App() {
     }, 4000);
   }, []);
 
-  // URL & Browser History Sync untuk /admin
   useEffect(() => {
     const handlePopState = () => {
       if (typeof window === 'undefined') return;
-      const pathname = window.location.pathname.toLowerCase();
-      if (pathname === '/admin' || pathname === '/admin/' || window.location.hash === '#admin') {
+      if (detectInitialAdminRoute()) {
         setCurrentView('dinas-dashboard');
-      } else if (pathname === '/' || pathname === '') {
-        setCurrentView('landing');
+        setShowIntro(false);
+      } else if (detectInitialSearchRoute()) {
+        setSearchPageFilters(parseSchoolSearchUrlParams(window.location.search));
+        setCurrentView('school-search');
+        setShowIntro(false);
+      } else {
+        const pathname = window.location.pathname.toLowerCase();
+        if (pathname === '/' || pathname === '') {
+          setCurrentView('landing');
+        }
       }
     };
 
@@ -176,24 +281,50 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigateTo = useCallback(
-    (view: AppView) => {
-      setCurrentView((prev) => {
-        if (prev !== view) {
-          setViewHistory((history) => [...history, prev]);
+  const navigateTo = useCallback((view: AppView) => {
+    setCurrentView(view);
+
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname.toLowerCase();
+      if (view === 'dinas-dashboard') {
+        if (currentPath !== '/admin') {
+          window.history.pushState(null, '', '/admin');
         }
-        return view;
-      });
+      } else if (view === 'school-search') {
+        if (currentPath !== '/search' && currentPath !== '/search/') {
+          window.history.pushState(null, '', '/search');
+        }
+      } else if (
+        currentPath === '/admin' ||
+        currentPath === '/admin/' ||
+        currentPath === '/search' ||
+        currentPath === '/search/' ||
+        window.location.search !== ''
+      ) {
+        window.history.pushState(null, '', '/');
+      }
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleOpenSearchPage = useCallback(
+    (filters?: Partial<SchoolSearchFilterState>) => {
+      const normalized: SchoolSearchFilterState = {
+        province: filters?.province || '',
+        city: filters?.city || '',
+        level: filters?.level || '',
+        status: filters?.status || '',
+        search: filters?.search || '',
+        page: filters?.page && filters.page > 0 ? filters.page : 1,
+      };
+      setSearchPageFilters(normalized);
+      setSearchPageResetKey((k) => k + 1);
+      setCurrentView('school-search');
 
       if (typeof window !== 'undefined') {
-        const currentPath = window.location.pathname.toLowerCase();
-        if (view === 'dinas-dashboard') {
-          if (currentPath !== '/admin') {
-            window.history.pushState(null, '', '/admin');
-          }
-        } else if (currentPath === '/admin' || currentPath === '/admin/') {
-          window.history.pushState(null, '', '/');
-        }
+        const targetUrl = buildSchoolSearchUrl(normalized);
+        window.history.pushState(null, '', targetUrl);
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -202,16 +333,8 @@ export function App() {
   );
 
   const handleGoBack = useCallback(() => {
-    setViewHistory([]);
-    setCurrentView('landing');
-    if (typeof window !== 'undefined') {
-      const currentPath = window.location.pathname.toLowerCase();
-      if (currentPath === '/admin' || currentPath === '/admin/') {
-        window.history.pushState(null, '', '/');
-      }
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    handleOpenSearchPage();
+  }, [handleOpenSearchPage]);
 
   const handleSelectSchoolAndOpenProfile = (
     school: SchoolData,
@@ -228,7 +351,7 @@ export function App() {
         }
       })
       .catch(() => {
-        // Fallback ke data lokal terverifikasi
+        // Pertahankan data lokal terverifikasi
       });
   };
 
@@ -242,6 +365,8 @@ export function App() {
     setReportAttachmentPrefill(
       `Arsip Nota ${item.invoice.number} & Data Geotagging (${item.geotag.lat}, ${item.geotag.lng})`
     );
+    setReportOcrTextPrefill('');
+    setReportOcrBospFactPrefill('');
     setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
@@ -250,6 +375,8 @@ export function App() {
     setPreselectReportSchool(true);
     setReportCategoryPrefill(scenario.reportCategoryPrefill);
     setReportAttachmentPrefill(scenario.attachmentLabel);
+    setReportOcrTextPrefill(scenario.ocrQuote || '');
+    setReportOcrBospFactPrefill(scenario.bospFact || '');
     setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
@@ -258,6 +385,8 @@ export function App() {
     setPreselectReportSchool(false);
     setReportCategoryPrefill('');
     setReportAttachmentPrefill('');
+    setReportOcrTextPrefill('');
+    setReportOcrBospFactPrefill('');
     setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
@@ -266,6 +395,8 @@ export function App() {
     setPreselectReportSchool(true);
     setReportCategoryPrefill('');
     setReportAttachmentPrefill('');
+    setReportOcrTextPrefill('');
+    setReportOcrBospFactPrefill('');
     setReportFormResetKey((k) => k + 1);
     navigateTo('anonymous-report');
   };
@@ -282,140 +413,130 @@ export function App() {
     setIsTourOpen(true);
   };
 
-  const handleReportSubmitted = (
-    ticketCode: string,
-    notes: string,
-    finalCategory: string
-  ) => {
+  const handleReportSubmitted = (ticketCode: string) => {
     setActiveTicketCode(ticketCode);
-    setSubmittedReporterNote(notes);
-    setReportCategoryPrefill(finalCategory);
     navigateTo('live-tracking');
-    showToast(`Laporan anonim terkirim! Kode Tiket Anda: ${ticketCode}`);
+    showToast(`Laporan terkirim. Kode tiket Anda: ${ticketCode}`);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1E293B]">
-      {showIntro && (
+    <div
+      className={`min-h-screen flex flex-col bg-[#FAF8F5] text-[#1E293B] ${
+        isAdminRoute ? '' : 'has-mobile-nav'
+      }`}
+    >
+      {!isAdminRoute && showIntro && (
         <IntroSplashScreen onFinish={handleIntroFinish} />
       )}
 
-      {/* =====================================================================
-          WHITE LIQUID GLASS NAVBAR (TRANSPARANSI TIPIS, NEMBUS DIKIT)
-         ===================================================================== */}
-      <header className="fixed top-2 sm:top-3 left-0 right-0 z-50 px-2 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-6 rounded-xl liquid-glass-nav-white flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left: Official DARADIK Logo */}
+      {/* Navbar publik disembunyikan pada halaman /admin.
+          Di HP (<640px) header hanya memuat logo; menu utama ada di bottom nav. */}
+      {!isAdminRoute && (
+        <header className="app-header-fixed fixed left-0 right-0 z-50 px-2 sm:pl-6 sm:pr-16 lg:pl-8 lg:pr-20 xl:px-8">
+          <div className="max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-6 rounded-xl liquid-glass-nav-white flex items-center justify-between gap-2 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => navigateTo('landing')}
+              className="flex items-center gap-2 sm:gap-3 text-left focus:outline-none group shrink-0 min-h-[44px]"
+              aria-label="Beranda DARADIK"
+            >
+              <img
+                src="/logo-daradik.png"
+                alt="Logo DARADIK"
+                className="h-6 sm:h-7 w-auto object-contain select-none transition-transform duration-200 group-hover:scale-[1.02] group-hover:opacity-90"
+              />
+            </button>
+
+            <nav
+              className="hidden sm:flex items-center gap-1 sm:gap-2"
+              aria-label="Navigasi Utama DARADIK"
+            >
+              <button
+                type="button"
+                data-tour-id="tour-kamus-bosp"
+                onClick={() => navigateTo('kamus-bosp')}
+                className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
+                  currentView === 'kamus-bosp'
+                    ? 'text-[#2E6496] bg-[#C9DFDC]/55'
+                    : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
+                <span>Kamus BOSP</span>
+              </button>
+
+              <button
+                type="button"
+                data-tour-id="tour-lacak-lapor"
+                onClick={handleOpenLiveTrackingFromHeader}
+                className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
+                  currentView === 'live-tracking'
+                    ? 'text-[#2E6496] bg-[#C9DFDC]/55'
+                    : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
+                }`}
+              >
+                <Search className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
+                <span>Lacak Lapor</span>
+              </button>
+
+              <button
+                type="button"
+                data-tour-id="tour-lapor"
+                onClick={handleOpenReportFromHeader}
+                className="px-2.5 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
+              >
+                <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true" />
+                <span>Lapor</span>
+              </button>
+            </nav>
+          </div>
+        </header>
+      )}
+
+      {/* Tombol panduan (?) disembunyikan sepenuhnya pada halaman /admin */}
+      {!isAdminRoute && (
+        <div className="app-header-fixed fixed right-3.5 sm:right-3.5 lg:right-5 h-14 sm:h-16 flex items-center z-[60] pointer-events-none group">
+          <div
+            role="tooltip"
+            className={`mr-2.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none translate-x-2 group-hover:translate-x-0 relative flex items-center select-none ${
+              isDarkBackground
+                ? 'bg-[#1E293B] text-[#FFFFFF] border border-[#334155]'
+                : 'bg-[#FFFFFF] text-[#1E293B] border border-[#C9DFDC] shadow-md'
+            }`}
+          >
+            <span>Panduan</span>
+            <div
+              className={`absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rotate-45 ${
+                isDarkBackground
+                  ? 'bg-[#1E293B] border-r border-t border-[#334155]'
+                  : 'bg-[#FFFFFF] border-r border-t border-[#C9DFDC]'
+              }`}
+              aria-hidden="true"
+            />
+          </div>
+
           <button
             type="button"
-            onClick={() => navigateTo('landing')}
-            className="flex items-center gap-2 sm:gap-3 text-left focus:outline-none group shrink-0"
-            aria-label="Beranda DARADIK"
-          >
-            <img
-              src="/logo-daradik.png"
-              alt="Logo DARADIK"
-              className="h-5 sm:h-7 w-auto object-contain select-none transition-transform duration-200 group-hover:scale-[1.02] group-hover:opacity-90"
-            />
-          </button>
-
-          {/* Right: 2 Clean Menus (Kamus BOSP & Lacak Lapor) + 1 CTA Button (Lapor) */}
-          <nav
-            className="flex items-center gap-1 sm:gap-2"
-            aria-label="Navigasi Utama DARADIK"
-          >
-            {/* Menu 1: Kamus BOSP */}
-            <button
-              type="button"
-              data-tour-id="tour-kamus-bosp"
-              onClick={() => navigateTo('kamus-bosp')}
-              className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'kamus-bosp'
-                  ? 'text-[#2E6496] bg-[#C9DFDC]/55'
-                  : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
-              }`}
-            >
-              <BookOpen className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
-              <span>Kamus BOSP</span>
-            </button>
-
-            {/* Menu 2: Lacak Lapor */}
-            <button
-              type="button"
-              data-tour-id="tour-lacak-lapor"
-              onClick={handleOpenLiveTrackingFromHeader}
-              className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'live-tracking'
-                  ? 'text-[#2E6496] bg-[#C9DFDC]/55'
-                  : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
-              }`}
-            >
-              <Search className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
-              <span>Lacak Lapor</span>
-            </button>
-
-            {/* Primary CTA Button: Lapor */}
-            <button
-              type="button"
-              data-tour-id="tour-lapor"
-              onClick={handleOpenReportFromHeader}
-              className="px-2.5 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
-            >
-              <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true" />
-              <span>Lapor</span>
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      {/* =====================================================================
-          TOMBOL BANTUAN ONBOARDING (?) KHUSUS DI POJOK KANAN ATAS (ADAPTIF WARNA BG)
-         ===================================================================== */}
-      <div className="fixed top-2 sm:top-3 right-3 sm:right-6 lg:right-8 h-14 sm:h-16 flex items-center z-[60] pointer-events-auto group">
-        {/* Balon Chat (Speech Bubble) "Panduan" muncul saat tombol di-hover */}
-        <div
-          role="tooltip"
-          className={`mr-2.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none translate-x-2 group-hover:translate-x-0 relative flex items-center select-none ${
-            isDarkBackground
-              ? 'bg-[#1E293B] text-[#FFFFFF] border border-[#334155]'
-              : 'bg-[#FFFFFF] text-[#1E293B] border border-[#C9DFDC] shadow-md'
-          }`}
-        >
-          <span>Panduan</span>
-          {/* Ekor Balon Chat mengarah ke tombol ? */}
-          <div
-            className={`absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rotate-45 ${
+            onClick={handleStartOnboardingTour}
+            title="Panduan Fitur"
+            aria-label="Buka panduan penggunaan fitur"
+            className={`pointer-events-auto w-10 h-10 sm:w-9 sm:h-9 rounded-full border-2 flex items-center justify-center font-bold text-sm sm:text-base leading-none select-none transition-all duration-300 cursor-pointer shrink-0 active:scale-95 ${
               isDarkBackground
-                ? 'bg-[#1E293B] border-r border-t border-[#334155]'
-                : 'bg-[#FFFFFF] border-r border-t border-[#C9DFDC]'
+                ? 'border-[#FFFFFF] text-[#FFFFFF] bg-transparent hover:border-white hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]'
+                : 'border-[#2E6496] text-[#2E6496] bg-white/80 hover:bg-white hover:border-[#1E293B] hover:text-[#1E293B] shadow-xs backdrop-blur-xs'
             }`}
-            aria-hidden="true"
-          />
+          >
+            ?
+          </button>
         </div>
+      )}
 
-        {/* Tombol ? Interaktif: Putih saat di atas Hero Gelap, Biru/Slate saat di atas Background Putih/Terang */}
-        <button
-          type="button"
-          onClick={handleStartOnboardingTour}
-          title="Panduan Fitur"
-          aria-label="Buka panduan penggunaan fitur"
-          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 flex items-center justify-center font-bold text-sm sm:text-base leading-none select-none transition-all duration-300 cursor-pointer shrink-0 active:scale-95 ${
-            isDarkBackground
-              ? 'border-[#FFFFFF] text-[#FFFFFF] bg-transparent hover:border-white hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]'
-              : 'border-[#2E6496] text-[#2E6496] bg-white/80 hover:bg-white hover:border-[#1E293B] hover:text-[#1E293B] shadow-xs backdrop-blur-xs'
-          }`}
-        >
-          ?
-        </button>
-      </div>
-
-      {/* =====================================================================
-          TOAST NOTIFICATION BANNER
-         ===================================================================== */}
+      {/* Toast Notification Banner */}
       {toastMessage && (
         <div
-          className="fixed bottom-5 right-5 z-50 max-w-md bg-[#1E293B] text-[#FAF8F5] border border-[#2E6496] rounded-lg px-4 py-3 shadow-lg flex items-center justify-between gap-3 animate-view-enter"
+          className="fixed left-3 right-3 bottom-[calc(var(--mobile-nav-h)+var(--safe-bottom)+0.75rem)] sm:left-auto sm:right-5 sm:bottom-5 z-[56] sm:max-w-md bg-[#1E293B] text-[#FAF8F5] border border-[#2E6496] rounded-lg px-4 py-3 shadow-lg flex items-center justify-between gap-3 animate-view-enter"
           role="status"
+          aria-live="polite"
         >
           <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium">
             <CheckCircle2 className="w-4 h-4 text-[#C9DFDC] shrink-0" />
@@ -424,7 +545,7 @@ export function App() {
           <button
             type="button"
             onClick={() => setToastMessage(null)}
-            className="text-[#C9DFDC] hover:text-[#FFFFFF]"
+            className="text-[#C9DFDC] hover:text-[#FFFFFF] p-2.5 -m-1.5 shrink-0"
             aria-label="Tutup notifikasi"
           >
             <X className="w-4 h-4" />
@@ -432,14 +553,13 @@ export function App() {
         </div>
       )}
 
-      {/* =====================================================================
-          MAIN VIEW CONTENT
-         ===================================================================== */}
+      {/* Main View Content */}
       <main className="flex-1">
         {currentView === 'landing' && (
           <LandingPage
             selectedSchool={selectedSchool}
             onSelectSchoolAndOpenProfile={handleSelectSchoolAndOpenProfile}
+            onOpenSearchPage={handleOpenSearchPage}
             onOpenAnonymousReport={handleOpenReportFromHeader}
             onOpenLiveTracking={handleOpenLiveTrackingFromHeader}
             onOpenKamusModal={() => navigateTo('kamus-bosp')}
@@ -447,13 +567,26 @@ export function App() {
           />
         )}
 
+        {currentView === 'school-search' && (
+          <div className="app-top-offset">
+            <SchoolSearchPage
+              key={searchPageResetKey}
+              initialFilters={searchPageFilters}
+              onBackToLanding={() => navigateTo('landing')}
+              onSelectSchool={(school) =>
+                handleSelectSchoolAndOpenProfile(school, 'summary')
+              }
+            />
+          </div>
+        )}
+
         {currentView === 'school-profile' && (
-          <div className="pt-20">
+          <div className="app-top-offset">
             <SchoolProfilePage
               school={selectedSchool}
               activeTab={profileTab}
               onTabChange={setProfileTab}
-              onBackToLanding={() => navigateTo('landing')}
+              onBackToLanding={() => handleOpenSearchPage()}
               onOpenKamusModal={() => navigateTo('kamus-bosp')}
               onOpenInvoiceModal={(item) => setActiveInvoiceItem(item)}
               onOpenGeotagModal={(item) => setActiveGeotagItem(item)}
@@ -466,7 +599,7 @@ export function App() {
         )}
 
         {currentView === 'anonymous-report' && (
-          <div className="pt-20">
+          <div className="app-top-offset">
             <AnonymousReportPage
               key={reportFormResetKey}
               selectedSchool={selectedSchool}
@@ -474,22 +607,20 @@ export function App() {
               onChangeSchool={setSelectedSchool}
               prefilledCategory={reportCategoryPrefill}
               prefilledAttachment={reportAttachmentPrefill}
+              prefilledOcrText={reportOcrTextPrefill}
+              prefilledOcrBospFact={reportOcrBospFactPrefill}
               onCancel={handleGoBack}
-              onBackToHome={() => navigateTo('landing')}
+              onBackToHome={() => handleOpenSearchPage()}
               onSubmitSuccess={handleReportSubmitted}
             />
           </div>
         )}
 
         {currentView === 'live-tracking' && (
-          <div className="pt-20">
+          <div className="app-top-offset">
             <LiveTrackingPage
               ticketCode={activeTicketCode}
-              school={selectedSchool}
-              reportCategory={reportCategoryPrefill}
-              reporterNote={submittedReporterNote}
-              onBackToHome={() => navigateTo('landing')}
-              onBackToSchoolProfile={() => navigateTo('school-profile')}
+              onBackToHome={() => handleOpenSearchPage()}
               onOpenAnonymousReport={handleOpenReportFromHeader}
               onShowToast={showToast}
             />
@@ -497,20 +628,14 @@ export function App() {
         )}
 
         {currentView === 'dinas-dashboard' && (
-          <div className="pt-20">
-            <DinasDashboardPage
-              onBackToHome={() => navigateTo('landing')}
-              onOpenLiveTracking={(ticketCode) => {
-                setActiveTicketCode(ticketCode);
-                navigateTo('live-tracking');
-              }}
-              onShowToast={showToast}
-            />
-          </div>
+          <DinasDashboardPage
+            onBackToHome={() => handleOpenSearchPage()}
+            onShowToast={showToast}
+          />
         )}
 
         {currentView === 'kamus-bosp' && (
-          <div className="pt-20">
+          <div className="app-top-offset">
             <KamusBospPage
               onBack={handleGoBack}
               onReportNow={handleOpenReportFromHeader}
@@ -519,149 +644,36 @@ export function App() {
         )}
       </main>
 
-      {/* =====================================================================
-          SIMPLE & MODERN CIVIC FOOTER (SESUAI HALAMAN WEBSITE DARADIK)
-         ===================================================================== */}
-      <footer className="bg-[#F2EFE8] border-t border-[#C9DFDC] pt-10 sm:pt-12 pb-8 sm:pb-10 px-4 sm:px-6 lg:px-8 mt-12 sm:mt-16">
-        <div className="max-w-6xl mx-auto">
-          {/* Main Content: Brand & Navigation */}
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 sm:gap-10 pb-8 sm:pb-10 border-b border-[#C9DFDC]">
-            {/* Left Column: Brand & Concise Mission */}
-            <div className="max-w-md space-y-3">
-              <button
-                type="button"
-                onClick={() => navigateTo('landing')}
-                className="focus:outline-none group text-left inline-block cursor-pointer"
-                aria-label="DARADIK Beranda"
-              >
-                <img
-                  src="/logo-daradik.png"
-                  alt="Logo DARADIK"
-                  className="h-7 w-auto object-contain select-none transition-opacity group-hover:opacity-85"
-                />
-              </button>
+      {/* Footer publik disembunyikan pada halaman /admin */}
+      {!isAdminRoute && (
+        <Footer
+          onNavigateHome={() => navigateTo('landing')}
+          onNavigateSearch={() => handleOpenSearchPage()}
+          onNavigateKamus={() => navigateTo('kamus-bosp')}
+          onNavigateTracking={handleOpenLiveTrackingFromHeader}
+          onNavigateReport={handleOpenReportFromHeader}
+          onStartTour={handleStartOnboardingTour}
+          onShowToast={showToast}
+        />
+      )}
 
-              <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-                Platform keterbukaan data alokasi dan realisasi dana Bantuan Operasional Satuan Pendidikan (BOSP) serta kanal pelaporan warga yang aman dan independen.
-              </p>
-            </div>
+      {!isAdminRoute && (
+        <MobileBottomNav
+          currentView={currentView}
+          onHome={() => navigateTo('landing')}
+          onSearch={() => handleOpenSearchPage()}
+          onReport={handleOpenReportFromHeader}
+          onTracking={handleOpenLiveTrackingFromHeader}
+          onKamus={() => navigateTo('kamus-bosp')}
+        />
+      )}
 
-            {/* Right Column: Real Navigable Pages on DARADIK */}
-            <div className="flex flex-wrap sm:flex-nowrap gap-10 sm:gap-16">
-              {/* Navigasi Utama */}
-              <div>
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496] block mb-3 font-mono">
-                  Navigasi
-                </span>
-                <ul className="space-y-2 text-xs sm:text-sm">
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => navigateTo('landing')}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                    >
-                      Beranda
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => navigateTo('kamus-bosp')}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                    >
-                      Kamus BOSP
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={handleOpenLiveTrackingFromHeader}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                    >
-                      Lacak Lapor
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={handleStartOnboardingTour}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <HelpCircle className="w-3.5 h-3.5 text-[#2E6496]" />
-                      <span>Panduan Fitur</span>
-                    </button>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Layanan Publik */}
-              <div>
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496] block mb-3 font-mono">
-                  Layanan Publik
-                </span>
-                <ul className="space-y-2 text-xs sm:text-sm">
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileTab('summary');
-                        navigateTo('school-profile');
-                      }}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                    >
-                      Profil Data Sekolah
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileTab('wa-scanner');
-                        navigateTo('school-profile');
-                      }}
-                      className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                    >
-                      Pemindai Iuran WA
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      onClick={handleOpenReportFromHeader}
-                      className="inline-flex items-center gap-1.5 font-bold text-[#2E6496] hover:text-[#245385] transition-colors text-left cursor-pointer"
-                    >
-                      <Flag className="w-3.5 h-3.5" />
-                      <span>Kirim Laporan Anonim</span>
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Bar: Copyright & Verified Badge */}
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] sm:text-xs text-[#64748B]">
-            <div className="flex items-center gap-2 tabular-nums font-mono">
-              <span>© 2026 DARADIK.</span>
-              <span>•</span>
-              <span className="font-sans">Transparansi Dana Pendidikan Indonesia</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#2E7D32]" />
-              <span>Kanal Pelaporan Terlindungi &amp; 100% Tanpa Identitas</span>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* =====================================================================
-          ONBOARDING TOUR & MODALS
-         ===================================================================== */}
-      <OnboardingTour
-        isOpen={isTourOpen}
-        onClose={() => setIsTourOpen(false)}
-      />
+      {!isAdminRoute && (
+        <OnboardingTour
+          isOpen={isTourOpen}
+          onClose={() => setIsTourOpen(false)}
+        />
+      )}
 
       <InvoiceModal
         item={activeInvoiceItem}

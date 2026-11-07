@@ -75,6 +75,22 @@ interface SpotlightRect {
   height: number;
 }
 
+/**
+ * Ambil elemen target pertama yang benar-benar terlihat. Satu langkah tour bisa
+ * memiliki dua elemen (menu header di tablet/desktop, bottom nav di HP) dan
+ * hanya salah satunya yang tampil pada ukuran layar tertentu.
+ */
+function findVisibleTarget(selector: string): HTMLElement | null {
+  const nodes = Array.from(
+    document.querySelectorAll<HTMLElement>(selector)
+  );
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) return node;
+  }
+  return nodes[0] ?? null;
+}
+
 export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   isOpen,
   onClose,
@@ -101,7 +117,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     const step = TOUR_STEPS[currentStepIndex];
     if (!step) return;
 
-    const el = document.querySelector(step.targetSelector) as HTMLElement | null;
+    const el = findVisibleTarget(step.targetSelector);
     setViewportSize({
       w: window.innerWidth,
       h: window.innerHeight,
@@ -130,19 +146,20 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     if (!step) return;
 
     const timer = setTimeout(() => {
-      const el = document.querySelector(step.targetSelector) as HTMLElement | null;
+      const el = findVisibleTarget(step.targetSelector);
       if (el) {
         const rect = el.getBoundingClientRect();
+        const isInMobileBottomNav = Boolean(el.closest('.mobile-nav'));
         if (step.id === 'step-search') {
           // Posisikan kotak pencarian di area atas-tengah layar agar terlihat jelas berdampingan dengan kartu di kanan
-          const desiredTop = window.innerWidth < 768 ? 76 : 130;
+          const desiredTop = window.innerWidth < 768 ? 72 : 130;
           const scrollTarget = window.scrollY + rect.top - desiredTop;
           window.scrollTo({
             top: Math.max(0, scrollTarget),
             behavior: 'smooth',
           });
-        } else {
-          // Untuk tombol di navbar, pastikan layar berada di paling atas
+        } else if (!isInMobileBottomNav) {
+          // Untuk tombol di navbar atas desktop, pastikan layar berada di paling atas
           if (window.scrollY > 80) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
@@ -311,11 +328,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     };
   };
 
-  // Panah penunjuk kecil menuju tombol di navbar
+  // Panah penunjuk kecil menuju tombol di navbar / bottom nav
   const computeArrowLeftOffset = (): number | null => {
     if (!targetRect) return null;
-    const isMobile = viewportSize.w < 768;
-    const cardMaxWidth = isMobile ? viewportSize.w - 24 : 400;
+    const isMobile = viewportSize.w < 640;
+    const cardMaxWidth = isMobile ? viewportSize.w - 24 : 360;
     let cardLeft = targetRect.left;
     if (currentStep.id !== 'step-search') {
       cardLeft = targetRect.left + targetRect.width / 2 - cardMaxWidth / 2;
@@ -324,7 +341,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
     const targetCenter = targetRect.left + targetRect.width / 2;
     const arrowOffset = targetCenter - cardLeft;
-    return Math.max(24, Math.min(cardMaxWidth - 24, arrowOffset));
+    return Math.max(20, Math.min(cardMaxWidth - 20, arrowOffset));
   };
 
   const arrowLeft = computeArrowLeftOffset();
@@ -341,6 +358,12 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     targetRect !== null &&
     !isCardRightOfTarget &&
     cardTopNum >= targetRect.top + targetRect.height - 10;
+
+  const isCardAboveTarget =
+    targetRect !== null &&
+    !isCardRightOfTarget &&
+    !isCardBelowTarget &&
+    cardTopNum < targetRect.top;
 
   return (
     <div
@@ -414,6 +437,12 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
           <div
             style={{ left: `${arrowLeft - 7}px` }}
             className="absolute -top-2 w-3.5 h-3.5 bg-[#FFFFFF] border-l border-t border-[#C9DFDC] rotate-45 pointer-events-none"
+            aria-hidden="true"
+          />
+        ) : isCardAboveTarget && arrowLeft !== null ? (
+          <div
+            style={{ left: `${arrowLeft - 7}px` }}
+            className="absolute -bottom-2 w-3.5 h-3.5 bg-[#FFFFFF] border-r border-b border-[#C9DFDC] rotate-45 pointer-events-none"
             aria-hidden="true"
           />
         ) : null}

@@ -27,6 +27,7 @@ import {
   Flag,
   Wallet,
   BookOpen,
+  Camera,
 } from 'lucide-react';
 import {
   BospRealizationItem,
@@ -59,12 +60,13 @@ interface SchoolProfilePageProps {
 }
 
 const QUICK_CHIPS = [
-  'kipas angin',
-  'proyektor',
-  'modul buku',
-  'kamar mandi',
+  'buku pelajaran',
+  'kertas & atk',
+  'toilet & sanitasi',
   'meja kursi',
-  'switch internet',
+  'kipas angin',
+  'wifi & internet',
+  'proyektor',
 ];
 
 function useAnimatedProgress(triggerKey: string, duration = 560): number {
@@ -120,8 +122,20 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
   const currentPerStudentEstimate = school.perStudentEstimate || 1900000;
   const currentTotalBosp =
     school.totalBosp || currentStudentCount * currentPerStudentEstimate;
-  const currentTahap1 = school.tahap1;
-  const currentTahap2 = school.tahap2;
+  const currentTahap1 = school.tahap1 || {
+    amount: Math.round(currentTotalBosp * 0.5),
+    period: 'Jan–Jun',
+    status: 'Sudah Cair',
+    disbursedDate: '16 Februari 2026',
+  };
+  const currentTahap2 = school.tahap2 || {
+    amount:
+      currentTotalBosp -
+      (school.tahap1?.amount || Math.round(currentTotalBosp * 0.5)),
+    period: 'Jul–Des',
+    status: 'Sudah Cair',
+    disbursedDate: '14 Agustus 2026',
+  };
 
   const schoolType =
     school.schoolType ||
@@ -143,16 +157,16 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     'global' | 'tahap1' | 'tahap2'
   >('global');
 
-  const globalCompositions = activeYearData.compositions;
+  const globalCompositions = school.compositions || [];
   const currentCompositions = globalCompositions;
   const tahap1Compositions =
-    activeYearData.tahap1Compositions ||
     school.tahap1Compositions ||
-    activeYearData.compositions;
+    school.compositions ||
+    [];
   const tahap2Compositions =
-    activeYearData.tahap2Compositions ||
     school.tahap2Compositions ||
-    activeYearData.compositions;
+    school.compositions ||
+    [];
 
   const activeCompositionList =
     compositionTab === 'tahap1'
@@ -321,23 +335,23 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
         {/* ===================================================================
             1. TOP UTILITY BAR (Kembali ke Pencarian Left | Bagikan & Unduh Right)
            =================================================================== */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 animate-school-header">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 animate-school-header">
           <button
             type="button"
             onClick={onBackToLanding}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-bold text-[#1E293B] shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="min-h-[42px] w-full sm:w-auto px-4 py-2.5 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-bold text-[#1E293B] shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-            <span>Kembali ke Beranda</span>
+            <span>Kembali ke Pencarian</span>
           </button>
 
-          <div className="w-full sm:w-auto flex items-center gap-2 justify-end">
+          <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-2 justify-end">
             <button
               type="button"
               onClick={handleShareSchool}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-bold text-[#1E293B] shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="min-h-[42px] px-3.5 sm:px-4 py-2.5 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-bold text-[#1E293B] shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <Share2 className="w-3.5 h-3.5 text-[#2E6496]" />
+              <Share2 className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
               <span>Bagikan</span>
             </button>
 
@@ -345,14 +359,14 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               type="button"
               onClick={handleDownloadPdf}
               disabled={isDownloadingPdf}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 cursor-pointer"
+              className="min-h-[42px] px-3.5 sm:px-4 py-2.5 rounded-full bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 cursor-pointer"
             >
               {isDownloadingPdf ? (
-                <Loader2 className="w-3.5 h-3.5 text-[#FFFFFF] animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 text-[#FFFFFF] animate-spin shrink-0" />
               ) : (
-                <Download className="w-3.5 h-3.5 text-[#FFFFFF]" />
+                <Download className="w-3.5 h-3.5 text-[#FFFFFF] shrink-0" />
               )}
-              <span>
+              <span className="truncate">
                 {isDownloadingPdf ? 'Membuat...' : 'Unduh Ringkasan'}
               </span>
             </button>
@@ -366,43 +380,51 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
           className="rounded-2xl sm:rounded-3xl bg-[#FFFFFF] border border-[#C9DFDC] shadow-xs p-4 sm:p-6 lg:p-7 animate-school-header"
           style={{ animationDelay: '40ms' }}
         >
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 sm:gap-6">
-            {/* School Real Photo / Emblem Badge */}
-            {school.imageUrl ? (
-              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl border-2 border-[#C9DFDC] shadow-xs shrink-0 overflow-hidden bg-[#FAF8F5] relative group">
-                <img
-                  src={school.imageUrl}
-                  alt={school.name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-            ) : (
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#2E6496] to-[#457FA8] text-[#FFFFFF] flex items-center justify-center shadow-xs shrink-0">
-                <Building2 className="w-8 h-8 sm:w-10 sm:h-10 text-[#FFFFFF]" />
-              </div>
-            )}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3.5 sm:gap-6">
+            {/* Mobile Compact Top Row: Photo + NPSN + Name side by side on <640px, standard on >=640px */}
+            <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 w-full md:w-auto md:flex-1 min-w-0">
+              {school.imageUrl ? (
+                <div className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl border-2 border-[#C9DFDC] shadow-xs shrink-0 overflow-hidden bg-[#FAF8F5] relative group">
+                  <img
+                    src={school.imageUrl}
+                    alt={school.name}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+              ) : (
+                <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-[#2E6496] text-[#FFFFFF] flex items-center justify-center shadow-xs shrink-0">
+                  <Building2 className="w-7 h-7 sm:w-10 sm:h-10 text-[#FFFFFF]" />
+                </div>
+              )}
 
-            {/* School Identity Main Details */}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="px-2.5 py-0.5 rounded-md bg-[#EBF3F8] text-[11px] sm:text-xs font-bold text-[#2E6496] tabular-nums">
-                  NPSN {school.npsn}
-                </span>
-                <span className="text-[11px] sm:text-xs font-semibold text-[#64748B]">
-                  Sekolah {schoolType}
-                </span>
+              {/* School Identity Main Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                  <span className="px-2 py-0.5 rounded-md bg-[#EBF3F8] text-[11px] sm:text-xs font-bold text-[#2E6496] tabular-nums">
+                    NPSN {school.npsn}
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-semibold text-[#64748B]">
+                    Sekolah {schoolType}
+                  </span>
+                </div>
+                <h1 className="text-base sm:text-xl md:text-2xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
+                  {school.name}
+                </h1>
+                <p className="hidden sm:flex text-xs sm:text-sm text-[#64748B] mt-1 items-start gap-1.5 leading-relaxed">
+                  <MapPin className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
+                  <span className="break-words">{school.address}</span>
+                </p>
               </div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
-                {school.name}
-              </h1>
-              <p className="text-xs sm:text-sm text-[#64748B] mt-1 flex items-start gap-1.5 leading-relaxed">
-                <MapPin className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
-                <span className="break-words">{school.address}</span>
-              </p>
             </div>
 
+            {/* Full-width Address on Mobile (<640px) so it never squeezes next to the photo */}
+            <p className="flex sm:hidden text-xs text-[#64748B] items-start gap-1.5 leading-relaxed">
+              <MapPin className="w-3.5 h-3.5 text-[#2E6496] shrink-0 mt-0.5" />
+              <span className="break-words">{school.address}</span>
+            </p>
+
             {/* Structured Spec Info (Kepala Sekolah & Jumlah Siswa) */}
-            <div className="w-full md:w-auto grid grid-cols-2 md:flex md:flex-col gap-2 sm:gap-2.5 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 md:border-l border-[#C9DFDC]/60 md:pl-6">
+            <div className="w-full md:w-auto grid grid-cols-2 md:flex md:flex-col gap-2 sm:gap-2.5 shrink-0 pt-2.5 md:pt-0 border-t md:border-t-0 md:border-l border-[#C9DFDC]/60 md:pl-6">
               <div className="p-2.5 sm:p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC]/70">
                 <span className="text-[10px] sm:text-[11px] font-medium text-[#64748B] block">
                   Kepala Sekolah
@@ -427,7 +449,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             3. PROMINENT 3-TAB NAVIGATION BAR
            =================================================================== */}
         <div
-          className="p-1.5 sm:p-2 bg-[#FFFFFF]/95 backdrop-blur-md border border-[#C9DFDC] rounded-2xl grid grid-cols-3 gap-1 sm:gap-2 shadow-xs sticky top-[68px] sm:static z-30 animate-school-header"
+          className="p-1.5 sm:p-2 bg-[#FFFFFF]/95 backdrop-blur-md border border-[#C9DFDC] rounded-2xl grid grid-cols-3 gap-1 sm:gap-2 shadow-xs sticky top-[62px] sm:static z-30 animate-school-header"
           style={{ animationDelay: '80ms' }}
           role="tablist"
         >
@@ -436,7 +458,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             role="tab"
             aria-selected={activeTab === 'summary'}
             onClick={() => onTabChange('summary')}
-            className={`py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
+            className={`min-h-[54px] sm:min-h-[48px] py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
               activeTab === 'summary'
                 ? 'bg-[#1E293B] text-[#FFFFFF] shadow-xs'
                 : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
@@ -459,20 +481,31 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             role="tab"
             aria-selected={activeTab === 'items-ai'}
             onClick={() => onTabChange('items-ai')}
-            className={`py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
+            className={`min-h-[54px] sm:min-h-[48px] py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
               activeTab === 'items-ai'
                 ? 'bg-[#1E293B] text-[#FFFFFF] shadow-xs'
                 : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div
-              className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 ${
-                activeTab === 'items-ai'
-                  ? 'bg-[#2E6496] text-[#FFFFFF]'
-                  : 'bg-[#EBF3F8] text-[#2E6496]'
-              }`}
-            >
-              <ReceiptText className="w-3.5 h-3.5" />
+            <div className="relative flex items-center justify-center">
+              <div
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 ${
+                  activeTab === 'items-ai'
+                    ? 'bg-[#2E6496] text-[#FFFFFF]'
+                    : 'bg-[#EBF3F8] text-[#2E6496]'
+                }`}
+              >
+                <ReceiptText className="w-3.5 h-3.5" />
+              </div>
+              <span
+                className={`sm:hidden -right-3 -top-1 absolute px-1.5 py-0.2 rounded-full text-[9px] font-extrabold tabular-nums ${
+                  activeTab === 'items-ai'
+                    ? 'bg-[#2E6496] text-[#FFFFFF] ring-1 ring-[#FFFFFF]/40'
+                    : 'bg-[#EBF3F8] text-[#2E6496] border border-[#C9DFDC]'
+                }`}
+              >
+                {currentItems.length}
+              </span>
             </div>
             <span>Hasil Belanja</span>
             <span
@@ -491,7 +524,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
             role="tab"
             aria-selected={activeTab === 'wa-scanner'}
             onClick={() => onTabChange('wa-scanner')}
-            className={`py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
+            className={`min-h-[54px] sm:min-h-[48px] py-2 sm:py-3 px-1 sm:px-4 rounded-xl text-[11px] sm:text-sm leading-tight font-bold transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-center cursor-pointer ${
               activeTab === 'wa-scanner'
                 ? 'bg-[#1E293B] text-[#FFFFFF] shadow-xs'
                 : 'text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
@@ -521,7 +554,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
               style={{ animationDelay: '60ms' }}
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                {/* Left 7 Cols: Perhitungan & Total Dana BOSP (Alur Membaca Alami & Nyaman) */}
+                {/* Left 7 Cols: Perhitungan & Total Dana BOSP */}
                 <div className="lg:col-span-7 space-y-4 sm:space-y-5">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-full bg-[#FFFFFF] text-[#2E6496] flex items-center justify-center shrink-0 shadow-xs">
@@ -546,11 +579,11 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                     <span className="text-xs sm:text-sm font-semibold text-[#FFFFFF]/85 tabular-nums block mb-1">
                       {currentStudentCount.toLocaleString('id-ID')} Siswa &times; {formatRupiah(currentPerStudentEstimate)} / siswa
                     </span>
-                    <div className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold text-[#FFFFFF] tracking-tight tabular-nums leading-none break-words">
+                    <div className="text-2xl sm:text-4xl lg:text-[44px] font-extrabold text-[#FFFFFF] tracking-tight tabular-nums leading-none break-words font-sturdy-heading">
                       {formatRupiah(Math.round(currentTotalBosp * animProgress))}
                     </div>
                     <p className="text-xs text-[#FFFFFF]/80 mt-1.5">
-                      Total alokasi pagu dana BOSP selama 1 tahun
+                      Total alokasi pagu dana BOSP selama 1 tahun anggaran
                     </p>
                   </div>
 
@@ -558,7 +591,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                     <button
                       type="button"
                       onClick={onOpenKamusModal}
-                      className="px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#2E6496] text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                      className="min-h-[40px] px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#2E6496] text-xs font-bold shadow-xs transition-all inline-flex items-center gap-1.5 cursor-pointer"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
                       <span>Kamus Aturan BOSP</span>
@@ -580,7 +613,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                           <span>{currentTahap1.status}</span>
                         </span>
                       </div>
-                      <div className="text-base sm:text-lg font-extrabold text-[#1E293B] tabular-nums mt-1">
+                      <div className="text-base sm:text-lg font-extrabold text-[#1E293B] tabular-nums mt-1 font-mono">
                         {formatRupiah(Math.round(currentTahap1.amount * animProgress))}
                       </div>
                       <span className="text-[11px] text-[#64748B] block mt-0.5">
@@ -599,7 +632,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                           <span>{currentTahap2.status}</span>
                         </span>
                       </div>
-                      <div className="text-base sm:text-lg font-extrabold text-[#1E293B] tabular-nums mt-1">
+                      <div className="text-base sm:text-lg font-extrabold text-[#1E293B] tabular-nums mt-1 font-mono">
                         {formatRupiah(Math.round(currentTahap2.amount * animProgress))}
                       </div>
                       <span className="text-[11px] text-[#64748B] block mt-0.5">
@@ -729,7 +762,7 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                     type="text"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Ketik barang yang dicari: kipas angin, buku modul, proyektor, meja kursi, wifi..."
+                    placeholder="Cari barang BOSP: buku pelajaran, kertas atk, toilet, meja kursi, kipas angin, wifi..."
                     className="w-full pl-11 pr-9 py-3 text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-full text-[#1E293B] font-medium placeholder:text-[#94A3B8] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] transition-all"
                   />
                   {searchInput && (
@@ -846,10 +879,12 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                   {searchResult.results.map((res) => {
                     const item = res.item;
                     const isExpanded = expandedItemId === item.id;
-                    const cleanRoomLabel = item.geotag.roomLabel
-                      .split('\u2014')[0]
-                      .split(' - ')[0]
-                      .trim();
+                    const cleanRoomLabel = item.geotag?.roomLabel
+                      ? item.geotag.roomLabel
+                          .split('\u2014')[0]
+                          .split(' - ')[0]
+                          .trim()
+                      : 'Ruang Kelas';
 
                     return (
                       <div
@@ -933,10 +968,10 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                           </div>
                         </div>
 
-                        {isExpanded && (
-                          <div className="px-5 pb-5 pt-3 bg-[#FAF8F5] border-t border-[#C9DFDC]/60 space-y-4 text-xs sm:text-sm school-expand-panel">
+                         {isExpanded && (
+                          <div className="px-3.5 sm:px-5 pb-4 sm:pb-5 pt-3 bg-[#FAF8F5] border-t border-[#C9DFDC]/60 space-y-3.5 sm:space-y-4 text-xs sm:text-sm school-expand-panel">
                             <div className="rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] divide-y divide-[#C9DFDC]/60 overflow-hidden">
-                              <div className="p-4">
+                              <div className="p-3.5 sm:p-4">
                                 <span className="text-xs font-bold text-[#2E6496] block mb-1">
                                   Tujuan Penggunaan
                                 </span>
@@ -945,8 +980,8 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                                 </p>
                               </div>
 
-                              {item.invoice.lineItems.length > 0 && (
-                                <div className="p-4 space-y-2">
+                              {item.invoice?.lineItems && item.invoice.lineItems.length > 0 && (
+                                <div className="p-3.5 sm:p-4 space-y-2">
                                   <span className="text-xs font-bold text-[#475569] block">
                                     Rincian Barang yang Dibeli
                                   </span>
@@ -954,18 +989,18 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                                     {item.invoice.lineItems.map((li, lIdx) => (
                                       <div
                                         key={lIdx}
-                                        className="flex items-center justify-between py-2 first:pt-1 last:pb-0 gap-3"
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between py-2 first:pt-1 last:pb-0 gap-1 sm:gap-3"
                                       >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-[#2E6496] shrink-0" />
-                                          <span className="font-medium text-[#1E293B] truncate">
+                                        <div className="flex items-start sm:items-center gap-2 min-w-0">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-[#2E6496] shrink-0 mt-1.5 sm:mt-0" />
+                                          <span className="font-medium text-[#1E293B] break-words sm:truncate">
                                             {li.name}
                                           </span>
                                           <span className="text-xs text-[#64748B] shrink-0 tabular-nums">
                                             ({li.qty})
                                           </span>
                                         </div>
-                                        <span className="font-bold text-[#2E6496] tabular-nums shrink-0">
+                                        <span className="font-bold font-mono text-[#2E6496] tabular-nums shrink-0 pl-3.5 sm:pl-0">
                                           {formatRupiah(li.subtotal)}
                                         </span>
                                       </div>
@@ -974,51 +1009,53 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
                                 </div>
                               )}
 
-                              <div className="p-4 flex items-start gap-2.5">
+                              <div className="p-3.5 sm:p-4 flex items-start gap-2.5">
                                 <MapPin className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
                                 <div className="text-xs">
                                   <span className="font-bold text-[#1E293B] block">
                                     Lokasi Ruangan:{' '}
-                                    {item.geotag.roomLabel.replace(
-                                      '\u2014',
-                                      '-'
-                                    )}
+                                    {item.geotag?.roomLabel
+                                      ? item.geotag.roomLabel.replace(
+                                          '\u2014',
+                                          '-'
+                                        )
+                                      : '-'}
                                   </span>
                                   <p className="text-[#475569] mt-0.5">
                                     Catatan pemeriksaan: &ldquo;
-                                    {item.geotag.inspectorNote}&rdquo;
+                                    {item.geotag?.inspectorNote || 'Pemeriksaan fisik sesuai pembelanjaan'}&rdquo;
                                   </p>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-0.5">
-                              <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 pt-0.5">
+                              <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => onOpenInvoiceModal(item)}
-                                  className="school-btn-secondary px-4 py-2 rounded-full text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
+                                  className="min-h-[42px] school-btn-secondary px-3 sm:px-4 py-2 rounded-full text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
-                                  <FileText className="w-3.5 h-3.5 text-[#2E6496]" />
-                                  <span>Lihat Foto Kwitansi</span>
+                                  <FileText className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                                  <span>Lihat Kuitansi</span>
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => onOpenGeotagModal(item)}
-                                  className="school-btn-secondary px-4 py-2 rounded-full text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
+                                  className="min-h-[42px] school-btn-secondary px-3 sm:px-4 py-2 rounded-full text-xs font-semibold text-[#2E6496] flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
-                                  <MapPin className="w-3.5 h-3.5 text-[#2E6496]" />
-                                  <span>Foto Ruang Kelas</span>
+                                  <Camera className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                                  <span>Bukti Fisik</span>
                                 </button>
                               </div>
 
                               <button
                                 type="button"
                                 onClick={() => onReportFromItem(item)}
-                                className="px-4 py-2 rounded-full bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] text-xs font-bold text-[#DC2626] transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                                className="min-h-[42px] px-4 py-2 rounded-full bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] text-xs font-bold text-[#DC2626] transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                               >
-                                <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626]" />
+                                <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
                                 <span>Laporkan Jika Tidak Ada</span>
                               </button>
                             </div>

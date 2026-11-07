@@ -83,6 +83,14 @@ interface LandingPageProps {
     school: SchoolData,
     initialTab?: 'summary' | 'items-ai' | 'wa-scanner'
   ) => void;
+  onOpenSearchPage: (filters?: {
+    province?: string;
+    city?: string;
+    level?: string;
+    status?: string;
+    search?: string;
+    page?: number;
+  }) => void;
   onOpenAnonymousReport: () => void;
   onOpenLiveTracking: () => void;
   onOpenKamusModal: () => void;
@@ -130,6 +138,7 @@ const AMBIENT_GRID_GLASS_CELLS: AmbientGridCell[] = [
 export const LandingPage: React.FC<LandingPageProps> = ({
   selectedSchool,
   onSelectSchoolAndOpenProfile,
+  onOpenSearchPage,
   onOpenAnonymousReport,
   onOpenLiveTracking,
   onOpenKamusModal,
@@ -164,6 +173,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [jenjangFilter, setJenjangFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isShaking, setIsShaking] = useState<boolean>(false);
 
   // Progressive disclosure ("Lihat Selengkapnya") for bottom summary
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
@@ -357,11 +367,52 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     searchInputRef.current?.focus();
   };
 
+  const getCleanSearchKeyword = () => {
+    const raw = searchQuery.trim();
+    if (!raw) return '';
+    if (
+      chosenSchool &&
+      raw.toLowerCase() ===
+        `${chosenSchool.name} (npsn: ${chosenSchool.npsn})`.toLowerCase()
+    ) {
+      return chosenSchool.name;
+    }
+    return raw;
+  };
+
+  const handleNavigateToSearchPage = () => {
+    setValidationError(null);
+    setIsDropdownOpen(false);
+    onOpenSearchPage({
+      province: provinsi,
+      city: kabupaten,
+      level: jenjangFilter,
+      status: statusFilter,
+      search: getCleanSearchKeyword(),
+      page: 1,
+    });
+  };
+
   const handleSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
-    const target = chosenSchool || filteredSchools[0] || SMK_TI_BAZMA;
-    onSelectSchoolAndOpenProfile(target, 'summary');
+
+    if (chosenSchool) {
+      onSelectSchoolAndOpenProfile(chosenSchool, 'summary');
+      return;
+    }
+
+    const cleanKeyword = getCleanSearchKeyword();
+    if (activeFilterCount > 0 || cleanKeyword.length > 0) {
+      handleNavigateToSearchPage();
+      return;
+    }
+
+    // Ketika form kosong: jangan buka sekolah default (SMK TI BAZMA), melainkan berikan feedback getar dan pesan validasi
+    setValidationError('Silakan ketik nama sekolah atau pilih sekolah terlebih dahulu.');
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+    searchInputRef.current?.focus();
   };
 
   // Subtle 3D Parallax Tilt Values (sedikit saja efeknya)
@@ -423,7 +474,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         ref={heroSectionRef}
         onMouseMove={handleHeroMouseMove}
         onMouseLeave={handleHeroMouseLeave}
-        className="relative w-full min-h-[92vh] sm:min-h-[100vh] lg:min-h-[108vh] daradik-hero-blue-gradient flex flex-col justify-between pt-20 sm:pt-24 overflow-hidden"
+        className="relative w-full min-h-0 sm:min-h-[100vh] lg:min-h-[108vh] daradik-hero-blue-gradient flex flex-col justify-between pt-16 sm:pt-24 overflow-hidden"
       >
         {/* 1. Very Thin Base Grid (42px x 42px) */}
         <div
@@ -546,15 +597,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         />
 
         {/* Main Hero Content Container */}
-        <div className="relative lg:-translate-y-12 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-auto pt-2 sm:pt-4 pb-8 sm:pb-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div className="relative lg:-translate-y-12 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-auto pt-3 sm:pt-4 pb-6 sm:pb-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* LEFT COLUMN: Sturdy Font Headline on 1 line, Sub-headline, & Empty-Default Search Box */}
             <div className="relative z-30 lg:col-span-7 flex flex-col items-start">
               {/* Headline: Transparansi Dana Sekolah (dengan huruf sambung pada kata 'Sekolah' dalam 1 baris) */}
-              <h1 className="mt-2 sm:mt-6 lg:mt-8 mb-4 sm:mb-6 text-[24px] sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold text-[#FFFFFF] tracking-tight leading-[1.12] sm:leading-[1.10] drop-shadow-sm">
+              <h1 className="mt-1 sm:mt-6 lg:mt-8 mb-3.5 sm:mb-6 text-[clamp(1.45rem,6.8vw,2.15rem)] sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold text-[#FFFFFF] tracking-tight leading-[1.14] sm:leading-[1.10] drop-shadow-sm">
                 <span className="block whitespace-normal sm:whitespace-nowrap">
                   Transparansi Dana{' '}
-                  <span className="font-script-sekolah text-[1.32em] sm:text-[1.5em] text-[#DCEFEA] px-1.5 sm:px-2 font-normal tracking-wide inline-block drop-shadow-sm select-none">
+                  <span className="font-script-sekolah text-[1.3em] sm:text-[1.5em] text-[#DCEFEA] px-1 sm:px-2 font-normal tracking-wide inline-block drop-shadow-sm select-none">
                     Sekolah
                   </span>
                 </span>
@@ -562,7 +613,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </h1>
 
               {/* Calm Sub-headline with comfortable vertical breathing space */}
-              <p className="mb-5 sm:mb-8 text-xs sm:text-sm text-[#FFFFFF]/85 max-w-[48ch] leading-[1.65] sm:leading-[1.7] font-normal text-left">
+              <p className="mb-4 sm:mb-8 text-xs sm:text-sm text-[#FFFFFF]/90 max-w-[48ch] leading-[1.6] sm:leading-[1.7] font-normal text-left">
                 Pantau langsung dana BOSP Tahap 1 &amp; 2, validasi bukti belanja fisik sekolah, dan deteksi indikasi pungutan liar secara anonim.
               </p>
 
@@ -570,28 +621,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <form
                 data-tour-id="tour-search-box"
                 onSubmit={handleSubmitSearch}
-                className="w-full bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6"
+                className={`w-full bg-[#FFFFFF] border rounded-2xl shadow-lg p-3.5 sm:p-6 transition-all duration-200 ${
+                  isShaking
+                    ? 'animate-daradik-shake border-red-400 ring-2 ring-red-400/50'
+                    : 'border-[#C9DFDC]'
+                }`}
               >
                 {/* 1. Label Utama & Tombol Buka/Tutup Filter */}
-                <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                   <label
                     htmlFor="school-search-field"
                     className="text-xs sm:text-sm font-bold text-[#1E293B]"
                   >
-                    Cari Nama Sekolah atau NPSN
+                    Cari Nama Sekolah / NPSN
                   </label>
 
                   <button
                     type="button"
                     onClick={() => setIsRegionFilterOpen((prev) => !prev)}
-                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                    className={`min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
                       isRegionFilterOpen || activeFilterCount > 0
                         ? 'bg-[#EBF3F8] text-[#2E6496] border-[#2E6496]'
                         : 'bg-[#F2EFE8] text-[#475569] border-[#C9DFDC] hover:text-[#1E293B] hover:bg-[#EBF3F8]'
                     }`}
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 text-[#2E6496]" />
-                    <span>Filter Daerah &amp; Jenjang</span>
+                    <span>Filter Wilayah</span>
                     {activeFilterCount > 0 && (
                       <span className="w-4 h-4 rounded-full bg-[#2E6496] text-white text-[10px] flex items-center justify-center font-bold">
                         {activeFilterCount}
@@ -620,14 +675,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       setIsDropdownOpen(true);
                       setValidationError(null);
                     }}
-                    placeholder="Ketik nama sekolah, NPSN, atau kota/kabupaten..."
-                    className="w-full pl-10 pr-10 py-3 text-base sm:text-sm bg-[#F2EFE8]/45 border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium placeholder:text-[#475569]/75 focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/30 focus:border-[#2E6496]"
+                    placeholder="Nama sekolah, NPSN, atau kota..."
+                    className="w-full min-h-[46px] pl-10 pr-10 py-2.5 text-base sm:text-sm bg-[#F2EFE8]/45 border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium placeholder:text-[#475569]/75 focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/30 focus:border-[#2E6496]"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={handleClearSearch}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#475569] hover:text-[#1E293B]"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-[#475569] hover:text-[#1E293B]"
                       aria-label="Bersihkan pencarian"
                     >
                       <X className="w-4 h-4" />
@@ -637,10 +692,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 {/* 3. Panel Filter Wilayah & Jenjang (Di bawah search input, Grid 2x2 yang pas dan lega) */}
                 {isRegionFilterOpen && (
-                  <div className="mb-3.5 p-3.5 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-3 animate-view-enter">
+                  <div className="mb-3.5 p-3 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-3 animate-view-enter">
                     <div className="flex items-center justify-between pb-1.5 border-b border-[#C9DFDC]/70">
                       <span className="text-[11px] font-bold text-[#2E6496] uppercase tracking-wider">
-                        Saring Berdasarkan Wilayah &amp; Jenjang
+                        Saring Wilayah &amp; Jenjang
                       </span>
                       {activeFilterCount > 0 && (
                         <button
@@ -653,8 +708,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <div className="col-span-2 sm:col-span-1">
                         <label
                           htmlFor="hero-prov"
                           className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -665,7 +720,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           id="hero-prov"
                           value={provinsi}
                           onChange={(e) => handleProvinsiChange(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                          className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
                         >
                           <option value="">Semua Provinsi</option>
                           {Object.keys(REGION_HIERARCHY).map((prov) => (
@@ -676,7 +731,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         </select>
                       </div>
 
-                      <div>
+                      <div className="col-span-2 sm:col-span-1">
                         <label
                           htmlFor="hero-kab"
                           className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -688,7 +743,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           value={kabupaten}
                           onChange={(e) => handleKabupatenChange(e.target.value)}
                           disabled={!provinsi}
-                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium disabled:opacity-50 disabled:bg-[#F1F5F9] focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                          className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium disabled:opacity-50 disabled:bg-[#F1F5F9] focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
                         >
                           <option value="">Semua Kota/Kab.</option>
                           {kabupatenOptions.map((kab) => (
@@ -699,18 +754,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         </select>
                       </div>
 
-                      <div>
+                      <div className="col-span-1">
                         <label
                           htmlFor="hero-jenjang"
                           className="block text-[11px] text-[#475569] font-semibold mb-1"
                         >
-                          Jenjang (SD, SMP, SMA, SMK)
+                          Jenjang
                         </label>
                         <select
                           id="hero-jenjang"
                           value={jenjangFilter}
                           onChange={(e) => handleJenjangChange(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                          className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
                         >
                           <option value="">Semua Jenjang</option>
                           <option value="SD">SD</option>
@@ -720,7 +775,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         </select>
                       </div>
 
-                      <div>
+                      <div className="col-span-1">
                         <label
                           htmlFor="hero-status"
                           className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -731,13 +786,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           id="hero-status"
                           value={statusFilter}
                           onChange={(e) => handleStatusChange(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-md text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
+                          className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
                         >
                           <option value="">Semua Status</option>
                           <option value="Negeri">Negeri</option>
                           <option value="Swasta">Swasta</option>
                         </select>
                       </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#C9DFDC]/70 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-[#64748B]">
+                        {activeFilterCount > 0
+                          ? `${activeFilterCount} filter dipilih`
+                          : 'Semua filter opsional'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleNavigateToSearchPage}
+                        className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2E6496] hover:bg-[#245385] text-[#FFFFFF] text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                        <span>Cari Sekolah</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -777,6 +848,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     >
                       Reset
                     </button>
+                    <button
+                      type="button"
+                      onClick={handleNavigateToSearchPage}
+                      className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-[#2E6496] hover:underline cursor-pointer"
+                    >
+                      <span>Cari Sekolah</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
                   </div>
                 )}
 
@@ -787,13 +866,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <span className="font-semibold text-[#2E6496]">
                         Daftar Sekolah ({filteredSchools.length})
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="text-[#2E6496] font-semibold hover:underline"
-                      >
-                        Tutup
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleNavigateToSearchPage}
+                          className="text-[#2E6496] font-bold hover:underline cursor-pointer"
+                        >
+                          Cari Sekolah →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="text-[#475569] font-semibold hover:underline cursor-pointer"
+                        >
+                          Tutup
+                        </button>
+                      </div>
                     </div>
                     {filteredSchools.map((s) => (
                       <button
@@ -819,23 +907,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 )}
 
                 {validationError && (
-                  <div className="mt-2.5 flex items-center gap-1.5 text-xs text-[#1E293B] bg-[#F2EFE8] px-3 py-1.5 rounded-md border border-[#C9DFDC]">
-                    <AlertCircle className="w-4 h-4 text-[#2E6496] shrink-0" />
-                    <span>{validationError}</span>
+                  <div className="mt-2.5 flex items-center gap-1.5 text-xs text-red-700 bg-red-50 px-3 py-2 rounded-lg border border-red-200 animate-view-enter">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span className="font-semibold">{validationError}</span>
                   </div>
                 )}
 
                 {/* CTA Button with Glass Sheen Shimmer Reflection on Hover ("effect kaca mengkilat") */}
-                <div className="mt-4">
+                <div className="mt-3.5 sm:mt-4 space-y-2.5">
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-6 rounded-lg daradik-cta-subtle btn-glass-sheen text-[#FFFFFF] font-bold text-sm sm:text-base active:translate-y-[1px] flex items-center justify-center gap-2.5 group cursor-pointer"
+                    className="w-full min-h-[46px] py-3 sm:py-3.5 px-5 sm:px-6 rounded-xl daradik-cta-subtle btn-glass-sheen text-[#FFFFFF] font-bold text-sm sm:text-base active:translate-y-[1px] flex items-center justify-center gap-2.5 group cursor-pointer"
                   >
                     <span className="relative z-10">
-                      Cek Transparansi Sekolah
+                      {!chosenSchool && (activeFilterCount > 0 || searchQuery.trim().length > 0)
+                        ? 'Cari Sekolah'
+                        : 'Cek Transparansi Sekolah'}
                     </span>
                     <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover:translate-x-1" />
                   </button>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 pt-1 px-0.5">
+                    <span className="text-[11px] sm:text-xs text-[#64748B] leading-snug">
+                      Telusuri direktori berdasarkan provinsi, kota/kabupaten, atau jenjang
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNavigateToSearchPage}
+                      className="self-start sm:self-auto shrink-0 inline-flex items-center gap-1 text-xs font-bold text-[#2E6496] hover:text-[#245385] hover:underline cursor-pointer"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Buka Direktori Sekolah →</span>
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -996,19 +1100,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
                     Pantau langsung pencairan dana BOSP Tahap 1 &amp; 2 lengkap dengan arsip nota kuitansi, rincian belanja barang, serta titik koordinat bukti fisik (geotagging) di ruang kelas.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onSelectSchoolAndOpenProfile(
-                        chosenSchool || selectedSchool,
-                        'items-ai'
-                      )
-                    }
-                    className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
-                  >
-                    <span>Lihat rincian dana &amp; bukti nota</span>
-                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
                 </div>
               </div>
             </ScrollRevealOnce>
@@ -1035,19 +1126,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
                     Unggah screenshot pengumuman iuran dari grup WhatsApp wali murid untuk mencocokkan otomatis dengan anggaran BOSP dan mendeteksi indikasi tumpang tindih biaya.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onSelectSchoolAndOpenProfile(
-                        chosenSchool || selectedSchool,
-                        'wa-scanner'
-                      )
-                    }
-                    className="mt-3 inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
-                  >
-                    <span>Coba pemindai screenshot WA</span>
-                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
                 </div>
               </div>
             </ScrollRevealOnce>

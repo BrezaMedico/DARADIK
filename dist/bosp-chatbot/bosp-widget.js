@@ -1416,7 +1416,7 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(function () {
           controller.abort();
-        }, 18000);
+        }, 3500);
 
         const res = await fetch(CONFIG.apiBaseUrl + '/api/chat', {
           method: 'POST',
@@ -1442,7 +1442,55 @@
         }
       } catch {}
 
-      // Jika server lambat/timeout atau gagal, gunakan penjawab lokal pintar secara instan
+      // Fallback opsional langsung ke Gemini API jika server proxy tidak aktif / deployment statis
+      if (!botText) {
+        const directKey =
+          (typeof window !== 'undefined' &&
+            (window.__DARADIK_GEMINI_KEY__ ||
+              localStorage.getItem('daradik_gemini_key'))) ||
+          '';
+        if (directKey) {
+          try {
+            const directController = new AbortController();
+            const dTimeout = setTimeout(function () {
+              directController.abort();
+            }, 3500);
+            const dRes = await fetch(
+              'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=' +
+                encodeURIComponent(directKey),
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      parts: [
+                        {
+                          text:
+                            'Kamu adalah Asisten BOSP DARADIK yang ramah. Jawab pertanyaan pengguna berikut ini secara santai, akurat, dan jelas dalam 2-3 kalimat bahasa Indonesia tanpa markdown/simbol/bintang: ' +
+                            question,
+                        },
+                      ],
+                    },
+                  ],
+                }),
+                signal: directController.signal,
+              }
+            );
+            clearTimeout(dTimeout);
+            if (dRes.ok) {
+              const dData = await dRes.json();
+              const candidate = dData?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (candidate && candidate.trim()) {
+                botText = candidate.replace(/[*_~`#>|•●]/g, '').trim();
+                botEmotion = 'senang';
+              }
+            }
+          } catch {}
+        }
+      }
+
+      // Jaminan 100%: jika server/jaringan lambat atau offline, gunakan penjawab lokal pintar secara instan tanpa pernah timeout
       if (!botText) {
         const fallback = getClientFallbackReply(
           question,

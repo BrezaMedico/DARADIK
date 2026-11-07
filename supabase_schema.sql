@@ -116,13 +116,95 @@ CREATE POLICY "Public Modify Schools SMK" ON public.schools_smk FOR ALL USING (t
 -- 5. VIEW GABUNGAN OTOMATIS (AGAR PENCARIAN GLOBAL TETAP RINGAN & CEPAT)
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW public.schools_all AS
-SELECT id, name, npsn, student_count, total_bosp, per_student_estimate, kabupaten, kecamatan, provinsi, address, status, school_type, 'SD' AS jenjang, data_payload, created_at, updated_at FROM public.schools_sd
+SELECT
+  id,
+  name,
+  npsn,
+  'SD'::text AS jenjang,
+  school_type,
+  status,
+  address,
+  provinsi,
+  kabupaten,
+  kecamatan,
+  student_count,
+  total_bosp,
+  per_student_estimate,
+  (data_payload->>'principalName') AS principal_name,
+  (data_payload->>'treasurerName') AS treasurer_name,
+  (data_payload->>'regionCostZone') AS region_cost_zone,
+  data_payload,
+  created_at,
+  updated_at
+FROM public.schools_sd
 UNION ALL
-SELECT id, name, npsn, student_count, total_bosp, per_student_estimate, kabupaten, kecamatan, provinsi, address, status, school_type, 'SMP' AS jenjang, data_payload, created_at, updated_at FROM public.schools_smp
+SELECT
+  id,
+  name,
+  npsn,
+  'SMP'::text AS jenjang,
+  school_type,
+  status,
+  address,
+  provinsi,
+  kabupaten,
+  kecamatan,
+  student_count,
+  total_bosp,
+  per_student_estimate,
+  (data_payload->>'principalName') AS principal_name,
+  (data_payload->>'treasurerName') AS treasurer_name,
+  (data_payload->>'regionCostZone') AS region_cost_zone,
+  data_payload,
+  created_at,
+  updated_at
+FROM public.schools_smp
 UNION ALL
-SELECT id, name, npsn, student_count, total_bosp, per_student_estimate, kabupaten, kecamatan, provinsi, address, status, school_type, 'SMA' AS jenjang, data_payload, created_at, updated_at FROM public.schools_sma
+SELECT
+  id,
+  name,
+  npsn,
+  'SMA'::text AS jenjang,
+  school_type,
+  status,
+  address,
+  provinsi,
+  kabupaten,
+  kecamatan,
+  student_count,
+  total_bosp,
+  per_student_estimate,
+  (data_payload->>'principalName') AS principal_name,
+  (data_payload->>'treasurerName') AS treasurer_name,
+  (data_payload->>'regionCostZone') AS region_cost_zone,
+  data_payload,
+  created_at,
+  updated_at
+FROM public.schools_sma
 UNION ALL
-SELECT id, name, npsn, student_count, total_bosp, per_student_estimate, kabupaten, kecamatan, provinsi, address, status, school_type, 'SMK' AS jenjang, data_payload, created_at, updated_at FROM public.schools_smk;
+SELECT
+  id,
+  name,
+  npsn,
+  'SMK'::text AS jenjang,
+  school_type,
+  status,
+  address,
+  provinsi,
+  kabupaten,
+  kecamatan,
+  student_count,
+  total_bosp,
+  per_student_estimate,
+  (data_payload->>'principalName') AS principal_name,
+  (data_payload->>'treasurerName') AS treasurer_name,
+  (data_payload->>'regionCostZone') AS region_cost_zone,
+  data_payload,
+  created_at,
+  updated_at
+FROM public.schools_smk;
+
+GRANT SELECT ON public.schools_all TO anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 6. MIGRASI OTOMATIS DARI TABEL 'schools' LAMA (JIKA SUDAH BERISI DATA)
@@ -202,4 +284,6 @@ END $$;
 -- (data fisik murni tersimpan terpisah di schools_sd, schools_smp, schools_sma, schools_smk):
 CREATE OR REPLACE VIEW public.schools AS
 SELECT * FROM public.schools_all;
+
+GRANT SELECT ON public.schools TO anon, authenticated;
 

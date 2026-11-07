@@ -29,11 +29,9 @@ dotenv.config({ override: true });
 const PORT = Number(process.env.PORT || 3001);
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
 const RAW_MODEL_ENV = (
-  process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
+  process.env.GEMINI_MODEL || 'gemini-3.8-flash'
 ).trim();
-const GEMINI_MODEL = /^gemini-(2\.5|2\.0|1\.5)/i.test(RAW_MODEL_ENV)
-  ? 'gemini-3.5-flash-lite'
-  : RAW_MODEL_ENV;
+const GEMINI_MODEL = RAW_MODEL_ENV || 'gemini-3.8-flash';
 
 const PIPER_BINARY_PATH = (process.env.PIPER_BINARY_PATH || 'piper').trim();
 const PIPER_MODEL_PATH = (
@@ -238,11 +236,9 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
   }
 
   const candidateModels = [
+    'gemini-3-flash-preview',
+    'gemini-3.8-flash',
     GEMINI_MODEL,
-    'gemini-3.5-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-3.6-flash',
-    'gemini-3.5-flash-lite',
   ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
 
   let rawOutput = '';
@@ -276,11 +272,8 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
           required: ['teks', 'emosi'],
         },
         temperature: 0.7,
-        maxOutputTokens: 450,
+        maxOutputTokens: 1000,
       };
-      if (modelName !== 'gemini-3.5-flash-lite') {
-        genConfig.thinkingConfig = { thinkingBudget: 0 };
-      }
 
       const response = await Promise.race([
         aiClient.models.generateContent({
@@ -289,7 +282,7 @@ export async function handleChatRequest(body = {}, clientIp = '127.0.0.1') {
           config: genConfig,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 9_000)
+          setTimeout(() => reject(new Error('Model timeout')), 3_500)
         ),
       ]);
 
