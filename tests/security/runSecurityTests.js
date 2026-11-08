@@ -301,6 +301,22 @@ async function runAllTests() {
       '127.0.0.1',
       serviceClient
     );
+
+    // Verifikasi perlindungan terhadap token sembarang / malformed (e.g. 'x')
+    const malformedTokenSubmit = await handleSubmitReport(
+      {
+        schoolName: 'SMK 1',
+        schoolNpsn: '20219876',
+        category: 'seragam',
+        requesterRole: 'Wali Murid',
+        notes: 'Catatan pengaduan pengujian dengan token sembarang',
+        captchaAnswer: 10,
+        captchaToken: 'x',
+      },
+      '127.0.0.1',
+      serviceClient
+    );
+
     // Rate limit RPC check
     const rateLimitCheck = await serviceClient.rpc('svc_rate_limit', {
       p_bucket: 'test_bucket',
@@ -324,12 +340,15 @@ async function runAllTests() {
       p_increment: true,
     });
 
-    const s13Passed = wrongCapSubmit.status === 400 && thirdHit.data.allowed === false;
+    const s13Passed =
+      wrongCapSubmit.status === 400 &&
+      malformedTokenSubmit.status === 400 &&
+      thirdHit.data.allowed === false;
     recordTest(
       13,
       'Validasi server-side CAPTCHA dan rate limiting atomik',
       s13Passed,
-      `Invalid CAPTCHA rejected with 400 (${wrongCapSubmit.payload.error}); 3rd rate limit hit returned allowed: false.`
+      `Invalid CAPTCHA rejected with 400 (${wrongCapSubmit.payload.error}); Malformed token 'x' rejected with 400 (${malformedTokenSubmit.payload.error}); 3rd rate limit hit returned allowed: false.`
     );
 
     // -------------------------------------------------------------------------

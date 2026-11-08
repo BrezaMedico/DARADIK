@@ -117,27 +117,19 @@ export function verifyCaptchaAnswer(submittedAnswer, token) {
   }
 
   const parts = token.split('.');
-  if (parts.length === 2 && parts[1] === 'direct') {
-    try {
-      const data = JSON.parse(Buffer.from(parts[0], 'base64').toString('utf8'));
-      if (typeof data.exp !== 'number' || Date.now() > data.exp) {
-        return { valid: false, reason: 'Waktu soal verifikasi telah habis. Silakan muat ulang tantangan.' };
-      }
-      if (String(submittedAnswer ?? '').trim() !== String(data.a).trim()) {
-        return { valid: false, reason: 'Jawaban verifikasi keamanan tidak sesuai.' };
-      }
-      return { valid: true, nonce: data.n || crypto.randomUUID() };
-    } catch {
-      return { valid: false, reason: 'Format token verifikasi tidak valid.' };
-    }
-  }
-
   if (parts.length !== 2) {
-    return { valid: true, nonce: crypto.randomUUID() };
+    return { valid: false, reason: 'Format token verifikasi tidak valid.' };
   }
 
   const [payloadB64u, sigB64u] = parts;
-  const expectedSig = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payloadB64u).digest('base64url');
+  if (!payloadB64u || !sigB64u) {
+    return { valid: false, reason: 'Komponen token verifikasi tidak lengkap.' };
+  }
+
+  const expectedSig = crypto
+    .createHmac('sha256', CAPTCHA_SECRET)
+    .update(payloadB64u)
+    .digest('base64url');
 
   const givenBuf = Buffer.from(sigB64u, 'base64url');
   const expBuf = Buffer.from(expectedSig, 'base64url');
@@ -153,18 +145,26 @@ export function verifyCaptchaAnswer(submittedAnswer, token) {
     return { valid: false, reason: 'Data token keamanan korup.' };
   }
 
+  if (!data || typeof data !== 'object') {
+    return { valid: false, reason: 'Muatan token keamanan tidak valid.' };
+  }
+
   if (typeof data.exp !== 'number' || Date.now() > data.exp) {
     return { valid: false, reason: 'Sesi verifikasi telah kedaluwarsa. Silakan muat ulang tantangan.' };
   }
 
-  const cleanAns = String(submittedAnswer ?? '').trim();
-  const expectedAns = String(data.a).trim();
+  if (!data.n || typeof data.n !== 'string' || !data.n.trim()) {
+    return { valid: false, reason: 'Nonce token keamanan tidak valid.' };
+  }
 
-  if (cleanAns !== expectedAns) {
+  const cleanAns = String(submittedAnswer ?? '').trim();
+  const expectedAns = String(data.a ?? '').trim();
+
+  if (!cleanAns || cleanAns !== expectedAns) {
     return { valid: false, reason: 'Jawaban verifikasi keamanan tidak sesuai.' };
   }
 
-  return { valid: true, nonce: data.n };
+  return { valid: true, nonce: data.n.trim() };
 }
 
 // Magic bytes validation for uploaded files
