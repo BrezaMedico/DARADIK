@@ -63,7 +63,7 @@ export function getAiClient() {
     process.env.GEMINI_API_KEY ||
     process.env.VITE_GEMINI_API_KEY ||
     GEMINI_API_KEY ||
-    DEFAULT_FALLBACK_KEY
+    ''
   ).trim();
   if (!key || key.startsWith('[ISI_')) return null;
   return new GoogleGenAI({ apiKey: key });

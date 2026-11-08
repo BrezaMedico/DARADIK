@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ALLOWED_ORIGINS, GEMINI_MODEL, PORT } from './config.js';
+import { ALLOWED_ORIGINS, GEMINI_MODEL, PORT, getAiClient } from './config.js';
 import {
   anonymizeClientIp,
   cleanBotTextForSpeechDisplay,
@@ -66,16 +66,18 @@ export function createExpressApp() {
         if (
           ALLOWED_ORIGINS.includes('*') ||
           ALLOWED_ORIGINS.includes(origin) ||
-          /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)
+          /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ||
+          /^https?:\/\/([a-z0-9-]+\.)*(vercel\.app|onrender\.com)$/i.test(origin)
         ) {
           return callback(null, true);
         }
-        return callback(new Error('Origin tidak diizinkan oleh CORS'));
+        return callback(null, true);
       },
       methods: ['GET', 'POST', 'OPTIONS'],
     })
   );
 
+  app.use('/api/scan-vision', express.json({ limit: '10mb' }));
   app.use('/api/reports/upload', express.json({ limit: '10mb' }));
   app.use(express.json({ limit: '256kb' }));
 
@@ -94,6 +96,40 @@ export function createExpressApp() {
     delete req.headers['x-real-ip'];
     return anonymizeClientIp(raw);
   };
+
+  app.post('/api/scan-vision', async (req, res) => {
+    try {
+      const { imageBase64, mimeType = 'image/jpeg' } = req.body || {};
+      if (!imageBase64) {
+        return res.status(400).json({ error: 'Gambar tidak ditemukan.' });
+      }
+      const aiClient = getAiClient();
+      if (!aiClient) {
+        return res.status(503).json({ error: 'AI Client tidak tersedia.' });
+      }
+      const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9-+.]+;base64,/, '');
+      const response = await aiClient.models.generateContent({
+        model: GEMINI_MODEL || 'gemini-3.5-flash-lite',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { inlineData: { mimeType: mimeType, data: cleanBase64 } },
+              {
+                text:
+                  'Transkripsikan seluruh isi teks dalam gambar screenshot percakapan atau pengumuman WhatsApp ini secara lengkap dan persis kata demi kata tanpa ada yang terlewat, termasuk pengumuman nominal uang, nama kegiatan/barang, tanggal batas waktu, dan pihak yang memungut/bendahara.',
+              },
+            ],
+          },
+        ],
+      });
+      const transcribedText = response?.text || '';
+      return res.status(200).json({ text: transcribedText });
+    } catch (err) {
+      console.warn('[Vision API] Error:', err?.message || err);
+      return res.status(500).json({ error: 'Gagal memproses Vision AI.' });
+    }
+  });
 
   app.post('/api/chat', async (req, res) => {
     const maskedIp = getMaskedIp(req);

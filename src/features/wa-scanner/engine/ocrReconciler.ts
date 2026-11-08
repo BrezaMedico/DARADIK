@@ -180,55 +180,83 @@ export async function runOptionalVisionAiPass(
       mimeType = mimeMatch[1];
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 18000);
-
-    const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
     let rawText = '';
 
-    for (const modelCandidate of candidateModels) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent?key=${encodeURIComponent(
-            apiKey
-          )}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text:
-                        'Transkripsikan seluruh teks dalam gambar tangkapan layar WhatsApp ini secara lengkap, persis, dan setia pada gambar baris demi baris dari atas ke bawah. ' +
-                        'Pertahankan seluruh rincian seperti pengumuman, nama barang (contoh: kipas angin, buku, seragam), nominal rupiah (contoh: Rp75.000), tanggal batas akhir, dan kalimat lainnya tanpa meringkas.',
-                    },
-                    {
-                      inlineData: {
-                        mimeType,
-                        data: base64Data,
-                      },
-                    },
-                  ],
-                },
-              ],
-            }),
-          }
-        );
-
-        if (response.ok) {
-          const json = await response.json();
-          rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (rawText.trim()) break;
+    // Cara 1: Gunakan server backend proxy /api/scan-vision (Aman, tanpa ekspos secret di client)
+    try {
+      const bController = new AbortController();
+      const bTimeout = setTimeout(() => bController.abort(), 18000);
+      const bRes = await fetch('/api/scan-vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: bController.signal,
+        body: JSON.stringify({
+          imageBase64: base64Data,
+          mimeType,
+        }),
+      });
+      clearTimeout(bTimeout);
+      if (bRes.ok) {
+        const bJson = await bRes.json();
+        if (bJson && typeof bJson.text === 'string' && bJson.text.trim()) {
+          rawText = bJson.text.trim();
         }
-      } catch {
-        // try next model candidate
       }
+    } catch (bErr) {
+      console.warn('[Vision AI] Backend proxy pass skipped, checking client direct key...', bErr);
     }
 
-    clearTimeout(timeoutId);
+    // Cara 2: Fallback langsung ke Gemini API jika client memiliki direct key
+    if (!rawText.trim() && apiKey) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+      const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
+
+      for (const modelCandidate of candidateModels) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent?key=${encodeURIComponent(
+              apiKey
+            )}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text:
+                          'Transkripsikan seluruh teks dalam gambar tangkapan layar WhatsApp ini secara lengkap, persis, dan setia pada gambar baris demi baris dari atas ke bawah. ' +
+                          'Pertahankan seluruh rincian seperti pengumuman, nama barang (contoh: kipas angin, buku, seragam), nominal rupiah (contoh: Rp75.000), tanggal batas akhir, dan kalimat lainnya tanpa meringkas.',
+                      },
+                      {
+                        inlineData: {
+                          mimeType,
+                          data: base64Data,
+                        },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            }
+          );
+
+          if (response.ok) {
+            const json = await response.json();
+            rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (rawText.trim()) break;
+          }
+        } catch {
+          // try next model candidate
+        }
+      }
+
+      clearTimeout(timeoutId);
+    }
     if (!rawText.trim()) return [];
 
     const lines = rawText

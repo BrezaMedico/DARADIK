@@ -535,8 +535,7 @@ export async function runAdvancedWaOcrPipeline(
 
   const shouldRunVision =
     adjustments?.enableVisionAi !== false &&
-    Boolean(configuredApiKey) &&
-    (allPassLines.length === 0 || allPassLines.length < 8 || adjustments?.enableVisionAi === true);
+    (allPassLines.length === 0 || allPassLines.length < 8 || adjustments?.enableVisionAi === true || Boolean(configuredApiKey));
 
   if (shouldRunVision) {
     try {
