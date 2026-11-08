@@ -230,11 +230,14 @@ export interface SubmitPublicReportInput {
   attachments: ReportAttachmentMeta[];
   ocrText?: string | null;
   ocrBospFact?: string | null;
+  captchaAnswer?: string | number;
+  captchaToken?: string;
 }
 
 export interface SubmitPublicReportResult {
   id: string;
   ticket_code: string;
+  tracking_token?: string;
   school_name: string;
   school_npsn: string;
   category: string;

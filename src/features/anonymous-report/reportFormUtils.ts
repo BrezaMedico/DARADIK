@@ -8,6 +8,7 @@ export interface UploadedFileItem {
 
 export interface SubmissionSuccessState {
   ticketCode: string;
+  trackingToken?: string;
   timestamp: string;
   schoolName: string;
   schoolNpsn: string;
@@ -137,6 +138,7 @@ export function recordReportSubmissionQuota() {
 // Stores only a local ticket reference; official status is always fetched from Supabase.
 export function saveTicketBookmarkToBrowserCookie(bookmark: {
   ticketCode: string;
+  trackingToken?: string;
   schoolName: string;
   schoolNpsn: string;
   category: string;

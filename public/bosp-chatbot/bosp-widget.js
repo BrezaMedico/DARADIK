@@ -1733,7 +1733,7 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(function () {
           controller.abort();
-        }, 7000);
+        }, 12000);
 
         const res = await fetch(CONFIG.apiBaseUrl + '/api/chat', {
           method: 'POST',

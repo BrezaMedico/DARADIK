@@ -23,6 +23,7 @@ import { computeTicketSignalHash } from '@/utils/cryptoSecurity';
 import {
   TRACKED_COOKIE_KEY,
   compressReplyAttachment,
+  getTrackingTokenForTicket,
   readTicketBookmarksFromCookie,
   setCookie,
   writeTicketBookmarkToCookie,
@@ -109,8 +110,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
           setNotFoundTicket(null);
           setQueryError(null);
 
+          const existingToken = getTrackingTokenForTicket(clean);
           const bookmark: TicketBookmarkItem = {
             ticketCode: result.report.ticket_code,
+            trackingToken: existingToken || undefined,
             schoolName: result.report.school_name,
             schoolNpsn: result.report.school_npsn,
             category: result.report.category,

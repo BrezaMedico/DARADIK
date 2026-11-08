@@ -1,5 +1,6 @@
 export interface TicketBookmarkItem {
   ticketCode: string;
+  trackingToken?: string;
   schoolName: string;
   schoolNpsn?: string;
   category: string;
@@ -49,6 +50,7 @@ export function readTicketBookmarksFromCookie(): TicketBookmarkItem[] {
       .filter((item) => String(item?.ticketCode || '').trim().startsWith('CHK-'))
       .map((item) => ({
         ticketCode: String(item.ticketCode).trim(),
+        trackingToken: item.trackingToken ? String(item.trackingToken).trim() : undefined,
         schoolName: String(item.schoolName || 'Sekolah Terlapor'),
         schoolNpsn: item.schoolNpsn ? String(item.schoolNpsn) : undefined,
         category: String(item.category || 'Laporan Pengaduan'),
@@ -57,6 +59,14 @@ export function readTicketBookmarksFromCookie(): TicketBookmarkItem[] {
   } catch {
     return [];
   }
+}
+
+export function getTrackingTokenForTicket(ticketCode: string): string | null {
+  const clean = String(ticketCode || '').trim();
+  if (!clean) return null;
+  const bookmarks = readTicketBookmarksFromCookie();
+  const found = bookmarks.find((b) => b.ticketCode === clean);
+  return found?.trackingToken || null;
 }
 
 export function writeTicketBookmarkToCookie(bookmark: TicketBookmarkItem) {

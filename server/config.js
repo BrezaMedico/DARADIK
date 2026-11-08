@@ -13,9 +13,11 @@ dotenv.config({ override: true });
 export const PORT = Number(process.env.PORT || 3001);
 export const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
 const RAW_MODEL_ENV = (
-  process.env.GEMINI_MODEL || 'gemini-3.8-flash'
+  process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
 ).trim();
-export const GEMINI_MODEL = RAW_MODEL_ENV || 'gemini-3.8-flash';
+export const GEMINI_MODEL = (RAW_MODEL_ENV === 'gemini-3.8-flash')
+  ? 'gemini-3.5-flash-lite'
+  : (RAW_MODEL_ENV || 'gemini-3.5-flash-lite');
 
 export const PIPER_BINARY_PATH = (process.env.PIPER_BINARY_PATH || 'piper').trim();
 export const PIPER_MODEL_PATH = (

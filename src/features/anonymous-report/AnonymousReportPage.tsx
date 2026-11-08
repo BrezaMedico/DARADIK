@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { ReportAttachmentMeta, SchoolData } from '@/types';
 import {
+  fetchReportCaptchaChallenge,
   submitPublicReportRpc,
   uploadReportEvidenceFile,
 } from '@/services/supabase';
@@ -159,10 +160,24 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
     useState<MathChallengeState>(generateMathChallenge);
   const [mathInput, setMathInput] = useState<string>('');
 
-  const handleRegenerateCaptcha = () => {
-    setMathChallenge(generateMathChallenge());
+  const handleRegenerateCaptcha = async () => {
     setMathInput('');
+    try {
+      const serverCap = await fetchReportCaptchaChallenge();
+      setMathChallenge({
+        textToDraw: serverCap.question,
+        token: serverCap.token,
+        timestamp: Date.now(),
+        salt: '',
+      });
+    } catch {
+      setMathChallenge(generateMathChallenge());
+    }
   };
+
+  useEffect(() => {
+    handleRegenerateCaptcha();
+  }, []);
 
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState<boolean>(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState<boolean>(false);
@@ -291,22 +306,24 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       return;
     }
 
-    if (Date.now() - mathChallenge.timestamp > 180000) {
-      setValidationError('Waktu soal verifikasi telah habis. Silakan hitung soal baru.');
-      handleRegenerateCaptcha();
-      return;
-    }
+    if (mathChallenge.salt) {
+      if (Date.now() - mathChallenge.timestamp > 180000) {
+        setValidationError('Waktu soal verifikasi telah habis. Silakan hitung soal baru.');
+        handleRegenerateCaptcha();
+        return;
+      }
 
-    const calculatedHash = hashCaptchaAnswer(
-      mathInput.trim(),
-      mathChallenge.salt,
-      mathChallenge.timestamp
-    );
+      const calculatedHash = hashCaptchaAnswer(
+        mathInput.trim(),
+        mathChallenge.salt,
+        mathChallenge.timestamp
+      );
 
-    if (calculatedHash !== mathChallenge.token) {
-      setValidationError('Hasil hitungan matematika belum tepat. Silakan coba kembali.');
-      handleRegenerateCaptcha();
-      return;
+      if (calculatedHash !== mathChallenge.token) {
+        setValidationError('Hasil hitungan matematika belum tepat. Silakan coba kembali.');
+        handleRegenerateCaptcha();
+        return;
+      }
     }
 
     setValidationError(null);
@@ -368,6 +385,8 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
         attachments: uploadedAttachments,
         ocrText: prefilledOcrText || null,
         ocrBospFact: prefilledOcrBospFact || null,
+        captchaAnswer: mathInput.trim(),
+        captchaToken: mathChallenge.token,
       });
 
       recordReportSubmissionQuota();
@@ -375,6 +394,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
 
       saveTicketBookmarkToBrowserCookie({
         ticketCode: dbResult.ticket_code,
+        trackingToken: dbResult.tracking_token,
         schoolName: dbResult.school_name,
         schoolNpsn: dbResult.school_npsn,
         category: dbResult.category,
@@ -383,6 +403,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
 
       setSubmissionSuccess({
         ticketCode: dbResult.ticket_code,
+        trackingToken: dbResult.tracking_token,
         timestamp: formatWibDateTime(dbResult.created_at),
         schoolName: dbResult.school_name,
         schoolNpsn: dbResult.school_npsn,

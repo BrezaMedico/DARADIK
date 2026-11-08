@@ -37,9 +37,10 @@ export const LandingVideoSection: React.FC = () => {
             <div className="relative w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden bg-[#0F172A] border border-[#C9DFDC]/60">
               {isVideoPlaying ? (
                 <iframe
-                  src="https://www.youtube.com/embed/2TfgFusfSWQ?autoplay=1&rel=0&modestbranding=1&vq=hd1080"
+                  src="https://www.youtube.com/embed/2TfgFusfSWQ?autoplay=1&rel=0&modestbranding=1"
                   title="Video Perkenalan DARADIK"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
                   allowFullScreen
                   className="w-full h-full border-0"
                 />
@@ -51,15 +52,7 @@ export const LandingVideoSection: React.FC = () => {
                   aria-label="Putar Video Perkenalan DARADIK"
                 >
                   <img
-                    src="https://i.ytimg.com/vi/2TfgFusfSWQ/maxresdefault.jpg"
-                    onError={(e) => {
-                      // Fall back to standard-definition thumbnail when YouTube lacks a maxres frame.
-                      const target = e.currentTarget;
-                      if (!target.src.includes('hqdefault.jpg')) {
-                        target.src =
-                          'https://i.ytimg.com/vi/2TfgFusfSWQ/hqdefault.jpg';
-                      }
-                    }}
+                    src="https://i.ytimg.com/vi/2TfgFusfSWQ/hqdefault.jpg"
                     alt="Thumbnail Video Perkenalan DARADIK"
                     className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   />

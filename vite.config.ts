@@ -38,17 +38,47 @@ function readStreamBody(req: any): Promise<string> {
 function bospChatbotMiddlewarePlugin(): Plugin {
   const attachMiddleware = (middlewares: any) => {
     middlewares.use(async (req: any, res: any, next: any) => {
-      res.setHeader('Referrer-Policy', 'no-referrer');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
       res.setHeader(
         'Permissions-Policy',
         'geolocation=(), camera=(), microphone=(), interest-cohort=()'
       );
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://i.ytimg.com https://*.ytimg.com https://img.youtube.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; media-src 'self' blob: data:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
+      );
+
+      const url = (req.url || '').split('?')[0];
+
+      if (req.method === 'GET' && url === '/api/reports/captcha') {
+        try {
+          const serverMod = await getServerModule();
+          const result = await serverMod.handleGetCaptcha();
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify({ error: err?.message || 'Gagal memuat tantangan keamanan.' }));
+          return;
+        }
+      }
 
       if (req.method !== 'POST') return next();
-      const url = (req.url || '').split('?')[0];
-      if (url !== '/api/chat' && url !== '/api/tts') return next();
+      if (
+        url !== '/api/chat' &&
+        url !== '/api/tts' &&
+        url !== '/api/reports/upload' &&
+        url !== '/api/reports/submit' &&
+        url !== '/api/reports/track' &&
+        url !== '/api/reports/reply'
+      ) {
+        return next();
+      }
 
       try {
         const rawBody = await readStreamBody(req);
@@ -57,6 +87,38 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         const maskedIp = serverMod.anonymizeClientIp
           ? serverMod.anonymizeClientIp(req.socket?.remoteAddress || 'anonymous')
           : 'anonymous';
+
+        if (url === '/api/reports/upload') {
+          const result = await serverMod.handleUploadEvidence(body, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
+
+        if (url === '/api/reports/submit') {
+          const result = await serverMod.handleSubmitReport(body, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
+
+        if (url === '/api/reports/track') {
+          const result = await serverMod.handleTrackReport(body, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
+
+        if (url === '/api/reports/reply') {
+          const result = await serverMod.handleReplyReport(body, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
 
         if (url === '/api/chat') {
           const result = await serverMod.handleChatRequest(body, maskedIp);

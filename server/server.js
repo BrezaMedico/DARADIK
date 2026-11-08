@@ -10,6 +10,13 @@ import {
 } from './security.js';
 import { handleTtsRequest, synthesizeWithPiper } from './ttsService.js';
 import { handleChatRequest } from './chatService.js';
+import {
+  handleGetCaptcha,
+  handleUploadEvidence,
+  handleSubmitReport,
+  handleTrackReport,
+  handleReplyReport,
+} from './reportService.js';
 
 export {
   anonymizeClientIp,
@@ -18,6 +25,11 @@ export {
   synthesizeWithPiper,
   handleChatRequest,
   handleTtsRequest,
+  handleGetCaptcha,
+  handleUploadEvidence,
+  handleSubmitReport,
+  handleTrackReport,
+  handleReplyReport,
 };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,13 +40,17 @@ export function createExpressApp() {
   app.disable('x-powered-by');
 
   app.use((_req, res, next) => {
-    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '0');
     res.setHeader(
       'Permissions-Policy',
       'geolocation=(), camera=(), microphone=(), interest-cohort=()'
+    );
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://i.ytimg.com https://*.ytimg.com https://img.youtube.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; media-src 'self' blob: data:; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
     );
     res.setHeader(
       'Strict-Transport-Security',
@@ -60,36 +76,33 @@ export function createExpressApp() {
     })
   );
 
-  app.use(express.json({ limit: '16kb' }));
+  app.use('/api/reports/upload', express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '256kb' }));
 
   app.use(
     '/bosp-chatbot',
     express.static(path.resolve(__dirname, '..', 'public', 'bosp-chatbot'))
   );
 
-  app.post('/api/chat', async (req, res) => {
-    const maskedIp = anonymizeClientIp(
+  const getMaskedIp = (req) => {
+    const raw =
       req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ||
-        req.socket.remoteAddress ||
-        'anonymous'
-    );
-    // Strip proxy IP headers immediately after hashing so downstream handlers never see raw IPs.
+      req.socket.remoteAddress ||
+      'anonymous';
     delete req.headers['x-forwarded-for'];
     delete req.headers['cf-connecting-ip'];
     delete req.headers['x-real-ip'];
+    return anonymizeClientIp(raw);
+  };
+
+  app.post('/api/chat', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
     const result = await handleChatRequest(req.body, maskedIp);
     res.status(result.status).json(result.payload);
   });
 
   app.post('/api/tts', async (req, res) => {
-    const maskedIp = anonymizeClientIp(
-      req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ||
-        req.socket.remoteAddress ||
-        'anonymous'
-    );
-    delete req.headers['x-forwarded-for'];
-    delete req.headers['cf-connecting-ip'];
-    delete req.headers['x-real-ip'];
+    const maskedIp = getMaskedIp(req);
     const result = await handleTtsRequest(req.body, maskedIp);
 
     if (result.isAudio && result.wavBuffer) {
@@ -103,6 +116,36 @@ export function createExpressApp() {
     }
 
     return res.status(result.status).json(result.payload);
+  });
+
+  // Endpoints pengaduan terenkripsi & terproteksi
+  app.get('/api/reports/captcha', async (_req, res) => {
+    const result = await handleGetCaptcha();
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/reports/upload', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleUploadEvidence(req.body, maskedIp);
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/reports/submit', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleSubmitReport(req.body, maskedIp);
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/reports/track', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleTrackReport(req.body, maskedIp);
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/reports/reply', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleReplyReport(req.body, maskedIp);
+    res.status(result.status).json(result.payload);
   });
 
   return app;

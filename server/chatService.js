@@ -72,15 +72,12 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
 
   const candidateModels = [
     'gemini-3.5-flash-lite',
-    'gemini-flash-lite-latest',
     'gemini-3.5-flash',
-    GEMINI_MODEL,
-  ].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
+  ];
 
   let rawOutput = '';
   let lastError = null;
 
-  // Cap each model attempt at 3.5s and fall through to local knowledge if all candidates fail.
   for (const modelName of candidateModels) {
     try {
       const genConfig = {
@@ -136,7 +133,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           required: ['teks', 'emosi'],
         },
         temperature: 0.7,
-        maxOutputTokens: 600,
+        maxOutputTokens: 500,
       };
 
       const response = await Promise.race([
@@ -146,7 +143,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           config: genConfig,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 6_000)
+          setTimeout(() => reject(new Error('Model timeout')), 4_500)
         ),
       ]);
 
@@ -185,7 +182,12 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
       }
     } catch (err) {
       lastError = err;
-      console.warn(`[BOSP-Chatbot] Model ${modelName} gagal:`, err?.status || err?.message);
+      const errMsg = err?.message || '';
+      console.warn(`[BOSP-Chatbot] Model ${modelName} gagal:`, err?.status || errMsg);
+      // Jika kuota habis atau error rate limit, langsung pakai local fallback tanpa menunda pengguna
+      if (err?.status === 429 || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota')) {
+        break;
+      }
     }
   }
 
