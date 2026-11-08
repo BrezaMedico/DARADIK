@@ -226,7 +226,10 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     e.stopPropagation();
     const next = bookmarks.filter((b) => b.ticketCode !== code);
     setBookmarks(next);
-    setCookie(TRACKED_COOKIE_KEY, JSON.stringify(next), 60);
+    setCookie(TRACKED_COOKIE_KEY, JSON.stringify(next), 90);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TRACKED_COOKIE_KEY, JSON.stringify(next));
+    }
     if (activeTicket === code) {
       handleBackToList();
     }

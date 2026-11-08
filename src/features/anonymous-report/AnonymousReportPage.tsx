@@ -146,11 +146,13 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
   const [previewModalTitle, setPreviewModalTitle] = useState<string>('');
 
   const [hasCookieConsent, setHasCookieConsent] = useState<boolean>(() => {
-    return (
-      getCookie(COOKIE_CONSENT_KEY) === 'true' ||
-      (typeof localStorage !== 'undefined' &&
-        localStorage.getItem(COOKIE_CONSENT_KEY) === 'true')
-    );
+    if (typeof document !== 'undefined') {
+      setCookie(COOKIE_CONSENT_KEY, 'true', 365);
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(COOKIE_CONSENT_KEY, 'true');
+    }
+    return true;
   });
   const [dailyQuotaCount, setDailyQuotaCount] = useState<number>(
     () => getDailyReportData().count

@@ -34,7 +34,14 @@ export function setCookie(name: string, value: string, days: number = 60) {
 // Reads locally bookmarked ticket codes; live status is always queried from Supabase.
 export function readTicketBookmarksFromCookie(): TicketBookmarkItem[] {
   try {
-    const raw = getCookie(TRACKED_COOKIE_KEY);
+    let raw = getCookie(TRACKED_COOKIE_KEY);
+    if (!raw && typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(TRACKED_COOKIE_KEY);
+      if (raw) {
+        // Pulihkan / aktifkan kembali cookie dari penyimpanan lokal
+        setCookie(TRACKED_COOKIE_KEY, raw, 90);
+      }
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -58,8 +65,11 @@ export function writeTicketBookmarkToCookie(bookmark: TicketBookmarkItem) {
     const next = [
       bookmark,
       ...current.filter((b) => b.ticketCode !== bookmark.ticketCode),
-    ].slice(0, 12);
-    setCookie(TRACKED_COOKIE_KEY, JSON.stringify(next), 60);
+    ].slice(0, 15);
+    setCookie(TRACKED_COOKIE_KEY, JSON.stringify(next), 90);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TRACKED_COOKIE_KEY, JSON.stringify(next));
+    }
   } catch {}
 }
 

@@ -198,7 +198,10 @@ function saveTicketBookmarkToBrowserCookie(bookmark: {
   createdAt: string;
 }) {
   try {
-    const raw = getCookie(TRACKED_TICKETS_COOKIE_KEY);
+    let raw = getCookie(TRACKED_TICKETS_COOKIE_KEY);
+    if (!raw && typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(TRACKED_TICKETS_COOKIE_KEY);
+    }
     const existing = raw ? JSON.parse(raw) : [];
     const safeList = Array.isArray(existing) ? existing : [];
     const updated = [
@@ -207,8 +210,11 @@ function saveTicketBookmarkToBrowserCookie(bookmark: {
         (item: { ticketCode?: string }) =>
           String(item?.ticketCode || '').trim() !== bookmark.ticketCode.trim()
       ),
-    ].slice(0, 12);
-    setCookie(TRACKED_TICKETS_COOKIE_KEY, JSON.stringify(updated), 60);
+    ].slice(0, 15);
+    setCookie(TRACKED_TICKETS_COOKIE_KEY, JSON.stringify(updated), 90);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TRACKED_TICKETS_COOKIE_KEY, JSON.stringify(updated));
+    }
   } catch {
     // ignore
   }
@@ -556,11 +562,13 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
   const [previewModalTitle, setPreviewModalTitle] = useState<string>('');
 
   const [hasCookieConsent, setHasCookieConsent] = useState<boolean>(() => {
-    return (
-      getCookie(COOKIE_CONSENT_KEY) === 'true' ||
-      (typeof localStorage !== 'undefined' &&
-        localStorage.getItem(COOKIE_CONSENT_KEY) === 'true')
-    );
+    if (typeof document !== 'undefined') {
+      setCookie(COOKIE_CONSENT_KEY, 'true', 365);
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(COOKIE_CONSENT_KEY, 'true');
+    }
+    return true;
   });
   const [dailyQuotaCount, setDailyQuotaCount] = useState<number>(
     () => getDailyReportData().count
