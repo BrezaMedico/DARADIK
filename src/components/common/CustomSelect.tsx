@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Check, Search, X } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 
 export interface CustomSelectOption {
   value: string;
@@ -15,7 +15,6 @@ export interface CustomSelectProps {
   placeholder: string;
   emptyOptionLabel?: string;
   disabled?: boolean;
-  searchable?: boolean;
   className?: string;
   buttonClassName?: string;
   ariaLabel?: string;
@@ -29,15 +28,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   placeholder,
   emptyOptionLabel,
   disabled = false,
-  searchable,
   className = '',
   buttonClassName = '',
   ariaLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Normalize options into uniform { value, label, badge } objects
   const normalizedOptions = useMemo<CustomSelectOption[]>(() => {
@@ -52,7 +48,6 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
     for (const opt of options) {
       if (typeof opt === 'string') {
-        // Detect badge for Indonesian regency/city
         let badge: string | undefined;
         if (opt.startsWith('Kab.')) badge = 'Kab';
         else if (opt.startsWith('Kota')) badge = 'Kota';
@@ -69,18 +64,6 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
     return list;
   }, [options, emptyOptionLabel]);
-
-  // Determine if search input should be visible (auto if > 7 items, or explicit prop)
-  const isSearchEnabled = typeof searchable === 'boolean' ? searchable : normalizedOptions.length > 7;
-
-  // Filtered options based on search query
-  const filteredOptions = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return normalizedOptions;
-    return normalizedOptions.filter((opt) =>
-      opt.label.toLowerCase().includes(query)
-    );
-  }, [normalizedOptions, searchQuery]);
 
   // Find currently selected label
   const selectedOption = useMemo(
@@ -100,14 +83,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         !containerRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
-        setSearchQuery('');
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsOpen(false);
-        setSearchQuery('');
       }
     };
 
@@ -122,32 +103,21 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     };
   }, [isOpen]);
 
-  // Focus search input when dropdown opens
-  useEffect(() => {
-    if (isOpen && isSearchEnabled) {
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, isSearchEnabled]);
-
   const handleToggle = () => {
     if (disabled) return;
     setIsOpen((prev) => !prev);
-    if (isOpen) {
-      setSearchQuery('');
-    }
   };
 
   const handleSelect = (nextValue: string) => {
     onChange(nextValue);
     setIsOpen(false);
-    setSearchQuery('');
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative ${isOpen ? 'z-50' : 'z-10'} ${className}`}
+    >
       {/* Trigger Button */}
       <button
         id={id}
@@ -189,73 +159,40 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         <div
           role="listbox"
           tabIndex={-1}
-          className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden animate-view-enter"
+          className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden animate-view-enter"
         >
-          {/* Quick search input if searchable */}
-          {isSearchEnabled && (
-            <div className="p-2 border-b border-[#E4E0D8] bg-[#FAF8F5] sticky top-0 z-10">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[#64748B] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Ketik untuk mencari..."
-                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:ring-1 focus:ring-[#2E6496] focus:border-[#2E6496] transition-colors"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1E293B] p-0.5 rounded cursor-pointer"
-                    aria-label="Hapus pencarian"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Options list */}
           <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((opt) => {
-                const isSelected = opt.value === value;
-                return (
-                  <button
-                    key={opt.value || '__empty__'}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => handleSelect(opt.value)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center justify-between gap-2 cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#EBF3F8] text-[#1D4F7A] font-bold'
-                        : 'text-[#1E293B] hover:bg-[#FAF8F5] hover:text-[#2E6496]'
-                    }`}
-                  >
-                    <span className="truncate">{opt.label}</span>
+            {normalizedOptions.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <button
+                  key={opt.value || '__empty__'}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => handleSelect(opt.value)}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#EBF3F8] text-[#1D4F7A] font-bold'
+                      : 'text-[#1E293B] hover:bg-[#FAF8F5] hover:text-[#2E6496]'
+                  }`}
+                >
+                  <span className="truncate">{opt.label}</span>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {opt.badge && !isSelected && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]">
-                          {opt.badge}
-                        </span>
-                      )}
-                      {isSelected && (
-                        <Check className="w-4 h-4 text-[#2E6496] shrink-0" />
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="p-4 text-center text-xs text-[#64748B]">
-                Tidak ada pilihan yang cocok.
-              </div>
-            )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {opt.badge && !isSelected && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]">
+                        {opt.badge}
+                      </span>
+                    )}
+                    {isSelected && (
+                      <Check className="w-4 h-4 text-[#2E6496] shrink-0" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

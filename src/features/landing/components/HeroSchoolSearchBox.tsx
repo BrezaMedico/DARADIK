@@ -309,7 +309,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
       </div>
 
       {isRegionFilterOpen && (
-        <div className="mb-3.5 p-3 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-3 animate-view-enter">
+        <div className="mb-3.5 p-3 sm:p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-3 animate-view-enter relative z-30">
           <div className="flex items-center justify-between pb-1.5 border-b border-[#C9DFDC]/70">
             <span className="text-[11px] font-bold text-[#2E6496] uppercase tracking-wider">
               Saring Wilayah &amp; Jenjang
@@ -326,7 +326,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <div className="col-span-2 sm:col-span-1">
+            <div className="col-span-2 sm:col-span-1 relative z-20">
               <label
                 htmlFor="hero-prov"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -343,7 +343,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               />
             </div>
 
-            <div className="col-span-2 sm:col-span-1">
+            <div className="col-span-2 sm:col-span-1 relative z-20">
               <label
                 htmlFor="hero-kab"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -361,7 +361,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               />
             </div>
 
-            <div className="col-span-1">
+            <div className="col-span-1 relative z-10">
               <label
                 htmlFor="hero-jenjang"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -375,11 +375,10 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
                 options={['SD', 'SMA', 'SMK', 'SMP']}
                 placeholder="Semua Jenjang"
                 emptyOptionLabel="Semua Jenjang"
-                searchable={false}
               />
             </div>
 
-            <div className="col-span-1">
+            <div className="col-span-1 relative z-10">
               <label
                 htmlFor="hero-status"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -393,7 +392,6 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
                 options={['Negeri', 'Swasta']}
                 placeholder="Semua Status"
                 emptyOptionLabel="Semua Status"
-                searchable={false}
               />
             </div>
           </div>
@@ -514,7 +512,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
         </div>
       )}
 
-      <div className="mt-3.5 sm:mt-4 space-y-2.5">
+      <div className="mt-3.5 sm:mt-4 space-y-2.5 relative z-10">
         <button
           type="submit"
           className="w-full min-h-[46px] py-3 sm:py-3.5 px-5 sm:px-6 rounded-xl daradik-cta-subtle btn-glass-sheen text-[#FFFFFF] font-bold text-sm sm:text-base active:translate-y-[1px] flex items-center justify-center gap-2.5 group cursor-pointer"
