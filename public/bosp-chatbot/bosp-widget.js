@@ -637,6 +637,7 @@
       '  <div class="bosp-reply-wrapper" id="bosp-reply-scroll">',
       '    <div id="bosp-reply-card" class="bosp-reply-card" aria-live="polite" aria-atomic="true">',
       '      <p id="bosp-reply-text" class="bosp-reply-text"></p>',
+      '      <div id="bosp-reply-actions" class="bosp-reply-actions" style="display:none;" aria-label="Menu Aksi Cepat"></div>',
       '    </div>',
       '  </div>',
 
@@ -692,6 +693,7 @@
 
     const replyCard = root.querySelector('#bosp-reply-card');
     const replyTextEl = root.querySelector('#bosp-reply-text');
+    const replyActionsEl = root.querySelector('#bosp-reply-actions');
     const replyScroll = root.querySelector('#bosp-reply-scroll');
     const chatForm = root.querySelector('#bosp-chat-form');
     const chatInput = root.querySelector('#bosp-chat-input');
@@ -1344,21 +1346,195 @@
     }
 
     // ========================================================================
+    // AKSI CEPAT NAVIGASI (TOMBOL FITUR DALAM CHAT)
+    // ========================================================================
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getButtonIconSvg(target) {
+      switch (target) {
+        case 'lapor-anonim':
+        case 'lapor':
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
+        case 'pantau-tiket':
+        case 'lacak':
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+        case 'cek-iuran-wa':
+        case 'scanner-wa':
+        case 'wa':
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>';
+        case 'kamus-bosp':
+        case 'kamus':
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
+        case 'cari-sekolah':
+        case 'cari':
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>';
+        case 'profil-sekolah':
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>';
+        case 'beranda':
+        default:
+          return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
+      }
+    }
+
+    const CHEVRON_SVG =
+      '<svg class="bosp-btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+
+    function navigateApp(target) {
+      let view = 'landing';
+      let tab = undefined;
+
+      switch (target) {
+        case 'lapor-anonim':
+        case 'lapor':
+          view = 'anonymous-report';
+          break;
+        case 'pantau-tiket':
+        case 'lacak':
+          view = 'live-tracking';
+          break;
+        case 'cek-iuran-wa':
+        case 'scanner-wa':
+        case 'wa':
+          view = 'school-profile';
+          tab = 'wa-scanner';
+          break;
+        case 'kamus-bosp':
+        case 'kamus':
+          view = 'kamus-bosp';
+          break;
+        case 'cari-sekolah':
+        case 'cari':
+          view = 'school-search';
+          break;
+        case 'profil-sekolah':
+          view = 'school-profile';
+          tab = 'summary';
+          break;
+        case 'beranda':
+        default:
+          view = 'landing';
+          break;
+      }
+
+      if (typeof window.__DARADIK_NAVIGATE__ === 'function') {
+        window.__DARADIK_NAVIGATE__(view, { tab: tab });
+      } else {
+        window.dispatchEvent(
+          new CustomEvent('daradik-navigate', {
+            detail: { view: view, tab: tab },
+          })
+        );
+      }
+
+      if (window.innerWidth <= 640) {
+        closePopup();
+      }
+    }
+
+    function resolveActionButtons(query, botText, existingButtons) {
+      if (Array.isArray(existingButtons) && existingButtons.length > 0) {
+        return existingButtons.slice(0, 3);
+      }
+
+      const q = (query || '').toLowerCase();
+      const t = (botText || '').toLowerCase();
+      const buttons = [];
+
+      const addBtn = (label, target) => {
+        if (!buttons.some((b) => b.target === target) && buttons.length < 3) {
+          buttons.push({ label: label, target: target });
+        }
+      };
+
+      if (
+        q.includes('lapor') ||
+        q.includes('pungli') ||
+        q.includes('aduan') ||
+        q.includes('sumbangan') ||
+        q.includes('tarikan') ||
+        t.includes('lapor anonim')
+      ) {
+        addBtn('Buka Lapor Anonim', 'lapor-anonim');
+      }
+
+      if (
+        q.includes('tiket') ||
+        q.includes('lacak') ||
+        q.includes('pantau') ||
+        t.includes('pantau tiket')
+      ) {
+        addBtn('Pantau Tiket Lapor', 'pantau-tiket');
+      }
+
+      if (
+        /\bwa\b/i.test(q) ||
+        q.includes('whatsapp') ||
+        q.includes('scan') ||
+        q.includes('cek iuran') ||
+        q.includes('grup') ||
+        t.includes('cek iuran wa')
+      ) {
+        addBtn('Buka Cek Iuran WA', 'cek-iuran-wa');
+      }
+
+      if (
+        q.includes('aturan') ||
+        q.includes('kamus') ||
+        q.includes('larangan') ||
+        q.includes('boleh') ||
+        q.includes('bosp') ||
+        t.includes('kamus bosp')
+      ) {
+        addBtn('Kamus Aturan BOSP', 'kamus-bosp');
+      }
+
+      if (
+        q.includes('cari') ||
+        q.includes('sekolah') ||
+        q.includes('npsn') ||
+        t.includes('ketik nama sekolah')
+      ) {
+        addBtn('Cari Data Sekolah', 'cari-sekolah');
+      }
+
+      if (buttons.length === 0) {
+        addBtn('Kamus Aturan BOSP', 'kamus-bosp');
+        addBtn('Cek Iuran WA', 'cek-iuran-wa');
+        addBtn('Lapor Anonim', 'lapor-anonim');
+      }
+
+      return buttons;
+    }
+
+    // ========================================================================
     // RENDER BALASAN TUNGGAL + EFEK MENGETIK SELARAS SUARA & EMOSI MATA
     // ========================================================================
-    function renderReplyWithTypewriter(text, emotion, shouldSpeak) {
+    function renderReplyWithTypewriter(text, emotion, shouldSpeak, buttons) {
       if (typingTimerId) {
         clearInterval(typingTimerId);
         typingTimerId = null;
       }
 
       state.lastReplyText = text;
+      state.lastReplyButtons = Array.isArray(buttons) ? buttons : [];
       setBotEmotion(emotion || 'netral', 7000);
       triggerBlink(false);
       replyCard.classList.add('is-fading-out');
 
       setTimeout(function () {
         replyTextEl.innerHTML = '';
+        if (replyActionsEl) {
+          replyActionsEl.innerHTML = '';
+          replyActionsEl.style.display = 'none';
+        }
+
         const textNode = document.createTextNode('');
         const cursorSpan = document.createElement('span');
         cursorSpan.className = 'bosp-typing-cursor';
@@ -1372,9 +1548,32 @@
           speakTextQueue(text);
         }
 
+        function showButtons() {
+          const actionList = Array.isArray(buttons) && buttons.length > 0 ? buttons : state.lastReplyButtons;
+          if (!replyActionsEl || !Array.isArray(actionList) || actionList.length === 0) return;
+          replyActionsEl.innerHTML = '';
+          replyActionsEl.style.display = 'flex';
+
+          actionList.forEach(function (btn) {
+            if (!btn || !btn.label || !btn.target) return;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'bosp-action-btn';
+            b.setAttribute('data-target', btn.target);
+            b.innerHTML = getButtonIconSvg(btn.target) + '<span>' + escapeHtml(btn.label) + '</span>' + CHEVRON_SVG;
+            b.addEventListener('click', function (e) {
+              e.preventDefault();
+              navigateApp(btn.target);
+            });
+            replyActionsEl.appendChild(b);
+          });
+          replyScroll.scrollTop = replyScroll.scrollHeight;
+        }
+
         if (state.prefersReducedMotion) {
           textNode.nodeValue = text;
           cursorSpan.remove();
+          showButtons();
           return;
         }
 
@@ -1396,6 +1595,7 @@
             clearInterval(typingTimerId);
             typingTimerId = null;
             cursorSpan.remove();
+            showButtons();
           }
         }, stepMs);
       }, 170);
@@ -1423,6 +1623,7 @@
 
       let botText = '';
       let botEmotion = 'netral';
+      let botButtons = [];
 
       try {
         const controller = new AbortController();
@@ -1447,6 +1648,7 @@
           if (data && data.teks) {
             botText = data.teks;
             botEmotion = data.emosi || 'netral';
+            botButtons = Array.isArray(data.tombol) ? data.tombol : [];
           }
           if (data && data.interactionId) {
             state.previousInteractionId = data.interactionId;
@@ -1510,6 +1712,11 @@
         );
         botText = fallback.teks;
         botEmotion = fallback.emosi;
+        botButtons = fallback.tombol || [];
+      }
+
+      if (!botButtons || botButtons.length === 0) {
+        botButtons = resolveActionButtons(question, botText);
       }
 
       state.conversationHistory.push({ role: 'user', text: question });
@@ -1519,7 +1726,7 @@
       }
 
       state.isThinking = false;
-      renderReplyWithTypewriter(botText, botEmotion, true);
+      renderReplyWithTypewriter(botText, botEmotion, true, botButtons);
       setControlsDisabled(false);
 
       if (state.isOpen && window.innerWidth > 640) {
@@ -1538,7 +1745,16 @@
 
       if (!state.hasGreeted) {
         state.hasGreeted = true;
-        renderReplyWithTypewriter(CONFIG.greetingText, 'menyapa', true);
+        renderReplyWithTypewriter(
+          CONFIG.greetingText,
+          'menyapa',
+          true,
+          [
+            { label: 'Kamus Aturan BOSP', target: 'kamus-bosp' },
+            { label: 'Cek Iuran WA', target: 'cek-iuran-wa' },
+            { label: 'Lapor Anonim', target: 'lapor-anonim' },
+          ]
+        );
       } else {
         setBotEmotion('senang', 2200);
         triggerBlink(true);

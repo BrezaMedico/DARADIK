@@ -84,6 +84,16 @@ export const FINAL_SYSTEM_PROMPT = `
 Kamu adalah "Bos" yang ramah, pintar, hangat, dan serba tahu di aplikasi DARADIK.
 Kamu bertugas menemani dan menjawab APA PUN pertanyaan dari pengguna dengan luwes dan komunikatif, baik seputar sekolah, aplikasi, maupun pertanyaan umum lainnya.
 
+PANDUAN TOMBOL NAVIGASI CEPAT:
+Jika jawabanmu berkaitan atau mengarahkan pengguna ke fitur website DARADIK, sertakan 1-3 tombol aksi relevan pada properti "tombol":
+- "lapor-anonim": Formulir Lapor Pungli Anonim
+- "pantau-tiket": Pantau / Lacak Tiket Laporan
+- "cek-iuran-wa": Verifikasi Scanner Iuran WhatsApp
+- "kamus-bosp": Kamus Biaya & Aturan Resmi BOSP
+- "cari-sekolah": Pencarian Data Sekolah & Pagu BOSP
+- "beranda": Kembali ke Beranda Utama
+Contoh tombol: [{"label": "Buka Lapor Anonim", "target": "lapor-anonim"}]
+
 PANDUAN PENGETAHUAN & MENJAWAB:
 1. Pertanyaan seputar Dana BOSP 2026 & Panduan DARADIK:
 Gunakan informasi resmi berikut sebagai acuan utama:
@@ -115,8 +125,87 @@ Kembalikan HANYA objek JSON valid berikut:
 }
 `.trim();
 
+export function getActionButtonsForQuery(query = '', replyText = '') {
+  const q = (query || '').toLowerCase();
+  const t = (replyText || '').toLowerCase();
+  const buttons = [];
+
+  const addBtn = (label, target) => {
+    if (!buttons.some((b) => b.target === target) && buttons.length < 3) {
+      buttons.push({ label, target });
+    }
+  };
+
+  if (
+    q.includes('lapor') ||
+    q.includes('pungli') ||
+    q.includes('aduan') ||
+    q.includes('sumbangan') ||
+    q.includes('tarikan') ||
+    t.includes('lapor anonim')
+  ) {
+    addBtn('Buka Lapor Anonim', 'lapor-anonim');
+  }
+
+  if (
+    q.includes('tiket') ||
+    q.includes('lacak') ||
+    q.includes('pantau') ||
+    t.includes('pantau tiket')
+  ) {
+    addBtn('Pantau Tiket Lapor', 'pantau-tiket');
+  }
+
+  if (
+    /\bwa\b/i.test(q) ||
+    q.includes('whatsapp') ||
+    q.includes('scan') ||
+    q.includes('cek iuran') ||
+    q.includes('grup') ||
+    t.includes('cek iuran wa')
+  ) {
+    addBtn('Buka Cek Iuran WA', 'cek-iuran-wa');
+  }
+
+  if (
+    q.includes('aturan') ||
+    q.includes('kamus') ||
+    q.includes('larangan') ||
+    q.includes('boleh') ||
+    q.includes('bosp') ||
+    t.includes('kamus bosp')
+  ) {
+    addBtn('Kamus Aturan BOSP', 'kamus-bosp');
+  }
+
+  if (
+    q.includes('cari') ||
+    q.includes('sekolah') ||
+    q.includes('npsn') ||
+    t.includes('ketik nama sekolah')
+  ) {
+    addBtn('Cari Data Sekolah', 'cari-sekolah');
+  }
+
+  if (buttons.length === 0) {
+    addBtn('Kamus Aturan BOSP', 'kamus-bosp');
+    addBtn('Cek Iuran WA', 'cek-iuran-wa');
+    addBtn('Lapor Anonim', 'lapor-anonim');
+  }
+
+  return buttons;
+}
+
 // Local keyword fallback used when Gemini is unconfigured or times out.
 export function getLocalKnowledgeReply(userMessage = '', history = []) {
+  const reply = _getLocalKnowledgeReplyInternal(userMessage, history);
+  if (!reply.tombol || !Array.isArray(reply.tombol) || reply.tombol.length === 0) {
+    reply.tombol = getActionButtonsForQuery(userMessage, reply.teks);
+  }
+  return reply;
+}
+
+function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
   const q = (userMessage || '').toLowerCase().trim();
   const rawQ = (userMessage || '').trim();
   const lastBotText =

@@ -264,6 +264,33 @@ export function App() {
     navigateTo('landing');
   }, [navigateTo]);
 
+  useEffect(() => {
+    const handleNavEvent = (e: any) => {
+      const detail = e.detail || {};
+      const view = detail.view as AppView;
+      if (!view) return;
+      setShowIntro(false);
+      if (view === 'school-search') {
+        handleOpenSearchPage(detail.searchFilters);
+      } else if (view === 'school-profile') {
+        if (detail.tab) setProfileTab(detail.tab);
+        navigateTo('school-profile');
+      } else {
+        navigateTo(view);
+      }
+    };
+
+    window.addEventListener('daradik-navigate', handleNavEvent as any);
+    (window as any).__DARADIK_NAVIGATE__ = (view: AppView, options?: any) => {
+      handleNavEvent({ detail: { view, ...options } });
+    };
+
+    return () => {
+      window.removeEventListener('daradik-navigate', handleNavEvent as any);
+      delete (window as any).__DARADIK_NAVIGATE__;
+    };
+  }, [navigateTo, handleOpenSearchPage]);
+
   const handleSelectSchoolAndOpenProfile = (
     school: SchoolData,
     initialTab: ProfileTab = 'summary'

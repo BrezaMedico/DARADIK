@@ -7,6 +7,7 @@ import {
 import {
   FINAL_SYSTEM_PROMPT,
   getLocalKnowledgeReply,
+  getActionButtonsForQuery,
 } from './knowledgeBase.js';
 
 export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
@@ -104,6 +105,30 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
                 'berpikir',
               ],
             },
+            tombol: {
+              type: 'array',
+              description:
+                'Tombol aksi cepat navigasi ke halaman fitur website DARADIK jika relevan (maksimal 3 tombol).',
+              items: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                  target: {
+                    type: 'string',
+                    enum: [
+                      'lapor-anonim',
+                      'pantau-tiket',
+                      'cek-iuran-wa',
+                      'kamus-bosp',
+                      'cari-sekolah',
+                      'profil-sekolah',
+                      'beranda',
+                    ],
+                  },
+                },
+                required: ['label', 'target'],
+              },
+            },
           },
           required: ['teks', 'emosi'],
         },
@@ -141,11 +166,17 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           ? parsed.emosi
           : 'netral';
 
+        let tombolList =
+          Array.isArray(parsed.tombol) && parsed.tombol.length > 0
+            ? parsed.tombol.slice(0, 3)
+            : getActionButtonsForQuery(message, cleanTeks);
+
         return {
           status: 200,
           payload: {
             teks: cleanTeks,
             emosi: cleanEmosi,
+            tombol: tombolList,
           },
         };
       }
@@ -164,6 +195,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
       emosi: VALID_EMOTIONS.has(fallbackReply.emosi)
         ? fallbackReply.emosi
         : 'netral',
+      tombol: fallbackReply.tombol || getActionButtonsForQuery(message, fallbackReply.teks),
     },
   };
 }
