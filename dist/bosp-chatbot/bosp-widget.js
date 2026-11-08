@@ -1257,32 +1257,32 @@
             utter.lang = 'id-ID';
           }
 
-          // Atur intonasi (pitch) dan tempo (rate) agar suara tenang, anggun, merdu, dan terdengar lancar cepat
+          // Atur intonasi (pitch) dan tempo (rate) ~3 kata per detik (sigap, jelas, merdu)
           let emotionPitch = 1.02;
-          let emotionRate = 1.12;
+          let emotionRate = 1.32;
 
           switch (state.currentEmotion) {
             case 'senang':
             case 'semangat':
             case 'menyapa':
               emotionPitch = 1.03;
-              emotionRate = 1.15;
+              emotionRate = 1.35;
               break;
             case 'empati':
               emotionPitch = 0.99;
-              emotionRate = 1.08;
+              emotionRate = 1.25;
               break;
             case 'berpikir':
               emotionPitch = 1.01;
-              emotionRate = 1.10;
+              emotionRate = 1.28;
               break;
             case 'bingung':
               emotionPitch = 1.03;
-              emotionRate = 1.10;
+              emotionRate = 1.30;
               break;
             default:
               emotionPitch = 1.02;
-              emotionRate = 1.12;
+              emotionRate = 1.32;
           }
 
           utter.pitch = emotionPitch;
@@ -1380,9 +1380,11 @@
 
         let charIndex = 0;
         const totalChars = text.length;
+        const wordsCount = (text.match(/\S+/g) || []).length;
+        const estimatedDurationMs = Math.max(700, (wordsCount / 3.0) * 1000);
         const stepMs = Math.max(
-          8,
-          Math.min(18, Math.round(1100 / Math.max(totalChars, 1)))
+          6,
+          Math.min(16, Math.round(estimatedDurationMs / Math.max(totalChars, 1)))
         );
 
         typingTimerId = setInterval(function () {

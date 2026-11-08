@@ -29,7 +29,7 @@ export function synthesizeWithPiper(normalizedText) {
       '--output_file',
       '-',
       '--length_scale',
-      '0.88',
+      '0.72',
     ];
     const proc = spawn(PIPER_BINARY_PATH, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
