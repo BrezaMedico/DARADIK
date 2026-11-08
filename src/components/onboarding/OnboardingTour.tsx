@@ -51,7 +51,7 @@ const LANDING_TOUR_STEPS: TourStep[] = [
     stepNum: '3 dari 5',
     title: 'Lacak Lapor',
     description:
-      'Pantau progres verifikasi aduan di Inspektorat lewat kode tiket dan kirim pesan balasan dua arah secara anonim.',
+      'Pantau tahapan dan hasil verifikasi aduan di Inspektorat dan Dinas Pendidikan secara transparan lewat kode tiket resmi.',
     tip: 'Riwayat tiket Anda tersimpan otomatis di perangkat ini.',
     icon: 'lacak',
   },

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Cookie, FileCheck, X, ChevronRight } from 'lucide-react';
 
 export interface CookieConsentBannerProps {
@@ -68,23 +68,34 @@ export const ReportPolicyModal: React.FC<ReportPolicyModalProps> = ({
 }) => {
   const policyScrollContainerRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      const el = policyScrollContainerRef.current;
+      if (el && el.scrollHeight <= el.clientHeight + 15) {
+        onReachBottom();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isOpen, onReachBottom]);
+
   if (!isOpen) return null;
 
   const handlePolicyScroll = () => {
     const el = policyScrollContainerRef.current;
     if (!el) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 25) {
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= 35) {
       onReachBottom();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="policy-modal-title"
-        className="bg-[#FFFFFF] rounded-t-2xl sm:rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-[#C9DFDC] flex flex-col max-h-[92dvh] sm:max-h-[90vh]"
+        className="bg-[#FFFFFF] rounded-2xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-2xl border border-[#C9DFDC] flex flex-col max-h-[90vh] sm:max-h-[90vh] overflow-hidden"
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8] shrink-0">
           <div className="flex items-center gap-2.5">
@@ -116,7 +127,8 @@ export const ReportPolicyModal: React.FC<ReportPolicyModalProps> = ({
         <div
           ref={policyScrollContainerRef}
           onScroll={handlePolicyScroll}
-          className="overflow-y-auto p-4 sm:p-5 rounded-2xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs text-[#334155] space-y-4 leading-relaxed flex-1"
+          className="overflow-y-auto p-4 sm:p-5 rounded-2xl bg-[#FAF8F5] border border-[#E4E0D8] text-xs text-[#334155] space-y-4 leading-relaxed flex-1 min-h-0 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           <p className="daradik-lead text-xs sm:text-sm text-[#475569] font-medium leading-relaxed">
             DARADIK adalah platform keterbukaan dana BOSP yang membantu orang tua memahami penggunaan dana sekolah dan melaporkan dugaan pungutan tidak sesuai ketentuan. Mohon baca kebijakan ini sebelum mengirim laporan.
@@ -162,10 +174,10 @@ export const ReportPolicyModal: React.FC<ReportPolicyModalProps> = ({
 
           <div>
             <div className="font-bold text-[#1E293B] text-xs sm:text-sm mb-1">
-              5. Bukti Pendukung dan Komunikasi Lanjutan
+              5. Bukti Pendukung dan Perkembangan Laporan
             </div>
             <p>
-              Gambar bukti dikompresi ulang pada perangkat Anda untuk menghapus metadata lokasi GPS maupun perangkat kamera sebelum disimpan ke penyimpanan aman. Melalui kode tiket, Anda dapat melihat perkembangan 5 tahap pemeriksaan dan membalas permintaan informasi tambahan dari petugas tanpa membuka identitas pribadi.
+              Gambar bukti dikompresi ulang pada perangkat Anda untuk menghapus metadata lokasi GPS maupun perangkat kamera sebelum disimpan ke penyimpanan aman. Melalui kode tiket, Anda dapat memantau 5 tahap perkembangan pemeriksaan secara transparan dari petugas tanpa membuka identitas pribadi.
             </p>
           </div>
 
@@ -174,7 +186,7 @@ export const ReportPolicyModal: React.FC<ReportPolicyModalProps> = ({
               6. Penyimpanan Kode Tiket
             </div>
             <p>
-              Simpan kode tiket Anda secara mandiri dan rahasia. Siapa pun yang memegang kode tiket dapat membaca perkembangan dan mengirim balasan tambahan pada laporan tersebut.
+              Simpan kode tiket Anda secara mandiri dan rahasia. Siapa pun yang memegang kode tiket dapat membaca perkembangan status pada laporan tersebut.
             </p>
           </div>
         </div>

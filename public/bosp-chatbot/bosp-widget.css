@@ -36,7 +36,9 @@
 }
 
 /* Sembunyikan tombol chatbot saat animasi pembuka/intro splash masih berjalan */
-body.is-intro-active .bosp-widget-root {
+body.is-intro-active .bosp-widget-root,
+body:has([role="dialog"]) .bosp-widget-root,
+body.is-modal-active .bosp-widget-root {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;

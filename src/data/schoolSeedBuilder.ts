@@ -172,7 +172,7 @@ export function buildSchoolCompositions(
       percentage: sarprasPct,
       amount: amtSarpras,
       color: '#4B83B1',
-      description: 'Pemeliharaan ruang kelas, perbaikan sanitasi toilet, dan meubelair.',
+      description: 'Pemeliharaan ruang kelas, perbaikan sanitasi toilet, dan meja kursi belajar.',
     },
     {
       id: `global-honor-${seq}`,
@@ -294,11 +294,11 @@ export function buildSchoolCompositions(
     },
     {
       id: `t2-sarpras-${seq}`,
-      label: 'Pemeliharaan Ruang Kelas, Meubelair & Ventilasi',
+      label: 'Pemeliharaan Ruang Kelas, Meja Kursi & Ventilasi',
       percentage: t2SarprasPct,
       amount: t2Amt3,
       color: '#66A3BF',
-      description: 'Penggantian meubelair belajar dan perbaikan ringan ruang kelas.',
+      description: 'Penggantian meja kursi belajar dan perbaikan ringan ruang kelas.',
     },
     {
       id: `t2-daya-${seq}`,

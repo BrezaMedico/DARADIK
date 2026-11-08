@@ -5,7 +5,7 @@ import type {
   SchoolData,
   WaScenarioData,
 } from '@/types/school';
-import { SMK_TI_BAZMA } from '@/data';
+import { SMK_TI_BAZMA, getSchoolsSeedDatabase } from '@/data';
 import { formatRupiah } from '@/utils/formatters';
 import { fetchSchoolFromSupabase } from '@/services/supabase';
 import {
@@ -165,6 +165,16 @@ export function App() {
         const cleanNpsn = npsnParam.trim();
         setCurrentView('school-profile');
         setShowIntro(false);
+
+        if (cleanNpsn === SMK_TI_BAZMA.npsn || cleanNpsn === SMK_TI_BAZMA.id) {
+          setSelectedSchool(SMK_TI_BAZMA);
+        } else {
+          const matched = getSchoolsSeedDatabase().find(
+            (s) => s.npsn === cleanNpsn || s.id === cleanNpsn
+          );
+          if (matched) setSelectedSchool(matched);
+        }
+
         fetchSchoolFromSupabase(cleanNpsn)
           .then((remote) => {
             if (remote) setSelectedSchool(remote);
@@ -265,9 +275,9 @@ export function App() {
 
   const navigateTo = useCallback((view: AppView) => {
     setCurrentView(view);
-    syncBrowserHistoryForView(view);
+    syncBrowserHistoryForView(view, view === 'school-profile' ? selectedSchool.npsn : undefined);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [selectedSchool.npsn]);
 
   const handleOpenSearchPage = useCallback(
     (filters?: Partial<SchoolSearchFilterState>) => {
@@ -331,7 +341,9 @@ export function App() {
   ) => {
     setSelectedSchool(school);
     setProfileTab(initialTab);
-    navigateTo('school-profile');
+    setCurrentView('school-profile');
+    syncBrowserHistoryForView('school-profile', school.npsn);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     fetchSchoolFromSupabase(school.id || school.npsn, school.jenjang)
       .then((remote) => {

@@ -65,7 +65,7 @@ export const KamusBospModal: React.FC<KamusModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0F172A]/50 p-0 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-[#0F172A]/50 p-0 sm:p-6 overflow-y-auto"
       onClick={onClose}
       role="dialog"
       aria-modal="true"

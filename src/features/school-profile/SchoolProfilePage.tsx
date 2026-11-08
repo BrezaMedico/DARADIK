@@ -149,20 +149,40 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
 
   const handleShareSchool = async () => {
     const shareUrl = `${window.location.origin}/?npsn=${school.npsn}`;
-    const shareText = `Ringkasan Transparansi BOSP ${school.name} (NPSN: ${school.npsn}), Pagu BOSP TA 2026: ${formatRupiah(
-      currentTotalBosp
-    )}. Cek rincian penggunaan di: ${shareUrl}`;
+    let shared = false;
 
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareText);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Transparansi BOSP - ${school.name}`,
+          text: `Cek transparansi dana BOSP dan rincian belanja ${school.name} (NPSN: ${school.npsn}) di DARADIK:`,
+          url: shareUrl,
+        });
+        shared = true;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
       }
-    } catch {
-      // Fallback
     }
-    onShowToast(
-      'Tautan ringkasan transparansi berhasil disalin untuk dibagikan ke grup WA!'
-    );
+
+    if (!shared) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(shareUrl);
+        } else {
+          const textArea = document.createElement('textarea');
+          textArea.value = shareUrl;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+        onShowToast('Tautan profil sekolah berhasil disalin ke papan klip!');
+      } catch {
+        onShowToast(`Tautan profil sekolah: ${shareUrl}`);
+      }
+    }
   };
 
   const handleDownloadPdf = async () => {

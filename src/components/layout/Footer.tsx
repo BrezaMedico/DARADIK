@@ -53,7 +53,7 @@ export const Footer: React.FC<FooterProps> = ({
   return (
     <footer className="bg-[#FFFFFF] border-t border-[#E2E8F0] pt-14 sm:pt-18 pb-2 sm:pb-4 px-4 sm:px-6 lg:px-8 mt-16 sm:mt-24 transition-colors">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 sm:gap-10 pb-12 sm:pb-16 text-left">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 pb-12 sm:pb-16 text-left">
           {/* Kolom 1: Navigasi Platform */}
           <div className="space-y-4">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E293B] block font-mono">
@@ -112,61 +112,7 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Kolom 2: Transparansi BOSP */}
-          <div className="space-y-4">
-            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E293B] block font-mono">
-              Transparansi BOSP
-            </span>
-            <ul className="space-y-2.5 text-xs sm:text-sm">
-              <li>
-                <button
-                  type="button"
-                  onClick={onNavigateSearch}
-                  className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                >
-                  Pagu Anggaran 2026
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={onNavigateSearch}
-                  className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                >
-                  Pencairan Tahap 1 & 2
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={onNavigateSearch}
-                  className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                >
-                  Kuitansi SIPLah Resmi
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={onNavigateSearch}
-                  className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                >
-                  Foto Bukti Fisik Lapangan
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={onNavigateSearch}
-                  className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                >
-                  Pemindai Pungli Pesan WA
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          {/* Kolom 3: Layanan Pengaduan */}
+          {/* Kolom 2: Layanan Pengaduan */}
           <div className="space-y-4">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E293B] block font-mono">
               Layanan Pengaduan
@@ -192,15 +138,6 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={onNavigateKamus}
-                  className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer"
-                >
-                  Kriteria Pelanggaran BOSP
-                </button>
-              </li>
-              <li>
                 <span className="inline-flex items-center gap-1.5 text-[#059669] font-medium">
                   <Lock className="w-3 h-3" />
                   <span>Jaminan 100% Tanpa Akun</span>
@@ -209,7 +146,7 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Kolom 4: Landasan Hukum */}
+          {/* Kolom 3: Landasan Hukum */}
           <div className="space-y-4">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E293B] block font-mono">
               Dasar Regulasi
@@ -234,8 +171,8 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
           </div>
 
-          {/* Kolom 5: Kontak & Bantuan Langsung */}
-          <div className="col-span-2 md:col-span-1 space-y-4">
+          {/* Kolom 4: Kontak & Bantuan Langsung */}
+          <div className="space-y-4">
             <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E293B] block font-mono">
               Bantuan Pengguna
             </span>
@@ -280,9 +217,6 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="space-y-1 text-xs text-[#64748B]">
             <p className="font-semibold text-[#1E293B]">
               &copy; 2026 DARADIK. Seluruh hak cipta dilindungi.
-            </p>
-            <p className="text-[11px] text-[#64748B]">
-              cc Kelompok VIOLET
             </p>
           </div>
 

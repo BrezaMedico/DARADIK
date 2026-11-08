@@ -87,7 +87,7 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
         )}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          <div className="col-span-2 sm:col-span-1 relative z-20">
+          <div className="col-span-2 sm:col-span-1 relative z-40 focus-within:z-50">
             <label
               htmlFor="search-page-province"
               className="block text-xs font-semibold text-[#475569] mb-1.5"
@@ -104,7 +104,7 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             />
           </div>
 
-          <div className="col-span-2 sm:col-span-1 relative z-20">
+          <div className="col-span-2 sm:col-span-1 relative z-30 focus-within:z-50">
             <label
               htmlFor="search-page-city"
               className="block text-xs font-semibold text-[#475569] mb-1.5"
@@ -122,7 +122,7 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             />
           </div>
 
-          <div className="col-span-1 relative z-10">
+          <div className="col-span-1 relative z-20 focus-within:z-50">
             <label
               htmlFor="search-page-level"
               className="block text-xs font-semibold text-[#475569] mb-1.5"
@@ -139,7 +139,7 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             />
           </div>
 
-          <div className="col-span-1 relative z-10">
+          <div className="col-span-1 relative z-10 focus-within:z-50">
             <label
               htmlFor="search-page-status"
               className="block text-xs font-semibold text-[#475569] mb-1.5"

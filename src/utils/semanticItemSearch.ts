@@ -212,7 +212,7 @@ const SEMANTIC_CLUSTERS: Record<
   },
   meubelair: {
     targetKeywords: ['meubelair', 'meja', 'kursi', 'bangku', 'perabot'],
-    label: 'Meubelair Ruang Belajar',
+    label: 'Perabot Meja & Kursi Belajar',
     concept: 'Peremajaan perabot meja dan kursi kelas yang rusak',
   },
   mebel: {

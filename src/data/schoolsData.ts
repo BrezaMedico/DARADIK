@@ -325,11 +325,11 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
   {
     id: 'item-meja-kursi-04',
     code: 'RKAS-05.04.02',
-    name: 'Pengadaan Meja & Kursi Belajar Siswa (Meubelair)',
+    name: 'Pengadaan Meja & Kursi Belajar Siswa',
     unitSummary: '30 Pasang Meja Kursi Siswa',
     amount: 16500000,
     category: 'Pemeliharaan Sarana dan Prasarana Sekolah',
-    aiCategoryPath: 'Sarana Ruang Kelas > Meubelair Meja Kursi Belajar',
+    aiCategoryPath: 'Sarana Ruang Kelas > Meja Kursi Belajar',
     date: '18 Mei 2026',
     stage: 'Tahap 1',
     allocation: 'Penggantian meja dan kursi belajar yang rusak di ruang kelas untuk memastikan kenyamanan siswa saat mengikuti pelajaran.',
@@ -340,7 +340,6 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
       'bangku',
       'meja belajar',
       'kursi belajar',
-      'meubelair',
       'mebel',
       'perabot',
       'meja kelas',
@@ -350,7 +349,7 @@ export const BAZMA_BOSP_ITEMS: BospRealizationItem[] = [
     ],
     invoice: {
       number: 'INV/KARYA-MEBEL/2026/05/0133',
-      vendorName: 'UD Karya Sentosa Meubelair (SIPLah Kemdikbud)',
+      vendorName: 'UD Karya Sentosa (SIPLah Kemdikbud)',
       vendorAddress: 'Jl. Raya Ciampea KM 12, Kab. Bogor',
       npwp: '05.332.901.4-403.000',
       date: '18 Mei 2026',
@@ -885,7 +884,7 @@ export function buildSchoolCompositions(
       percentage: sarprasPct,
       amount: amtSarpras,
       color: '#4B83B1',
-      description: 'Pemeliharaan ruang kelas, perbaikan sanitasi toilet, dan meubelair.',
+      description: 'Pemeliharaan ruang kelas, perbaikan sanitasi toilet, dan meja kursi belajar.',
     },
     {
       id: `global-honor-${seq}`,
@@ -1009,11 +1008,11 @@ export function buildSchoolCompositions(
     },
     {
       id: `t2-sarpras-${seq}`,
-      label: 'Pemeliharaan Ruang Kelas, Meubelair & Ventilasi',
+      label: 'Pemeliharaan Ruang Kelas, Meja Kursi & Ventilasi',
       percentage: t2SarprasPct,
       amount: t2Amt3,
       color: '#66A3BF',
-      description: 'Penggantian meubelair belajar dan perbaikan ringan ruang kelas.',
+      description: 'Penggantian meja kursi belajar dan perbaikan ringan ruang kelas.',
     },
     {
       id: `t2-daya-${seq}`,

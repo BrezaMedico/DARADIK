@@ -71,8 +71,8 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
   }
 
   const candidateModels = [
-    'gemini-3.5-flash-lite',
     'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
   ];
 
   let rawOutput = '';
@@ -143,7 +143,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           config: genConfig,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 4_500)
+          setTimeout(() => reject(new Error('Model timeout')), 12_000)
         ),
       ]);
 

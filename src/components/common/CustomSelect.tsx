@@ -116,7 +116,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative ${isOpen ? 'z-50' : 'z-10'} ${className}`}
+      className={`relative ${isOpen ? 'z-[100]' : 'z-auto'} ${className}`}
     >
       {/* Trigger Button */}
       <button
@@ -159,7 +159,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         <div
           role="listbox"
           tabIndex={-1}
-          className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden animate-view-enter"
+          className="absolute left-0 right-0 top-full mt-1.5 z-[110] bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl shadow-slate-900/10 overflow-hidden animate-view-enter"
         >
           {/* Options list */}
           <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">

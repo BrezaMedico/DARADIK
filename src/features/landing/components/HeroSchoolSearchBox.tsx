@@ -326,7 +326,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <div className="col-span-2 sm:col-span-1 relative z-20">
+            <div className="col-span-2 sm:col-span-1 relative z-40 focus-within:z-50">
               <label
                 htmlFor="hero-prov"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -343,7 +343,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               />
             </div>
 
-            <div className="col-span-2 sm:col-span-1 relative z-20">
+            <div className="col-span-2 sm:col-span-1 relative z-30 focus-within:z-50">
               <label
                 htmlFor="hero-kab"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -361,7 +361,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               />
             </div>
 
-            <div className="col-span-1 relative z-10">
+            <div className="col-span-1 relative z-20 focus-within:z-50">
               <label
                 htmlFor="hero-jenjang"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"
@@ -378,7 +378,7 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               />
             </div>
 
-            <div className="col-span-1 relative z-10">
+            <div className="col-span-1 relative z-10 focus-within:z-50">
               <label
                 htmlFor="hero-status"
                 className="block text-[11px] text-[#475569] font-semibold mb-1"

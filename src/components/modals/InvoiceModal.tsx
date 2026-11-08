@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import {
   X,
   AlertTriangle,
@@ -8,6 +9,7 @@ import {
   Building2,
   Store,
   Check,
+  Loader2,
 } from 'lucide-react';
 import type { BospRealizationItem, SchoolData } from '@/types/school';
 import { formatRupiah } from '@/utils';
@@ -26,66 +28,41 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
   onReportItem,
 }) => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const receiptSheetRef = useRef<HTMLDivElement>(null);
 
   if (!item) return null;
 
-  const handleDownloadReceipt = () => {
-    const textReceipt = `================================================
-KUITANSI DIGITAL RESMI PENGADAAN BOSP
-Sistem Informasi Pengadaan di Sekolah (SIPLah)
-Kemendikdasmen Republik Indonesia
-================================================
-No. Kuitansi : ${item.invoice.number}
-Tanggal      : ${item.invoice.date} (${item.stage})
-Status       : LUNAS / TERVERIFIKASI
+  const handleDownloadReceipt = async () => {
+    if (!receiptSheetRef.current || isDownloading) return;
+    try {
+      setIsDownloading(true);
+      const canvas = await html2canvas(receiptSheetRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF',
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `Kuitansi-BOSP-${item.invoice.number.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-INFORMASI PEMBELI:
-Satuan Pend. : ${school.name}
-NPSN         : ${school.npsn}
-Kode RKAS    : ${item.code}
-
-TOKO / PENYEDIA MITRA SIPLah:
-Nama Toko    : ${item.invoice.vendorName}
-Alamat Toko  : ${item.invoice.vendorAddress}
-NPWP         : ${item.invoice.npwp}
-
-RINCIAN BARANG:
-${item.invoice.lineItems
-  .map(
-    (li, idx) =>
-      `${idx + 1}. ${li.name}\n   Volume: ${li.qty} | Harga: ${formatRupiah(Math.round(li.unitPrice))} | Subtotal: ${formatRupiah(li.subtotal)}`
-  )
-  .join('\n')}
-------------------------------------------------
-TOTAL PEMBAYARAN: ${formatRupiah(item.amount)}
-------------------------------------------------
-Peruntukan:
-${item.allocation}
-
-PENANGGUNG JAWAB:
-- Kepala Sekolah : ${item.invoice.principalName}
-- Bendahara BOSP : ${item.invoice.treasurerName}
-
-Terverifikasi Otomatis melalui Sistem ARKAS & BOSP
-================================================`;
-
-    const blob = new Blob([textReceipt], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Kuitansi-BOSP-${item.invoice.number.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 4000);
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 4000);
+    } catch (err) {
+      console.error('Gagal membuat gambar kuitansi PNG:', err);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0F172A]/60 p-0 sm:p-5 overflow-y-auto backdrop-blur-xs"
+      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-[#0F172A]/60 p-0 sm:p-5 overflow-y-auto backdrop-blur-xs"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -126,7 +103,10 @@ Terverifikasi Otomatis melalui Sistem ARKAS & BOSP
         {/* Scrollable Receipt Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-[#FAF8F5] space-y-3.5">
           {/* Digital Receipt Sheet */}
-          <div className="bg-[#FFFFFF] border border-[#CBD5E1] rounded-xl shadow-xs overflow-hidden">
+          <div
+            ref={receiptSheetRef}
+            className="bg-[#FFFFFF] border border-[#CBD5E1] rounded-xl shadow-xs overflow-hidden"
+          >
             {/* Receipt Header Badge */}
             <div className="bg-[#1E293B] text-[#FFFFFF] px-4 py-3 border-b border-[#334155]">
               <div className="flex items-center justify-between gap-2">
@@ -280,11 +260,21 @@ Terverifikasi Otomatis melalui Sistem ARKAS & BOSP
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
+              disabled={isDownloading}
               onClick={handleDownloadReceipt}
-              className="school-btn-secondary flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+              className="school-btn-secondary flex-1 sm:flex-initial min-h-[42px] px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
-              <Download className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
-              <span>Unduh Kuitansi</span>
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 text-[#2E6496] animate-spin shrink-0" />
+                  <span>Membuat PNG...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
+                  <span>Unduh Kuitansi (.png)</span>
+                </>
+              )}
             </button>
             <button
               type="button"

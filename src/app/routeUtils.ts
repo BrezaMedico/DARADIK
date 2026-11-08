@@ -30,7 +30,7 @@ export function detectInitialSearchRoute(): boolean {
   );
 }
 
-export function syncBrowserHistoryForView(view: AppView): void {
+export function syncBrowserHistoryForView(view: AppView, schoolNpsn?: string): void {
   if (typeof window === 'undefined') return;
   const currentPath = window.location.pathname.toLowerCase();
 
@@ -41,6 +41,11 @@ export function syncBrowserHistoryForView(view: AppView): void {
   } else if (view === 'school-search') {
     if (currentPath !== '/search' && currentPath !== '/search/') {
       window.history.pushState(null, '', '/search');
+    }
+  } else if (view === 'school-profile') {
+    const targetUrl = schoolNpsn ? `/?npsn=${schoolNpsn}` : '/';
+    if (window.location.search !== `?npsn=${schoolNpsn}`) {
+      window.history.pushState(null, '', targetUrl);
     }
   } else if (
     currentPath === '/admin' ||

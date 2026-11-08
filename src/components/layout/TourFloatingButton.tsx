@@ -35,11 +35,7 @@ export const TourFloatingButton: React.FC<TourFloatingButtonProps> = ({
         onClick={onStartTour}
         title="Panduan Fitur"
         aria-label="Buka panduan penggunaan fitur"
-        className={`pointer-events-auto w-10 h-10 sm:w-9 sm:h-9 rounded-full border-2 flex items-center justify-center font-bold text-sm sm:text-base leading-none select-none transition-all duration-300 cursor-pointer shrink-0 active:scale-95 ${
-          isDarkBackground
-            ? 'border-[#FFFFFF] text-[#FFFFFF] bg-transparent hover:border-white hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]'
-            : 'border-[#2E6496] text-[#2E6496] bg-white/80 hover:bg-white hover:border-[#1E293B] hover:text-[#1E293B] shadow-xs backdrop-blur-xs'
-        }`}
+        className="pointer-events-auto w-9 h-9 sm:w-9 sm:h-9 rounded-full border-2 border-[#2E6496] bg-[#FFFFFF] text-[#2E6496] hover:bg-[#2E6496] hover:text-[#FFFFFF] shadow-sm flex items-center justify-center font-extrabold text-sm sm:text-base leading-none select-none transition-all duration-200 cursor-pointer shrink-0 active:scale-95 ring-2 ring-[#2E6496]/20"
       >
         ?
       </button>

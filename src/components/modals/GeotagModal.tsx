@@ -158,7 +158,7 @@ export const GeotagModal: React.FC<GeotagModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0F172A]/60 p-0 sm:p-5 overflow-y-auto backdrop-blur-xs"
+        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-[#0F172A]/60 p-0 sm:p-5 overflow-y-auto backdrop-blur-xs"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
@@ -354,7 +354,7 @@ export const GeotagModal: React.FC<GeotagModalProps> = ({
 
       {isEnlarged && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#000000]/80 p-3 sm:p-6 backdrop-blur-sm"
+          className="fixed inset-0 z-[1010] flex items-center justify-center bg-[#000000]/80 p-3 sm:p-6 backdrop-blur-sm"
           onClick={() => setIsEnlarged(false)}
         >
           <div

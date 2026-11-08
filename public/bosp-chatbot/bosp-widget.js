@@ -1935,23 +1935,42 @@
       let recognition = null;
       let isListening = false;
 
-      micBtn.addEventListener('click', function () {
+      micBtn.addEventListener('click', async function () {
         if (state.isBusy) return;
         if (isListening && recognition) {
-          recognition.stop();
+          try {
+            recognition.stop();
+          } catch {}
           return;
+        }
+
+        // Pastikan izin mikrofon browser aktif
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(function (t) {
+              t.stop();
+            });
+          } catch (err) {
+            chatInput.placeholder = 'Izin mikrofon belum diberikan di peramban...';
+            setTimeout(function () {
+              chatInput.placeholder = 'Tanyakan soal BOSP atau cara pakai web...';
+            }, 3000);
+            return;
+          }
         }
 
         try {
           recognition = new SpeechRecognitionClass();
           recognition.lang = 'id-ID';
+          recognition.continuous = false;
           recognition.interimResults = false;
           recognition.maxAlternatives = 1;
 
           recognition.onstart = function () {
             isListening = true;
             micBtn.classList.add('is-listening');
-            chatInput.placeholder = 'Mendengarkan...';
+            chatInput.placeholder = 'Mendengarkan suara Anda...';
             setBotEmotion('semangat', 0);
           };
 
@@ -1973,10 +1992,20 @@
             chatInput.placeholder = 'Tanyakan soal BOSP atau cara pakai web...';
           };
 
-          recognition.onerror = function () {
+          recognition.onerror = function (event) {
             isListening = false;
             micBtn.classList.remove('is-listening');
-            chatInput.placeholder = 'Tanyakan soal BOSP atau cara pakai web...';
+            const errCode = event && event.error ? event.error : '';
+            if (errCode === 'not-allowed') {
+              chatInput.placeholder = 'Akses mikrofon ditolak di peramban.';
+            } else if (errCode === 'no-speech') {
+              chatInput.placeholder = 'Suara tidak terdeteksi. Silakan coba lagi.';
+            } else {
+              chatInput.placeholder = 'Gagal mendengar suara. Silakan ketik pertanyaan.';
+            }
+            setTimeout(function () {
+              chatInput.placeholder = 'Tanyakan soal BOSP atau cara pakai web...';
+            }, 3500);
             setBotEmotion('netral', 0);
           };
 
