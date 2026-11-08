@@ -1257,32 +1257,32 @@
             utter.lang = 'id-ID';
           }
 
-          // Atur intonasi (pitch) dan tempo (rate) agar suara tenang, anggun, merdu, dan terdengar cantik
+          // Atur intonasi (pitch) dan tempo (rate) agar suara tenang, anggun, merdu, dan terdengar lancar cepat
           let emotionPitch = 1.02;
-          let emotionRate = 0.94;
+          let emotionRate = 1.12;
 
           switch (state.currentEmotion) {
             case 'senang':
             case 'semangat':
             case 'menyapa':
-              emotionPitch = 1.03; // Kalem, manis, ramah dan cantik
-              emotionRate = 0.95;
+              emotionPitch = 1.03;
+              emotionRate = 1.15;
               break;
             case 'empati':
-              emotionPitch = 0.99; // Sangat lembut, teduh, menenangkan
-              emotionRate = 0.91;
+              emotionPitch = 0.99;
+              emotionRate = 1.08;
               break;
             case 'berpikir':
-              emotionPitch = 1.01; // Bijak, fokus, santun
-              emotionRate = 0.93;
+              emotionPitch = 1.01;
+              emotionRate = 1.10;
               break;
             case 'bingung':
-              emotionPitch = 1.03; // Lembut dengan nada sedikit bertanya
-              emotionRate = 0.93;
+              emotionPitch = 1.03;
+              emotionRate = 1.10;
               break;
             default:
               emotionPitch = 1.02;
-              emotionRate = 0.94;
+              emotionRate = 1.12;
           }
 
           utter.pitch = emotionPitch;
@@ -1381,8 +1381,8 @@
         let charIndex = 0;
         const totalChars = text.length;
         const stepMs = Math.max(
-          16,
-          Math.min(30, Math.round(2400 / Math.max(totalChars, 1)))
+          8,
+          Math.min(18, Math.round(1100 / Math.max(totalChars, 1)))
         );
 
         typingTimerId = setInterval(function () {

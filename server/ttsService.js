@@ -23,7 +23,14 @@ export function synthesizeWithPiper(normalizedText) {
       );
     }
 
-    const args = ['--model', PIPER_MODEL_PATH, '--output_file', '-'];
+    const args = [
+      '--model',
+      PIPER_MODEL_PATH,
+      '--output_file',
+      '-',
+      '--length_scale',
+      '0.88',
+    ];
     const proc = spawn(PIPER_BINARY_PATH, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
