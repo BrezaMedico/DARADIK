@@ -942,7 +942,7 @@ body.is-tour-active .bosp-widget-root {
 @media (max-width: 640px) {
   .bosp-widget-root {
     right: 14px;
-    bottom: 14px;
+    bottom: calc(var(--mobile-nav-h, 64px) + var(--safe-bottom, 0px) + 12px);
   }
 
   .bosp-fab-btn {

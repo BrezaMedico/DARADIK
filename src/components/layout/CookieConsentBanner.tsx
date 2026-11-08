@@ -18,7 +18,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
     <aside
       role="region"
       aria-label="Pemberitahuan Persetujuan Cookie dan Penyimpanan Data"
-      className="fixed bottom-[calc(var(--mobile-nav-h)+var(--safe-bottom)+0.75rem)] left-3 right-3 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md z-40 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 shadow-xl space-y-3 animate-view-enter"
+      className="fixed bottom-[calc(var(--mobile-nav-h)+var(--safe-bottom)+0.75rem)] left-3 right-3 sm:left-6 sm:right-auto sm:bottom-6 sm:max-w-md z-[995] bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 shadow-xl space-y-3 animate-view-enter"
     >
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#FAF8F5] border border-[#E4E0D8] text-[#92400E] flex items-center justify-center shrink-0">
@@ -56,3 +56,4 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
     </aside>
   );
 };
+
