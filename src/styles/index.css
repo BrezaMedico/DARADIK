@@ -893,6 +893,17 @@ body.is-admin-route .bosp-widget-root {
   pointer-events: none !important;
 }
 
+/* Sembunyikan chatbot selama langkah 1-4 panduan pengguna agar tidak menutupi tampilan HP */
+body.is-tour-active:not(.is-tour-step-chatbot) .bosp-widget-root {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.is-tour-active #bosp-chat-popup {
+  display: none !important;
+}
+
 /* Native <dialog> modal scroll lock & backdrop (Modern Web Guidance) */
 html:has(dialog:modal) {
   overflow: hidden;

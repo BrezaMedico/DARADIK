@@ -8,6 +8,7 @@ import {
 import { ScannerInputCard } from './components/ScannerInputCard';
 import { ScannerPreviewPanel } from './components/ScannerPreviewPanel';
 import { ScannerVerdictPanel } from './components/ScannerVerdictPanel';
+import type { WaSampleScenario } from './sampleScenarios';
 
 interface WaScannerWorkspaceProps {
   school: SchoolData;
@@ -62,6 +63,11 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           compositions: school.compositions,
           tahap1Compositions: school.tahap1Compositions,
           tahap2Compositions: school.tahap2Compositions,
+          enableVisionAi: true,
+          visionApiKey:
+            (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+            (window as any).__DARADIK_GEMINI_KEY__ ||
+            '',
         }
       );
       setOcrScanResult(result);
@@ -230,6 +236,20 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
     onReportFromWaScenario(scenarioData);
   };
 
+  const handleLoadSampleText = (text: string) => {
+    setPastedText(text);
+    handleAnalyzeDirectText(text);
+  };
+
+  const handleLoadSampleImage = (scenario: WaSampleScenario) => {
+    try {
+      const canvas = scenario.generateCanvas();
+      executePipeline(canvas, scenario.fileName, 0);
+    } catch {
+      setScanError('Gagal memuat gambar contoh.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <input
@@ -266,6 +286,8 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           onPastedTextChange={setPastedText}
           onPasteFromClipboard={handlePasteFromClipboard}
           onAnalyzeDirectText={() => handleAnalyzeDirectText()}
+          onLoadSampleImage={handleLoadSampleImage}
+          onLoadSampleText={handleLoadSampleText}
         />
       )}
 

@@ -7,15 +7,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const ENV_FILE_PATH = path.resolve(__dirname, '..', '.env');
+const SRC_ENV_PATH = path.resolve(__dirname, '..', 'src', '.env');
 dotenv.config({ path: ENV_FILE_PATH, override: true });
+dotenv.config({ path: SRC_ENV_PATH, override: false });
 dotenv.config({ override: true });
 
 export const PORT = Number(process.env.PORT || 3001);
-export const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
-const RAW_MODEL_ENV = (
-  process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
+export const GEMINI_API_KEY = (
+  process.env.GEMINI_API_KEY ||
+  process.env.VITE_GEMINI_API_KEY ||
+  ''
 ).trim();
-export const GEMINI_MODEL = (RAW_MODEL_ENV === 'gemini-3.8-flash')
+const RAW_MODEL_ENV = (
+  process.env.GEMINI_MODEL ||
+  process.env.VITE_GEMINI_MODEL ||
+  'gemini-3.5-flash-lite'
+).trim();
+export const GEMINI_MODEL = (RAW_MODEL_ENV === 'gemini-3.8-flash' || RAW_MODEL_ENV === 'gemini-2.5-flash')
   ? 'gemini-3.5-flash-lite'
   : (RAW_MODEL_ENV || 'gemini-3.5-flash-lite');
 
@@ -50,7 +58,13 @@ export const VALID_EMOTIONS = new Set([
 // Re-read .env on each call so key rotations take effect without restarting the server.
 export function getAiClient() {
   dotenv.config({ path: ENV_FILE_PATH, override: true });
-  const key = (process.env.GEMINI_API_KEY || GEMINI_API_KEY || '').trim();
+  dotenv.config({ path: SRC_ENV_PATH, override: false });
+  const key = (
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    GEMINI_API_KEY ||
+    DEFAULT_FALLBACK_KEY
+  ).trim();
   if (!key || key.startsWith('[ISI_')) return null;
   return new GoogleGenAI({ apiKey: key });
 }

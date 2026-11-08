@@ -150,7 +150,7 @@ export const SchoolIdentityHeader: React.FC<SchoolIdentityHeaderProps> = ({
 
       {/* 3. PROMINENT 3-TAB NAVIGATION BAR */}
       <div
-        className="p-1.5 sm:p-2 bg-[#FFFFFF]/95 backdrop-blur-md border border-[#C9DFDC] rounded-2xl grid grid-cols-3 gap-1 sm:gap-2 shadow-xs sticky top-[62px] sm:static z-30 animate-school-header"
+        className="p-1.5 sm:p-2 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl grid grid-cols-3 gap-1 sm:gap-2 shadow-xs animate-school-header"
         style={{ animationDelay: '80ms' }}
         role="tablist"
       >

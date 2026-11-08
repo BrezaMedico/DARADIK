@@ -8,6 +8,11 @@ if (typeof window !== 'undefined') {
     window.history.scrollRestoration = 'manual';
   }
   window.scrollTo(0, 0);
+
+  (window as any).__DARADIK_GEMINI_KEY__ =
+    (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).__DARADIK_GEMINI_KEY__ || '';
+  (window as any).__DARADIK_GEMINI_MODEL__ =
+    (import.meta as any).env?.VITE_GEMINI_MODEL || (window as any).__DARADIK_GEMINI_MODEL__ || 'gemini-3.5-flash-lite';
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

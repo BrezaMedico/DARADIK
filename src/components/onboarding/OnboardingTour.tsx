@@ -81,7 +81,7 @@ const PROFILE_TOUR_STEPS: TourStep[] = [
   {
     id: 'step-profile-summary',
     targetSelector: '[data-tour-id="tour-profile-summary"]',
-    stepNum: '1 dari 3',
+    stepNum: '1 dari 4',
     title: 'Ringkasan Dana',
     description:
       'Lihat total pagu dana BOSP tahun berjalan, pencairan dana Tahap 1 dan Tahap 2, serta diagram persentase komposisi belanja sekolah.',
@@ -91,7 +91,7 @@ const PROFILE_TOUR_STEPS: TourStep[] = [
   {
     id: 'step-profile-items',
     targetSelector: '[data-tour-id="tour-profile-items"]',
-    stepNum: '2 dari 3',
+    stepNum: '2 dari 4',
     title: 'Hasil Belanja',
     description:
       'Daftar bukti riil pengeluaran BOSP sekolah, dilengkapi pencarian semantik item belanja, arsip foto fisik barang, dan dokumen nota kuitansi.',
@@ -101,12 +101,22 @@ const PROFILE_TOUR_STEPS: TourStep[] = [
   {
     id: 'step-profile-wa',
     targetSelector: '[data-tour-id="tour-profile-wa"]',
-    stepNum: '3 dari 3',
+    stepNum: '3 dari 4',
     title: 'Verifikasi Iuran WA',
     description:
       'Pindai dan verifikasi pesan tagihan atau iuran di grup WhatsApp sekolah untuk mencocokkan apakah pengeluaran tersebut sesuai aturan BOSP atau indikasi pungli.',
     tip: 'Cukup salin teks pesan WA atau unggah tangkapan layar chat grup komite.',
     icon: 'wa',
+  },
+  {
+    id: 'step-tanya-bos',
+    targetSelector: '[data-tour-id="tour-tanya-bos"], #bosp-chat-fab',
+    stepNum: '4 dari 4',
+    title: 'Tanya BOS',
+    description:
+      'Asisten interaktif cerdas untuk bertanya apa saja seputar alokasi dana BOSP sekolah ini, aturan pendidikan resmi, atau cara lapor.',
+    tip: 'Bisa ditanya via ketikan teks maupun tombol suara mikrofon di pojok kanan bawah!',
+    icon: 'ai',
   },
 ];
 
@@ -151,22 +161,92 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   const currentStep = steps[currentStepIndex];
 
   useEffect(() => {
-    if (isOpen) {
-      setCurrentStepIndex(0);
+    if (!isOpen) {
+      document.body.classList.remove('is-tour-active', 'is-tour-step-chatbot');
+      return;
     }
-  }, [isOpen, tourType]);
+
+    document.body.classList.add('is-tour-active');
+    const isChatbotStep = steps[currentStepIndex]?.id === 'step-tanya-bos';
+    document.body.classList.toggle('is-tour-step-chatbot', isChatbotStep);
+
+    const popupEl = document.querySelector('#bosp-chat-popup');
+    if (popupEl?.classList.contains('is-open')) {
+      const closeBtn = document.querySelector<HTMLButtonElement>('#bosp-close-btn');
+      if (closeBtn) closeBtn.click();
+    }
+
+    return () => {
+      document.body.classList.remove('is-tour-active', 'is-tour-step-chatbot');
+    };
+  }, [isOpen, currentStepIndex, steps]);
 
   const updateSpotlightPosition = useCallback(() => {
     if (!isOpen) return;
     const step = steps[currentStepIndex];
     if (!step) return;
 
-    const el = findVisibleTarget(step.targetSelector);
     setViewportSize({
       w: window.innerWidth,
       h: window.innerHeight,
     });
 
+    if (step.id === 'step-tanya-bos') {
+      document.body.classList.add('is-tour-step-chatbot');
+      const widgetRoot = document.querySelector<HTMLElement>('.bosp-widget-root');
+      if (widgetRoot) {
+        widgetRoot.style.display = 'block';
+        widgetRoot.style.visibility = 'visible';
+        widgetRoot.style.opacity = '1';
+        widgetRoot.style.pointerEvents = 'auto';
+        widgetRoot.style.zIndex = '10001';
+      }
+      const fabBtn = document.querySelector<HTMLElement>('#bosp-chat-fab');
+      if (fabBtn) {
+        fabBtn.classList.remove('is-hidden');
+      }
+
+      const el = findVisibleTarget(step.targetSelector) || fabBtn;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          const pad = 6;
+          setTargetRect({
+            top: Math.max(4, rect.top - pad),
+            left: Math.max(4, rect.left - pad),
+            width: Math.min(window.innerWidth - 8, rect.width + pad * 2),
+            height: rect.height + pad * 2,
+          });
+          return;
+        }
+      }
+
+      const isMobile = window.innerWidth < 640;
+      const fabWidth = isMobile ? 144 : 164;
+      const fabHeight = isMobile ? 48 : 54;
+      const rightGap = isMobile ? 14 : 22;
+      const bottomGap = isMobile ? 76 : 22;
+
+      setTargetRect({
+        top: window.innerHeight - bottomGap - fabHeight - 4,
+        left: window.innerWidth - rightGap - fabWidth - 4,
+        width: fabWidth + 8,
+        height: fabHeight + 8,
+      });
+      return;
+    }
+
+    // Pada langkah selain Tanya BOS, sembunyikan penuh widget agar tidak menutupi tampilan HP
+    document.body.classList.remove('is-tour-step-chatbot');
+    const widgetRoot = document.querySelector<HTMLElement>('.bosp-widget-root');
+    if (widgetRoot) {
+      widgetRoot.style.display = 'none';
+      widgetRoot.style.visibility = 'hidden';
+      widgetRoot.style.opacity = '0';
+      widgetRoot.style.pointerEvents = 'none';
+    }
+
+    const el = findVisibleTarget(step.targetSelector);
     if (!el) {
       setTargetRect(null);
       return;
@@ -320,6 +400,24 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     const estimatedCardHeight = cardRef.current?.offsetHeight || 220;
     const gap = 16;
 
+    // Khusus langkah Tanya BOS: tempatkan kartu tepat di atas tombol launcher di pojok kanan bawah
+    if (currentStep.id === 'step-tanya-bos') {
+      const rightPadding = isMobile ? 12 : 20;
+      const leftPos = Math.max(12, viewportSize.w - cardMaxWidth - rightPadding);
+      const actualCardHeight = cardRef.current
+        ? Math.max(cardRef.current.offsetHeight, isMobile ? 250 : 210)
+        : (isMobile ? 250 : 210);
+      const topPos = Math.max(16, targetRect.top - actualCardHeight - gap);
+
+      return {
+        top: `${Math.round(topPos)}px`,
+        left: `${Math.round(leftPos)}px`,
+        width: `${cardMaxWidth}px`,
+        maxHeight: `${Math.max(180, Math.round(targetRect.top - 20))}px`,
+        overflowY: 'auto',
+      };
+    }
+
     const spaceRight = viewportSize.w - (targetRect.left + targetRect.width);
     const canFitOnRight = (viewportSize.w >= 768 && spaceRight >= 300) || viewportSize.w >= 1024;
 
@@ -373,15 +471,21 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
     if (!targetRect) return null;
     const isMobile = viewportSize.w < 640;
     const cardMaxWidth = isMobile ? viewportSize.w - 24 : 360;
-    let cardLeft = targetRect.left;
-    if (currentStep.id !== 'step-search') {
+
+    let cardLeft: number;
+    if (currentStep.id === 'step-tanya-bos') {
+      const rightPadding = isMobile ? 12 : 20;
+      cardLeft = Math.max(12, viewportSize.w - cardMaxWidth - rightPadding);
+    } else if (currentStep.id === 'step-search') {
+      cardLeft = targetRect.left;
+    } else {
       cardLeft = targetRect.left + targetRect.width / 2 - cardMaxWidth / 2;
     }
     cardLeft = Math.max(12, Math.min(cardLeft, viewportSize.w - cardMaxWidth - 12));
 
     const targetCenter = targetRect.left + targetRect.width / 2;
     const arrowOffset = targetCenter - cardLeft;
-    return Math.max(20, Math.min(cardMaxWidth - 20, arrowOffset));
+    return Math.max(20, Math.min(cardMaxWidth - 24, arrowOffset));
   };
 
   const arrowLeft = computeArrowLeftOffset();
@@ -396,20 +500,21 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
   const isCardBelowTarget =
     targetRect !== null &&
+    currentStep.id !== 'step-tanya-bos' &&
     !isCardRightOfTarget &&
     cardTopNum >= targetRect.top + targetRect.height - 10;
 
   const isCardAboveTarget =
     targetRect !== null &&
     !isCardRightOfTarget &&
-    !isCardBelowTarget &&
-    cardTopNum < targetRect.top;
+    (currentStep.id === 'step-tanya-bos' || (!isCardBelowTarget && cardTopNum < targetRect.top));
 
   return (
     <div
       className="fixed inset-0 z-[10000] select-none"
       role="dialog"
       aria-modal="true"
+      data-tour-modal="true"
       aria-label="Panduan Penggunaan DARADIK"
     >
       <svg
@@ -426,8 +531,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
                 y={targetRect.top}
                 width={targetRect.width}
                 height={targetRect.height}
-                rx={14}
-                ry={14}
+                rx={currentStep.id === 'step-tanya-bos' ? 28 : 14}
+                ry={currentStep.id === 'step-tanya-bos' ? 28 : 14}
                 fill="black"
                 className="transition-all duration-300 ease-out"
               />
@@ -452,7 +557,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
             width: `${targetRect.width}px`,
             height: `${targetRect.height}px`,
           }}
-          className="fixed z-[10001] rounded-[14px] border-2 border-[#FFFFFF] ring-4 ring-[#2E6496]/60 shadow-[0_0_24px_rgba(46,100,150,0.45)] pointer-events-none transition-all duration-300 ease-out"
+          className={`fixed z-[10001] border-2 border-[#FFFFFF] ring-4 ring-[#2E6496]/60 shadow-[0_0_24px_rgba(46,100,150,0.45)] pointer-events-none transition-all duration-300 ease-out ${
+            currentStep.id === 'step-tanya-bos' ? 'rounded-full' : 'rounded-[14px]'
+          }`}
           aria-hidden="true"
         />
       )}
@@ -460,7 +567,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       <div
         ref={cardRef}
         style={cardStyle}
-        className="fixed z-[10002] bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3 transition-all duration-300 ease-out animate-view-enter"
+        className="fixed z-[10003] bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3 transition-all duration-300 ease-out animate-view-enter"
       >
         {isCardRightOfTarget ? (
           <div

@@ -1760,21 +1760,26 @@
         }
       } catch {}
 
-      // Fallback opsional langsung ke Gemini API jika server proxy tidak aktif / deployment statis
+      // Fallback langsung ke Gemini API jika server proxy tidak aktif / deployment statis
       if (!botText) {
         const directKey =
           (typeof window !== 'undefined' &&
             (window.__DARADIK_GEMINI_KEY__ ||
               localStorage.getItem('daradik_gemini_key'))) ||
           '';
+        const modelName =
+          (typeof window !== 'undefined' && window.__DARADIK_GEMINI_MODEL__) ||
+          'gemini-3.5-flash-lite';
         if (directKey) {
           try {
             const directController = new AbortController();
             const dTimeout = setTimeout(function () {
               directController.abort();
-            }, 6000);
+            }, 15000);
             const dRes = await fetch(
-              'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=' +
+              'https://generativelanguage.googleapis.com/v1beta/models/' +
+                encodeURIComponent(modelName) +
+                ':generateContent?key=' +
                 encodeURIComponent(directKey),
               {
                 method: 'POST',
@@ -1785,7 +1790,7 @@
                       parts: [
                         {
                           text:
-                            'Kamu adalah Bos di aplikasi DARADIK yang ramah. Jawab pertanyaan pengguna berikut ini secara santai, akurat, dan jelas dalam 2-3 kalimat bahasa Indonesia tanpa markdown/simbol/bintang: ' +
+                            'Kamu adalah Bos, asisten pintar di aplikasi DARADIK. Kamu ramah, cerdas, bersahabat, dan serba tahu. Jawab pertanyaan pengguna berikut ini secara akurat, santai, dan jelas dalam 2-3 kalimat bahasa Indonesia tanpa simbol bintang atau format markdown: ' +
                             question,
                         },
                       ],

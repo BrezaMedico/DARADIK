@@ -562,8 +562,20 @@ export function matchSchoolBudgetItems(
       if (!cleanKw) continue;
       const genericSingleWords = new Set(['air', 'ujian', 'penilaian', 'asesmen', 'buku', 'layar', 'presentasi', 'map', 'pulpen', 'pensil', 'kebersihan']);
       if (genericSingleWords.has(cleanKw) && !hasFinancialOrLevyContext) continue;
-      if (cleanKw === 'buku' && matchPhraseSmart(doc, 'buku tahunan').matched) continue;
+      if (cleanKw === 'buku') {
+        if (matchPhraseSmart(doc, 'buku tahunan').matched || matchPhraseSmart(doc, 'buku tabungan').matched || matchPhraseSmart(doc, 'buku rekening').matched) continue;
+        const isBookPurchase = /(?:buku\s+paket|buku\s+teks|buku\s+pelajaran|buku\s+bacaan|buku\s+literasi|buku\s+kurikulum|buku\s+perpustakaan|beli\s+buku|uang\s+buku|iuran\s+buku|biaya\s+buku|modul\s+buku)/i.test(doc.originalText);
+        if (!isBookPurchase && !cleanKw.includes(' ')) continue;
+      }
       if (cleanKw === 'bangku' && matchPhraseSmart(doc, 'uang bangku').matched) continue;
+      if (cleanKw === 'ujian' || cleanKw === 'penilaian' || cleanKw === 'asesmen') {
+        const isExamFeeOrMaterial = /(?:kertas|lembar|soal|naskah|cetak|penggandaan|fotokopi|biaya|uang|iuran|tarif)\s+(?:ujian|penilaian|asesmen|ulangan|tes)/i.test(doc.originalText);
+        if (!isExamFeeOrMaterial) continue;
+      }
+      if (cleanKw === 'air') {
+        const isWaterFacility = /(?:air\s+bersih|keran\s+air|pipa\s+air|saluran\s+air|toren\s+air|pompa\s+air|tagihan\s+air|pdam|galon\s+air)/i.test(doc.originalText);
+        if (!isWaterFacility) continue;
+      }
       dynamicCandidates.add(cleanKw);
     }
 
@@ -656,6 +668,7 @@ export function matchKamusBospAndCompositions(
     compositionRegex?: RegExp;
     phrases: string[];
     contextOnlyPhrases?: string[];
+    excludePhrases?: string[];
     primaryRegulation: string;
     statusTitleDanger: string;
     statusTitleSafe?: string;
@@ -825,10 +838,10 @@ export function matchKamusBospAndCompositions(
     },
     {
       id: 'kamus-pemeliharaan-sarpras',
-      categoryTitle: 'Pemeliharaan & Perawatan Ringan Ruang Kelas / Sarpras',
+      categoryTitle: 'Pemeliharaan & Pengadaan Sarana Ruang Kelas / Sarpras',
       kind: 'BOSP_FUNDED_OPERATIONAL',
       requiresFinancialOrSanction: true,
-      compositionRegex: /pemeliharaan|sarana|prasarana|sanitasi|ruang belajar/i,
+      compositionRegex: /pemeliharaan|sarana|prasarana|sanitasi|ruang belajar|alat pembelajaran/i,
       phrases: [
         'uang cat',
         'cat kelas',
@@ -847,16 +860,42 @@ export function matchKamusBospAndCompositions(
         'tirai kelas',
         'uang kebersihan',
         'iuran kebersihan',
+        'kipas angin',
+        'kipas kelas',
+        'kipas dinding',
+        'pengadaan kipas',
+        'beli kipas',
+        'iuran kipas',
+        'ac kelas',
+        'service ac',
+        'servis ac',
+        'cuci ac',
+        'pendingin ruangan',
+        'exhaust fan',
+        'ventilasi kelas',
+        'meja kelas',
+        'kursi kelas',
+        'papan tulis',
+        'spidol kelas',
       ],
-      contextOnlyPhrases: ['pengecatan', 'renovasi', 'plafon', 'gorden'],
+      contextOnlyPhrases: [
+        'pengecatan',
+        'renovasi',
+        'plafon',
+        'gorden',
+        'kipas',
+        'ventilasi',
+        'pendingin',
+        'exhaust',
+      ],
       primaryRegulation: 'Permendikdasmen 8/2026 & Permendikbudristek 63/2023 Pasal 61',
-      statusTitleDanger: 'Terindikasi Pungutan Pemeliharaan Kelas (Sudah Dicover BOSP)',
+      statusTitleDanger: 'Terindikasi Pungutan Sarana / Fasilitas Kelas (Wajib Dicover BOSP)',
       legalNoteDanger:
-        'Pengecatan, penggantian lampu/kaca/pintu, dan perawatan ringan ruang belajar merupakan komponen resmi Pemeliharaan Sarana dan Prasarana Sekolah pada dana BOSP (alokasi s.d. ≥20% di Juknis 2026).',
+        'Pengadaan atau pemeliharaan sarana belajar kelas seperti kipas angin, pendingin ruangan, lampu, pengecatan, meja/kursi, dan fasilitas ruang kelas merupakan komponen resmi BOSP (Pemeliharaan Sarpras & Penyediaan Alat Pembelajaran). Sekolah dilarang membebankan iuran pengadaan fasilitas kelas kepada wali murid.',
       buildFact: ({ schoolName, compMatch, tarikanStr }) =>
         compMatch
-          ? `${schoolName} telah mengalokasikan dana BOSP untuk pemeliharaan sarpras pada pos "${compMatch.label}" sebesar ${formatRp(compMatch.amount)}. Menarik patungan perawatan kelas (${tarikanStr}) terindikasi tumpang tindih anggaran.`
-          : `Perawatan ringan ruang kelas (cat, lampu, pintu, kebersihan) wajib dibiayai melalui pos Pemeliharaan Sarana Prasarana BOSP ${schoolName}, bukan dari patungan wali murid (${tarikanStr}).`,
+          ? `${schoolName} telah mengalokasikan dana BOSP untuk sarana prasarana pada pos "${compMatch.label}" sebesar ${formatRp(compMatch.amount)}. Menarik patungan fasilitas/sarana kelas (${tarikanStr}) terindikasi tumpang tindih anggaran.`
+          : `Pengadaan dan perawatan fasilitas ruang belajar (kipas angin, pendingin, lampu, cat, sarpras kelas) wajib dibiayai melalui dana BOSP ${schoolName}, bukan dari pungutan atau patungan wali murid (${tarikanStr}).`,
     },
     {
       id: 'kamus-honor-gtk',
@@ -957,6 +996,7 @@ export function matchKamusBospAndCompositions(
         'uang bulanan',
       ],
       contextOnlyPhrases: ['spp', 'komite'],
+      excludePhrases: ['wifi', 'internet', 'listrik', 'air bersih', 'kebersihan', 'keamanan', 'kipas'],
       primaryRegulation: 'Permendikbud 75/2016 Pasal 10 & 12 & Permendikbud 44/2012',
       statusTitleDanger: 'Terindikasi Pungutan Wajib Komite / Iuran Bulanan Mengikat',
       legalNoteDanger:
@@ -965,6 +1005,35 @@ export function matchKamusBospAndCompositions(
         schoolType.toLowerCase() === 'negeri'
           ? `Sebagai satuan pendidikan Negeri, ${schoolName} telah dibiayai negara melalui BOSP dan dilarang memungut SPP maupun iuran bulanan komite yang bersifat wajib/mengikat (${tarikanStr}).`
           : `Penarikan dana komite/bulanan (${tarikanStr}) di ${schoolName} disertai unsur kewajiban, tenggat jatuh tempo, atau ancaman sanksi akademik yang bertentangan dengan prinsip perlindungan hak peserta didik.`,
+    },
+    {
+      id: 'kamus-tik-komputer-asesmen',
+      categoryTitle: 'Perangkat Komputer, Laptop & Sarana TIK Asesmen ANBK',
+      kind: 'BOSP_FUNDED_OPERATIONAL',
+      requiresFinancialOrSanction: true,
+      compositionRegex: /multimedia|komputer|asesmen|sarana|alat pembelajaran/i,
+      phrases: [
+        'sewa laptop',
+        'sewa komputer',
+        'biaya komputer',
+        'uang komputer',
+        'iuran komputer',
+        'biaya lab komputer',
+        'ujian komputer',
+        'komputer anbk',
+        'laptop anbk',
+        'perangkat tik',
+        'chromebook',
+      ],
+      contextOnlyPhrases: ['komputer', 'laptop', 'chromebook'],
+      primaryRegulation: 'Permendikdasmen 8/2026 (Komponen Sarana Prasarana & TIK Pembelajaran)',
+      statusTitleDanger: 'Terindikasi Pungutan Sewa Laptop / Komputer Asesmen (Dibiayai BOSP)',
+      legalNoteDanger:
+        'Penyediaan perangkat TIK, komputer/laptop, serta sewa perangkat untuk kelancaran Asesmen Nasional (ANBK) maupun KBM berbasis digital secara tegas termasuk dalam komponen pembiayaan resmi BOSP.',
+      buildFact: ({ schoolName, compMatch, tarikanStr }) =>
+        compMatch
+          ? `Operasional sarana TIK dan asesmen di ${schoolName} tercakup dalam pos RKAS "${compMatch.label}" (${formatRp(compMatch.amount)}). Penarikan sewa laptop/komputer ${tarikanStr} dari siswa melanggar ketentuan BOSP.`
+          : `Perangkat komputer dan laptop untuk asesmen/KBM merupakan sarana dasar yang wajib disediakan atau disewa melalui dana BOSP di ${schoolName}. Penarikan ${tarikanStr} dari siswa berindikasi pungutan liar.`,
     },
     {
       id: 'kamus-seragam-atribut',
@@ -1061,6 +1130,10 @@ export function matchKamusBospAndCompositions(
       !coercion.hasFinancialOrLevyContext &&
       !coercion.hasAcademicSanction
     ) {
+      continue;
+    }
+
+    if (rule.excludePhrases?.some((ex: string) => matchPhraseSmart(doc, ex).matched)) {
       continue;
     }
 
@@ -1198,11 +1271,15 @@ export function analyzeChatWithBospItems(
     candidateZones: [],
   };
 
+  const isHighPriorityKamusViolation =
+    kamusMatch &&
+    (kamusMatch.kind === 'ACADEMIC_RIGHTS_SANCTION' ||
+      kamusMatch.kind === 'PROHIBITED_STRUCTURAL_LEVY' ||
+      kamusMatch.kind === 'UNIFORM_ATTIRE_RULE' ||
+      kamusMatch.id === 'kamus-spp-komite-bulanan');
+
   const matchedItem =
-    itemMatch &&
-    (!kamusMatch ||
-      kamusMatch.kind !== 'ACADEMIC_RIGHTS_SANCTION' ||
-      itemMatch.score >= kamusMatch.score)
+    itemMatch && !isHighPriorityKamusViolation
       ? itemMatch.item
       : null;
 

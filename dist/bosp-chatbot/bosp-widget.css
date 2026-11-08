@@ -35,19 +35,41 @@
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-/* Sembunyikan tombol chatbot saat animasi pembuka/intro splash masih berjalan */
+/* Sembunyikan tombol chatbot saat animasi pembuka/intro splash masih berjalan atau saat dialog modal luar aktif (selain tour panduan) */
 body.is-intro-active .bosp-widget-root,
-body:has([role="dialog"]) .bosp-widget-root,
-body.is-modal-active .bosp-widget-root {
+body.is-modal-active:not(.is-tour-active) .bosp-widget-root,
+body:not(.is-tour-active):has([role="dialog"]:not(#bosp-chat-popup):not([data-tour-modal])) .bosp-widget-root {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-/* Saat sesi panduan fitur berjalan, posisikan widget di bawah lapisan sorotan panduan */
-body.is-tour-active .bosp-widget-root {
-  z-index: 999;
+/* Selama sesi panduan fitur berjalan:
+   Sembunyikan penuh widget chatbot pada langkah awal (1 s.d. 4) agar tidak menutupi kartu panduan di layar HP.
+   Hanya tampilkan tombol launcher saat langkah panduan khusus Tanya BOS aktif (.is-tour-step-chatbot). */
+body.is-tour-active:not(.is-tour-step-chatbot) .bosp-widget-root {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: 990 !important;
+}
+
+body.is-tour-step-chatbot .bosp-widget-root {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 10001 !important;
+}
+
+/* Pastikan popup percakapan chatbot tidak bisa menutupi layar HP selama panduan aktif */
+body.is-tour-active #bosp-chat-popup {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .bosp-widget-root *,

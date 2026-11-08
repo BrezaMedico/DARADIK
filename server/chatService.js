@@ -70,10 +70,13 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
     }
   }
 
-  const candidateModels = [
-    'gemini-3.5-flash',
-    'gemini-3.5-flash-lite',
-  ];
+  const candidateModels = Array.from(
+    new Set([
+      GEMINI_MODEL || 'gemini-3.5-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+    ])
+  );
 
   let rawOutput = '';
   let lastError = null;
@@ -83,57 +86,8 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
       const genConfig = {
         systemInstruction: FINAL_SYSTEM_PROMPT,
         responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'object',
-          properties: {
-            teks: {
-              type: 'string',
-              description:
-                'Jawaban bahasa Indonesia maksimal 2-4 kalimat tanpa markdown, simbol, atau emoji. Angka ditulis dengan kata.',
-            },
-            emosi: {
-              type: 'string',
-              enum: [
-                'senang',
-                'netral',
-                'bingung',
-                'semangat',
-                'empati',
-                'berpikir',
-                'marah',
-                'sedih',
-                'kaget',
-              ],
-            },
-            tombol: {
-              type: 'array',
-              description:
-                'Tombol aksi cepat navigasi ke halaman fitur website DARADIK jika relevan (maksimal 3 tombol).',
-              items: {
-                type: 'object',
-                properties: {
-                  label: { type: 'string' },
-                  target: {
-                    type: 'string',
-                    enum: [
-                      'lapor-anonim',
-                      'pantau-tiket',
-                      'cek-iuran-wa',
-                      'kamus-bosp',
-                      'cari-sekolah',
-                      'profil-sekolah',
-                      'beranda',
-                    ],
-                  },
-                },
-                required: ['label', 'target'],
-              },
-            },
-          },
-          required: ['teks', 'emosi'],
-        },
         temperature: 0.7,
-        maxOutputTokens: 500,
+        maxOutputTokens: 600,
       };
 
       const response = await Promise.race([
@@ -143,7 +97,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
           config: genConfig,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Model timeout')), 12_000)
+          setTimeout(() => reject(new Error('Model timeout')), 16_000)
         ),
       ]);
 

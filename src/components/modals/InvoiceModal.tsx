@@ -1,5 +1,4 @@
-import React, { useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import React, { useState } from 'react';
 import {
   X,
   AlertTriangle,
@@ -10,9 +9,10 @@ import {
   Store,
   Check,
   Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 import type { BospRealizationItem, SchoolData } from '@/types/school';
-import { formatRupiah } from '@/utils';
+import { formatRupiah, terbilangRupiah, downloadReceiptPng } from '@/utils';
 
 interface InvoiceModalProps {
   item: BospRealizationItem | null;
@@ -29,28 +29,14 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 }) => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const receiptSheetRef = useRef<HTMLDivElement>(null);
 
   if (!item) return null;
 
   const handleDownloadReceipt = async () => {
-    if (!receiptSheetRef.current || isDownloading) return;
+    if (isDownloading) return;
     try {
       setIsDownloading(true);
-      const canvas = await html2canvas(receiptSheetRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#FFFFFF',
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `Kuitansi-BOSP-${item.invoice.number.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
+      await downloadReceiptPng(item, school);
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 4000);
     } catch (err) {
@@ -103,90 +89,106 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
         {/* Scrollable Receipt Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-[#FAF8F5] space-y-3.5">
           {/* Digital Receipt Sheet */}
-          <div
-            ref={receiptSheetRef}
-            className="bg-[#FFFFFF] border border-[#CBD5E1] rounded-xl shadow-xs overflow-hidden"
-          >
+          <div className="bg-[#FFFFFF] border border-[#CBD5E1] rounded-xl shadow-xs overflow-hidden">
             {/* Receipt Header Badge */}
-            <div className="bg-[#1E293B] text-[#FFFFFF] px-4 py-3 border-b border-[#334155]">
+            <div className="bg-[#0F172A] text-[#FFFFFF] px-4 py-3.5 border-b border-[#334155]">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-mono tracking-wider font-bold text-[#93C5FD] uppercase flex items-center gap-1.5">
                   <FileCheck2 className="w-3.5 h-3.5 text-[#38BDF8]" />
                   SIPLah Kemendikdasmen
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#34D399] border border-[#10B981]/40 text-[10px] font-mono font-bold">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#10B981]/20 text-[#34D399] border border-[#10B981]/40 text-[10px] font-mono font-bold">
                   LUNAS
                 </span>
               </div>
-              <h3 className="font-sturdy-heading text-sm sm:text-base font-extrabold text-[#FFFFFF] mt-1 tracking-tight">
+              <h3 className="font-sturdy-heading text-sm sm:text-base font-extrabold text-[#FFFFFF] mt-1.5 tracking-tight">
                 KUITANSI PEMBELIAN BOSP
               </h3>
-              <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-[#CBD5E1] mt-1 pt-1.5 border-t border-[#334155]/60 gap-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 text-[11px] font-mono text-[#CBD5E1] mt-1.5 pt-1.5 border-t border-[#334155]/60 gap-1">
                 <span className="break-all">No: {item.invoice.number}</span>
-                <span>{item.invoice.date}</span>
+                <span className="sm:text-right">{item.invoice.date}</span>
               </div>
             </div>
 
             {/* Parties Info Grid */}
-            <div className="p-4 bg-[#F8FAFC] border-b border-[#E2E8F0] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-[#64748B] flex items-center gap-1">
+            <div className="p-4 bg-[#F8FAFC] border-b border-[#E2E8F0] grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+              <div className="space-y-1 bg-[#FFFFFF] p-3 rounded-lg border border-[#E2E8F0]">
+                <span className="text-[10px] uppercase font-bold text-[#2E6496] flex items-center gap-1">
                   <Building2 className="w-3 h-3 text-[#2E6496]" />
-                  Satuan Pendidikan:
+                  Satuan Pendidikan (Penerima):
                 </span>
-                <div className="font-bold text-[#1E293B] break-words">
+                <div className="font-bold text-[#1E293B] break-words leading-snug">
                   {school.name}
                 </div>
-                <div className="text-[11px] font-mono text-[#64748B]">
-                  NPSN: <span className="tabular-nums font-semibold">{school.npsn}</span>
+                <div className="text-[11px] font-mono text-[#475569]">
+                  NPSN: <span className="tabular-nums font-semibold">{school.npsn}</span> &bull; {school.jenjang} ({school.status})
+                </div>
+                <div className="text-[11px] text-[#64748B] leading-tight">
+                  {school.address ? `${school.address}, ` : ''}{school.kecamatan ? `${school.kecamatan}, ` : ''}{school.kabupaten ? `${school.kabupaten}` : ''}
                 </div>
               </div>
 
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold text-[#64748B] flex items-center gap-1">
+              <div className="space-y-1 bg-[#FFFFFF] p-3 rounded-lg border border-[#E2E8F0]">
+                <span className="text-[10px] uppercase font-bold text-[#2E6496] flex items-center gap-1">
                   <Store className="w-3 h-3 text-[#2E6496]" />
-                  Toko Mitra SIPLah:
+                  Toko Mitra SIPLah (Penyedia):
                 </span>
-                <div className="font-bold text-[#1E293B] break-words">
+                <div className="font-bold text-[#1E293B] break-words leading-snug">
                   {item.invoice.vendorName}
                 </div>
-                <div className="text-[11px] text-[#64748B] break-words">
-                  {item.invoice.vendorAddress}
+                <div className="text-[11px] font-mono text-[#475569]">
+                  NPWP: <span className="tabular-nums font-semibold">{item.invoice.npwp || '00.000.000.0-000.000'}</span>
+                </div>
+                <div className="text-[11px] text-[#64748B] leading-tight break-words">
+                  {item.invoice.vendorAddress || 'Alamat Toko Terdaftar SIPLah'}
                 </div>
               </div>
             </div>
 
-            {/* Line Items List */}
+            {/* Line Items Table */}
             <div className="p-4">
-              <div className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#64748B] pb-2 border-b border-[#E2E8F0] flex items-center justify-between">
-                <span>Rincian Barang</span>
-                <span>Subtotal</span>
-              </div>
-
-              <div className="divide-y divide-[#F1F5F9]">
-                {item.invoice.lineItems.map((li, idx) => (
-                  <div key={idx} className="py-2.5 first:pt-2 last:pb-1 space-y-1">
-                    <div className="font-semibold text-xs text-[#1E293B] break-words leading-snug">
-                      {li.name}
-                    </div>
-                    <div className="flex items-center justify-between text-xs gap-2">
-                      <span className="text-[11px] font-mono text-[#64748B]">
-                        {li.qty} × {formatRupiah(Math.round(li.unitPrice))}
-                      </span>
-                      <span className="font-bold font-mono text-[#1E293B] tabular-nums shrink-0">
-                        {formatRupiah(li.subtotal)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#CBD5E1] text-[10px] uppercase font-mono font-bold text-[#64748B]">
+                      <th className="pb-2 w-7 text-center">No</th>
+                      <th className="pb-2">Rincian Barang</th>
+                      <th className="pb-2 text-center w-14">Qty</th>
+                      <th className="pb-2 text-right w-24">Harga</th>
+                      <th className="pb-2 text-right w-28">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F1F5F9]">
+                    {item.invoice.lineItems.map((li, idx) => (
+                      <tr key={idx} className="align-top">
+                        <td className="py-2.5 text-center font-mono text-[#64748B] text-[11px]">{idx + 1}</td>
+                        <td className="py-2.5 pr-2 font-semibold text-[#1E293B] break-words leading-snug">
+                          {li.name}
+                        </td>
+                        <td className="py-2.5 text-center font-mono text-[#475569]">{li.qty}</td>
+                        <td className="py-2.5 text-right font-mono text-[#475569] tabular-nums whitespace-nowrap">
+                          {formatRupiah(Math.round(li.unitPrice))}
+                        </td>
+                        <td className="py-2.5 text-right font-mono font-bold text-[#1E293B] tabular-nums whitespace-nowrap">
+                          {formatRupiah(li.subtotal)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               {/* Total Row */}
-              <div className="mt-3 pt-3 border-t-2 border-dashed border-[#CBD5E1] flex items-center justify-between gap-2">
-                <span className="font-bold text-xs uppercase text-[#1E293B]">
-                  Total Pembayaran
-                </span>
-                <span className="font-extrabold text-base sm:text-lg text-[#2E6496] font-mono tabular-nums">
+              <div className="mt-3 pt-3 border-t-2 border-dashed border-[#CBD5E1] flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#F8FAFC] p-3 rounded-lg">
+                <div>
+                  <span className="font-bold text-xs uppercase text-[#1E293B] block">
+                    Total Pembayaran (Lunas)
+                  </span>
+                  <span className="text-[11px] italic text-[#2E6496] font-medium block leading-tight mt-0.5">
+                    Terbilang: &ldquo;{terbilangRupiah(item.amount)}&rdquo;
+                  </span>
+                </div>
+                <span className="font-extrabold text-base sm:text-lg text-[#2E6496] font-mono tabular-nums self-end sm:self-auto">
                   {formatRupiah(item.amount)}
                 </span>
               </div>
@@ -203,32 +205,33 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             </div>
 
             {/* Verification Signatures */}
-            <div className="p-4 border-t border-[#E2E8F0] bg-[#FFFFFF] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="p-4 border-t border-[#E2E8F0] bg-[#FFFFFF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <div className="px-2.5 py-1 rounded-md border border-[#2E6496] bg-[#EBF3F8] text-center">
-                  <div className="text-[9px] font-mono font-bold text-[#2E6496] tracking-wider uppercase">
+                <div className="px-2.5 py-1.5 rounded-md border border-[#2E6496] bg-[#EBF3F8] text-center shrink-0">
+                  <div className="text-[9px] font-mono font-bold text-[#2E6496] tracking-wider uppercase flex items-center justify-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-[#2E6496]" />
                     TERVERIFIKASI
                   </div>
                   <div className="text-[11px] font-mono font-extrabold text-[#2E6496]">
                     ARKAS 2026
                   </div>
                 </div>
-                <div className="text-[11px] text-[#64748B]">
+                <div className="text-[11px] text-[#64748B] leading-tight">
                   Bukti sah belanja dana operasional sekolah
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-[#F1F5F9]">
-                <div>
-                  <span className="text-[10px] text-[#64748B] block">Kepala Sekolah:</span>
-                  <span className="font-semibold text-[#1E293B] block truncate">
-                    {item.invoice.principalName}
+              <div className="grid grid-cols-2 gap-3 text-xs border-t sm:border-t-0 pt-2.5 sm:pt-0 border-[#F1F5F9]">
+                <div className="border-t border-[#CBD5E1] pt-1">
+                  <span className="text-[10px] text-[#64748B] block font-medium">Bendahara BOSP:</span>
+                  <span className="font-bold text-[#1E293B] block break-words leading-tight">
+                    {item.invoice.treasurerName}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-[#64748B] block">Bendahara:</span>
-                  <span className="font-semibold text-[#1E293B] block truncate">
-                    {item.invoice.treasurerName}
+                <div className="border-t border-[#CBD5E1] pt-1 sm:text-right">
+                  <span className="text-[10px] text-[#64748B] block font-medium">Kepala Sekolah:</span>
+                  <span className="font-bold text-[#1E293B] block break-words leading-tight">
+                    {item.invoice.principalName}
                   </span>
                 </div>
               </div>

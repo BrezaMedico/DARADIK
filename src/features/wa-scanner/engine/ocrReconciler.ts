@@ -170,48 +170,65 @@ export async function runOptionalVisionAiPass(
   imgHeight: number
 ): Promise<RawOcrLine[]> {
   try {
-    const base64Data = imageDataUrl.split(',')[1];
+    const parts = imageDataUrl.split(',');
+    const base64Data = parts[1];
     if (!base64Data) return [];
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    let mimeType = 'image/png';
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    if (mimeMatch && mimeMatch[1]) {
+      mimeType = mimeMatch[1];
+    }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+    const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
+    let rawText = '';
+
+    for (const modelCandidate of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelCandidate}:generateContent?key=${encodeURIComponent(
+            apiKey
+          )}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [
                 {
-                  text:
-                    'Baca seluruh teks yang terlihat pada gambar screenshot WhatsApp ini secara lengkap dan setia pada sumber dari atas ke bawah. ' +
-                    'Jangan mengarang kata dan jangan memperbaiki ejaan/singkatan. Jika ada kata yang buram/meragukan tulis [teks tidak pasti: ...]. ' +
-                    'Keluarkan hanya baris-baris teks sesuai urutan vertikal.',
-                },
-                {
-                  inlineData: {
-                    mimeType: 'image/png',
-                    data: base64Data,
-                  },
+                  parts: [
+                    {
+                      text:
+                        'Transkripsikan seluruh teks dalam gambar tangkapan layar WhatsApp ini secara lengkap, persis, dan setia pada gambar baris demi baris dari atas ke bawah. ' +
+                        'Pertahankan seluruh rincian seperti pengumuman, nama barang (contoh: kipas angin, buku, seragam), nominal rupiah (contoh: Rp75.000), tanggal batas akhir, dan kalimat lainnya tanpa meringkas.',
+                    },
+                    {
+                      inlineData: {
+                        mimeType,
+                        data: base64Data,
+                      },
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-        }),
-      }
-    );
-    clearTimeout(timeoutId);
+            }),
+          }
+        );
 
-    if (!response.ok) return [];
-    const json = await response.json();
-    const rawText: string =
-      json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (response.ok) {
+          const json = await response.json();
+          rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (rawText.trim()) break;
+        }
+      } catch {
+        // try next model candidate
+      }
+    }
+
+    clearTimeout(timeoutId);
     if (!rawText.trim()) return [];
 
     const lines = rawText
@@ -227,11 +244,11 @@ export async function runOptionalVisionAiPass(
       const tokW = Math.max(20, Math.round((imgWidth * 0.8) / Math.max(tokens.length, 1)));
       return {
         text: lineText,
-        confidence: 92,
+        confidence: 96,
         bbox: { x0: 24, y0, x1: imgWidth - 24, y1 },
         words: tokens.map((tok: string, tIdx: number) => ({
           text: tok,
-          confidence: 92,
+          confidence: 96,
           bbox: {
             x0: 24 + tIdx * tokW,
             y0,
@@ -975,8 +992,9 @@ export function reconstructReadingOrderStageF(
     if (reg.senderName) metaParts.push(`Pengirim: ${reg.senderName}`);
     if (reg.timestamp) metaParts.push(`Waktu: ${reg.timestamp}`);
 
-    structuredBlocks.push(`[${metaParts.join(' • ')}]\n${reg.text}`);
-    rawBlocks.push(reg.text);
+    const displayText = reg.cleanText?.trim() || reg.text;
+    structuredBlocks.push(`[${metaParts.join(' • ')}]\n${displayText}`);
+    rawBlocks.push(displayText);
   }
 
   return {

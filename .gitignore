@@ -5,4 +5,7 @@
 *.png
 *.log
 .env
+.env.*
+.env.local
+src/.env
 

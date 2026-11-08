@@ -445,24 +445,32 @@ export async function runAdvancedWaOcrPipeline(
       );
       allPassLines.push(...parsedLines);
       passesExecuted.push(variant.name);
+
+      // If the primary natural pass succeeded with high confidence and sufficient text,
+      // skip destructive morphological passes that degrade anti-aliased digital fonts.
+      if (vIdx === 0 && parsedLines.length >= 6) {
+        const avgPassConf =
+          parsedLines.reduce((acc, l) => acc + l.confidence, 0) / parsedLines.length;
+        if (avgPassConf >= 68) {
+          // Excellent crisp reading obtained from natural image; preserve tokens cleanly.
+          break;
+        }
+      }
     }
 
-    const missedOrWeakZones = diagnostics.candidateZones.filter((zone) => {
+    const trulyMissedZones = diagnostics.candidateZones.filter((zone) => {
       const overlappingLines = allPassLines.filter(
-        (l) => computeBoxOverlap(zone.bbox, l.bbox).iou > 0.1
+        (l) => computeBoxOverlap(zone.bbox, l.bbox).iou > 0.08
       );
-      if (overlappingLines.length === 0) {
-        return (
-          zone.strokeDensity >= 8.5 &&
-          zone.bbox.x1 - zone.bbox.x0 >= 32 &&
-          zone.bbox.y1 - zone.bbox.y0 >= 10
-        );
-      }
-      const maxConf = Math.max(...overlappingLines.map((l) => l.confidence));
-      return maxConf < 78;
+      return (
+        overlappingLines.length === 0 &&
+        zone.strokeDensity >= 9.0 &&
+        zone.bbox.x1 - zone.bbox.x0 >= 36 &&
+        zone.bbox.y1 - zone.bbox.y0 >= 12
+      );
     });
 
-    const targetedZones = missedOrWeakZones.slice(0, 8);
+    const targetedZones = trulyMissedZones.slice(0, 3);
     if (targetedZones.length > 0) {
       await worker.setParameters({
         tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
@@ -516,20 +524,41 @@ export async function runAdvancedWaOcrPipeline(
     console.warn('[AI OCR Pipeline] Worker warning:', err);
   }
 
-  const configuredApiKey = adjustments?.visionApiKey?.trim() || '';
+  const configuredApiKey =
+    adjustments?.visionApiKey?.trim() ||
+    (typeof window !== 'undefined' && (window as any).__DARADIK_GEMINI_KEY__) ||
+    (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GEMINI_API_KEY) ||
+    (typeof process !== 'undefined' && (process.env?.GEMINI_API_KEY || process.env?.VITE_GEMINI_API_KEY)) ||
+    '';
+
   let privacyMode: AiScanAnalysisResult['privacyMode'] = 'local-browser';
 
-  if (adjustments?.enableVisionAi && configuredApiKey) {
-    const visionLines = await runOptionalVisionAiPass(
-      processedPreviewDataUrl,
-      configuredApiKey,
-      diagnostics.width,
-      diagnostics.height
-    );
-    if (visionLines.length > 0) {
-      allPassLines.push(...visionLines);
-      passesExecuted.push('Vision-AI-Gemini');
-      privacyMode = 'hybrid-vision-ai';
+  const shouldRunVision =
+    adjustments?.enableVisionAi !== false &&
+    Boolean(configuredApiKey) &&
+    (allPassLines.length === 0 || allPassLines.length < 8 || adjustments?.enableVisionAi === true);
+
+  if (shouldRunVision) {
+    try {
+      reportStage(
+        'D',
+        'Tahap D: Ekstraksi Teks Multi-Pass OCR & Vision AI',
+        'Menyempurnakan pembacaan dengan Gemini Vision Multimodal...',
+        75
+      );
+      const visionLines = await runOptionalVisionAiPass(
+        processedPreviewDataUrl,
+        configuredApiKey,
+        diagnostics.width,
+        diagnostics.height
+      );
+      if (visionLines.length > 0) {
+        allPassLines.push(...visionLines);
+        passesExecuted.push('Vision-AI-Gemini');
+        privacyMode = 'hybrid-vision-ai';
+      }
+    } catch (visionErr) {
+      console.warn('[AI OCR Pipeline] Vision AI pass skipped:', visionErr);
     }
   }
 
@@ -575,6 +604,13 @@ export async function runAdvancedWaOcrPipeline(
       r.category !== 'status_bar' &&
       r.category !== 'footer_interface'
   );
+
+  const cleanBodyText = semanticRegions
+    .map((r) => r.cleanText || r.text)
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
+
   const semanticBodyText =
     semanticRegions.map((r) => r.text).join('\n\n').trim() || rawOcrText.trim();
 
@@ -584,14 +620,48 @@ export async function runAdvancedWaOcrPipeline(
 
   const schoolName = adjustments?.schoolName || 'SMK TI BAZMA';
   const studentCount = adjustments?.studentCount || 90;
-  const bospAnalysis = analyzeChatWithBospItems(
-    semanticBodyText || finalRawText,
+
+  // Run comprehensive multi-tier analysis so no pungli signal in bubbles or headers is missed
+  const primaryAnalysis = analyzeChatWithBospItems(
+    cleanBodyText || semanticBodyText || finalRawText,
     bospItems,
     schoolName,
     studentCount,
     'screenshot',
     adjustments
   );
+
+  let bospAnalysis = primaryAnalysis;
+
+  // If primary analysis didn't flag danger, verify against finalRawText and fullStructuredTranscript
+  if (bospAnalysis.statusType !== 'danger') {
+    if (finalRawText && finalRawText !== cleanBodyText) {
+      const fallbackAnalysis = analyzeChatWithBospItems(
+        finalRawText,
+        bospItems,
+        schoolName,
+        studentCount,
+        'screenshot',
+        adjustments
+      );
+      if (fallbackAnalysis.statusType === 'danger') {
+        bospAnalysis = fallbackAnalysis;
+      }
+    }
+    if (bospAnalysis.statusType !== 'danger' && fullStructuredTranscript) {
+      const fullAnalysis = analyzeChatWithBospItems(
+        fullStructuredTranscript,
+        bospItems,
+        schoolName,
+        studentCount,
+        'screenshot',
+        adjustments
+      );
+      if (fullAnalysis.statusType === 'danger') {
+        bospAnalysis = fullAnalysis;
+      }
+    }
+  }
 
   const readableRegions = regions.filter((r) => r.uncertaintyStatus !== 'unreadable');
   const avgOcrConfidence =

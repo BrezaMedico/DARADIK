@@ -148,6 +148,20 @@ export function createExpressApp() {
     res.status(result.status).json(result.payload);
   });
 
+  // Sajikan berkas statis produksi frontend (Single Page Application fallback)
+  const distPath = path.resolve(__dirname, '..', 'dist');
+  app.use(express.static(distPath));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/bosp-chatbot')) {
+      return next();
+    }
+    const indexPath = path.join(distPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) next();
+    });
+  });
+
   return app;
 }
 
