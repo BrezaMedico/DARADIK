@@ -146,13 +146,10 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
   const [previewModalTitle, setPreviewModalTitle] = useState<string>('');
 
   const [hasCookieConsent, setHasCookieConsent] = useState<boolean>(() => {
-    if (typeof document !== 'undefined') {
-      setCookie(COOKIE_CONSENT_KEY, 'true', 365);
-    }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(COOKIE_CONSENT_KEY, 'true');
-    }
-    return true;
+    if (typeof document === 'undefined') return true;
+    const rawCookie = getCookie(COOKIE_CONSENT_KEY);
+    const rawStorage = typeof localStorage !== 'undefined' ? localStorage.getItem(COOKIE_CONSENT_KEY) : null;
+    return rawCookie === 'true' || rawStorage === 'true';
   });
   const [dailyQuotaCount, setDailyQuotaCount] = useState<number>(
     () => getDailyReportData().count
@@ -255,7 +252,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
     }
 
     if (!hasCookieConsent) {
-      setValidationError('Silakan setujui penggunaan cookie anti-spam di bagian bawah layar.');
+      setValidationError('Silakan setujui penyimpanan data cookie di bagian bawah layar.');
       return;
     }
 

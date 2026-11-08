@@ -14,6 +14,7 @@ import {
   MobileBottomNav,
   ToastBanner,
   TourFloatingButton,
+  CookieConsentBanner,
 } from '@/components/layout';
 import { GeotagModal, InvoiceModal } from '@/components/modals';
 import { IntroSplashScreen, OnboardingTour } from '@/components/onboarding';
@@ -36,6 +37,21 @@ import {
 } from './routeUtils';
 
 export type { AppView };
+
+const COOKIE_CONSENT_KEY = 'daradik_cookie_consent';
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+function setCookie(name: string, value: string, days: number = 365) {
+  if (typeof document === 'undefined') return;
+  const date = new Date();
+  date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${date.toUTCString()};path=/;SameSite=Lax`;
+}
 
 export function App() {
   const [showIntro, setShowIntro] = useState<boolean>(
@@ -75,6 +91,24 @@ export function App() {
   const [activeTicketCode, setActiveTicketCode] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
+
+  const [hasCookieConsent, setHasCookieConsent] = useState<boolean>(() => {
+    if (typeof document === 'undefined') return true;
+    const rawCookie = getCookie(COOKIE_CONSENT_KEY);
+    const rawStorage =
+      typeof localStorage !== 'undefined'
+        ? localStorage.getItem(COOKIE_CONSENT_KEY)
+        : null;
+    return rawCookie === 'true' || rawStorage === 'true';
+  });
+
+  const handleAcceptCookieConsent = useCallback(() => {
+    setCookie(COOKIE_CONSENT_KEY, 'true', 365);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(COOKIE_CONSENT_KEY, 'true');
+    }
+    setHasCookieConsent(true);
+  }, []);
 
   const isAdminRoute = currentView === 'dinas-dashboard';
   const isDarkBackground = currentView === 'landing' && !isScrolled;
@@ -539,6 +573,13 @@ export function App() {
         onClose={() => setActiveGeotagItem(null)}
         onReportItem={handleReportFromItem}
       />
+
+      {!isAdminRoute && currentView !== 'anonymous-report' && (
+        <CookieConsentBanner
+          hasCookieConsent={hasCookieConsent}
+          onAccept={handleAcceptCookieConsent}
+        />
+      )}
     </div>
   );
 }

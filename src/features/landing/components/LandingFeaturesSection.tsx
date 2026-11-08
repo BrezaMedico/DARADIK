@@ -59,7 +59,7 @@ export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
             </div>
           </ScrollRevealOnce>
 
-          <ScrollRevealOnce delayMs={150} className="relative">
+          <ScrollRevealOnce delayMs={60} className="relative">
             <div className="flex items-start gap-3 sm:gap-6">
               <div className="flex flex-col items-center shrink-0">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
@@ -82,7 +82,7 @@ export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
             </div>
           </ScrollRevealOnce>
 
-          <ScrollRevealOnce delayMs={300} className="relative">
+          <ScrollRevealOnce delayMs={120} className="relative">
             <div className="flex items-start gap-3 sm:gap-6">
               <div className="flex flex-col items-center shrink-0">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
@@ -123,7 +123,7 @@ export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
           </ScrollRevealOnce>
         </div>
 
-        <ScrollRevealOnce delayMs={450} className="mt-16 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
+        <ScrollRevealOnce delayMs={180} className="mt-16 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="max-w-xl">
               <span className="text-xs font-bold uppercase tracking-wider text-[#2E6496]">

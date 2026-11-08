@@ -57,7 +57,7 @@ const ScrollRevealOnce: React.FC<ScrollRevealOnceProps> = ({
           }
         });
       },
-      { threshold: 0.12 }
+      { threshold: 0.04, rootMargin: '0px 0px -20px 0px' }
     );
 
     observer.observe(el);
@@ -1106,7 +1106,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </ScrollRevealOnce>
 
             {/* FITUR 02 */}
-            <ScrollRevealOnce delayMs={150} className="relative">
+            <ScrollRevealOnce delayMs={60} className="relative">
               <div className="flex items-start gap-3 sm:gap-6">
                 {/* Node & Connecting Line Column */}
                 <div className="flex flex-col items-center shrink-0">
@@ -1132,7 +1132,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </ScrollRevealOnce>
 
             {/* FITUR 03 */}
-            <ScrollRevealOnce delayMs={300} className="relative">
+            <ScrollRevealOnce delayMs={120} className="relative">
               <div className="flex items-start gap-3 sm:gap-6">
                 {/* Node Column (No trailing line on final step) */}
                 <div className="flex flex-col items-center shrink-0">
@@ -1176,7 +1176,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* INFORMASI DI BAWAH (NO TABLE, NO BOXES — Pure Clean Editorial Format) */}
-          <ScrollRevealOnce delayMs={450} className="mt-16 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
+          <ScrollRevealOnce delayMs={180} className="mt-16 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="max-w-xl">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#2E6496]">
