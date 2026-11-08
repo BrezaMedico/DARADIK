@@ -2,10 +2,10 @@
 /.agents
 /AGENTS.md
 /skills-lock.json
-*.png
 *.log
 .env
 .env.*
 .env.local
 src/.env
+
 

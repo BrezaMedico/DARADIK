@@ -129,25 +129,35 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
         });
 
         // Use unlit MeshBasicMaterial with flipped UVs so screen text stays crisp without specular glare.
-        const rawDisplayMat = materials.materials['Display_Texture'] as any;
-        let screenMat: THREE.MeshBasicMaterial | null = null;
-        if (rawDisplayMat && rawDisplayMat.map) {
-          rawDisplayMat.map.wrapS = THREE.RepeatWrapping;
-          rawDisplayMat.map.repeat.x = -1;
-          rawDisplayMat.map.offset.x = 1;
-          rawDisplayMat.map.colorSpace = THREE.SRGBColorSpace;
-          rawDisplayMat.map.anisotropy = 16;
-          rawDisplayMat.map.generateMipmaps = true;
-          rawDisplayMat.map.minFilter = THREE.LinearMipmapLinearFilter;
-          rawDisplayMat.map.magFilter = THREE.LinearFilter;
-          rawDisplayMat.map.needsUpdate = true;
+        const textureLoader = new THREE.TextureLoader();
+        const screenTexture = textureLoader.load(
+          '/models/iphone16/screen_texture.png',
+          (tex) => {
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.repeat.x = -1;
+            tex.offset.x = 1;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 16;
+            tex.generateMipmaps = true;
+            tex.minFilter = THREE.LinearMipmapLinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.needsUpdate = true;
+            if (screenMat) {
+              screenMat.map = tex;
+              screenMat.needsUpdate = true;
+            }
+          }
+        );
+        screenTexture.wrapS = THREE.RepeatWrapping;
+        screenTexture.repeat.x = -1;
+        screenTexture.offset.x = 1;
+        screenTexture.colorSpace = THREE.SRGBColorSpace;
 
-          screenMat = new THREE.MeshBasicMaterial({
-            map: rawDisplayMat.map,
-            toneMapped: true,
-          });
-          materials.materials['Display_Texture'] = screenMat;
-        }
+        const screenMat = new THREE.MeshBasicMaterial({
+          map: screenTexture,
+          toneMapped: true,
+        });
+        materials.materials['Display_Texture'] = screenMat;
 
         const objLoader = new OBJLoader();
         objLoader.setMaterials(materials);
@@ -157,21 +167,20 @@ export const Phone3DCanvas: React.FC<Phone3DCanvasProps> = ({
           (object) => {
             if (isDisposed) return;
 
-            if (screenMat) {
-              object.traverse((child) => {
-                if (child instanceof THREE.Mesh) {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material = child.material.map((m) =>
-                        m.name === 'Display_Texture' ? screenMat! : m
-                      );
-                    } else if (child.material.name === 'Display_Texture') {
-                      child.material = screenMat;
-                    }
-                  }
+            object.traverse((child) => {
+              if (child instanceof THREE.Mesh) {
+                if (
+                  child.name === 'Screen_Screenshot_Texture' ||
+                  child.material?.name === 'Display_Texture'
+                ) {
+                  child.material = screenMat;
+                } else if (Array.isArray(child.material)) {
+                  child.material = child.material.map((m) =>
+                    m.name === 'Display_Texture' ? screenMat : m
+                  );
                 }
-              });
-            }
+              }
+            });
 
             object.rotation.set(-Math.PI / 2, 0, Math.PI);
             phoneGroup.add(object);
