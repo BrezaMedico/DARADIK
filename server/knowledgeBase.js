@@ -121,8 +121,20 @@ FORMAT OUTPUT WAJIB (JSON MURNI):
 Kembalikan HANYA objek JSON valid berikut:
 {
   "teks": "Jawaban natural tanpa simbol atau emoji...",
-  "emosi": "senang|netral|bingung|semangat|empati|berpikir"
+  "emosi": "senang|netral|bingung|semangat|empati|berpikir|marah|sedih|kaget"
 }
+
+PANDUAN EKSPRESI EMOSI MATA:
+Pilih properti "emosi" yang selaras dengan isi jawaban:
+- "marah": sikap tegas mengecam pungli liar, tarikan paksa di sekolah, pemerasan, atau pelanggaran aturan BOSP.
+- "sedih": rasa prihatin dan empati mendalam atas fasilitas sekolah rusak parah, ketidakadilan, atau kesulitan siswa.
+- "kaget": rasa terkejut atas nominal tarikan iuran yang sangat besar, kejanggalan ekstrem, atau hal mengejutkan.
+- "senang": jawaban hangat, gembira, lelucon, apresiasi, atau sapaan ceria.
+- "semangat": panduan langkah praktis, ajakan positif, dan motivasi belajar.
+- "berpikir": penjelasan angka, persentase RKAS, analisis aturan teknis, atau logika hitungan.
+- "bingung": pertanyaan tidak jelas, typo acak, atau kalimat membingungkan.
+- "empati": mendengarkan keluhan orang tua dengan sabar dan menenangkan kekhawatiran.
+- "netral": informasi umum tanpa muatan emosional spesifik.
 `.trim();
 
 export function getActionButtonsForQuery(query = '', replyText = '') {
@@ -519,6 +531,57 @@ function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
     return {
       teks: 'Pertama, ketik nama sekolah atau nomor NPSN di halaman utama untuk melihat total dana BOSP, grafik anggaran, dan foto bukti belanjanya. Lalu, gunakan menu Cek Iuran WA jika ingin memeriksa pengumuman tarikan biaya dari grup orang tua. Terakhir, gunakan menu Lapor Anonim jika menemukan pungutan yang melanggar aturan.',
       emosi: 'semangat',
+    };
+  }
+
+  // Respon tegas (marah) untuk pungli liar & pemaksaan iuran ilegal
+  if (
+    q.includes('marah') ||
+    q.includes('dipaksa') ||
+    q.includes('pemaksaan') ||
+    q.includes('uang gedung') ||
+    q.includes('dipalak') ||
+    q.includes('ancaman') ||
+    q.includes('rapor ditahan') ||
+    q.includes('ijazah ditahan') ||
+    (q.includes('pungli') && (q.includes('sekolah') || q.includes('guru') || q.includes('kepala')))
+  ) {
+    return {
+      teks: 'Segala bentuk pungli, penahanan ijazah atau rapor, serta pemaksaan uang gedung di sekolah negeri adalah pelanggaran hukum berat! Dana BOSP sudah menanggung operasional sekolah secara penuh. Jangan ragu, kamu bisa segera kirim bukti dan laporkan kasus ini lewat fitur Lapor Anonim agar tim pengawas menindaklanjutinya.',
+      emosi: 'marah',
+    };
+  }
+
+  // Respon terkejut (kaget) atas nominal tak masuk akal atau kejadian mengejutkan
+  if (
+    q.includes('kaget') ||
+    q.includes('astaga') ||
+    q.includes('terkejut') ||
+    q.includes('mahal banget') ||
+    q.includes('jutaan') ||
+    q.includes('gila') ||
+    q.includes('kok bisa')
+  ) {
+    return {
+      teks: 'Astaga, tarikan biaya sebesar itu jelas mencurigakan dan wajib dipertanyakan dasarnya! Sekolah negeri tidak diperbolehkan menarik iuran wajib bernilai besar tanpa dasar hukum yang jelas. Coba unggah rinciannya ke menu Cek Iuran WA atau laporkan langsung secara anonim ya.',
+      emosi: 'kaget',
+    };
+  }
+
+  // Respon sedih dan prihatin atas fasilitas rusak atau ketidakmampuan biaya
+  if (
+    q.includes('sedih') ||
+    q.includes('rusak parah') ||
+    q.includes('ambruk') ||
+    q.includes('atap bocor') ||
+    q.includes('kasihan') ||
+    q.includes('tidak mampu') ||
+    q.includes('miskin') ||
+    q.includes('kurang mampu')
+  ) {
+    return {
+      teks: 'Kami sangat prihatin mendengar kondisi tersebut. Siswa berhak belajar di lingkungan yang aman dan layak tanpa terbebani biaya yang mencekik. Kamu bisa mengajukan laporan kerusakan fasilitas atau kendala bantuan pendidikan ini melalui sistem pelaporan agar segera mendapat perhatian dinas pendidikan.',
+      emosi: 'sedih',
     };
   }
 

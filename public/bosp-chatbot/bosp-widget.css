@@ -540,76 +540,182 @@ body.is-tour-active .bosp-widget-root {
 .bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-eye {
   height: 25px;
   width: 14px;
-  box-shadow: 0 0 16px rgba(186, 230, 253, 0.92);
+  box-shadow: 0 0 16px rgba(186, 230, 253, 0.95);
+}
+
+.bosp-orb-stage[data-emotion='senang'] .bosp-orb-eye--left,
+.bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-eye--left {
+  transform: rotate(-5deg) translateY(-2px);
+}
+
+.bosp-orb-stage[data-emotion='senang'] .bosp-orb-eye--right,
+.bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-eye--right {
+  transform: rotate(5deg) translateY(-2px);
 }
 
 .bosp-orb-stage[data-emotion='senang'] .bosp-orb-eye::after,
 .bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-eye::after {
-  transform: translateY(18%);
+  transform: translateY(16%);
 }
 
 .bosp-orb-stage[data-emotion='senang'] .bosp-orb-sphere,
 .bosp-orb-stage[data-emotion='menyapa'] .bosp-orb-sphere {
-  border-color: rgba(212, 236, 252, 0.9);
+  border-color: rgba(212, 236, 252, 0.92);
   box-shadow: 0 0 32px rgba(125, 211, 252, 0.52),
     inset 0 0 20px rgba(186, 230, 253, 0.35);
 }
 
-/* 2. SEMANGAT: Mata membesar antusias & sedikit miring tegas */
+/* 2. SEMANGAT: Mata membesar antusias & sedikit miring sigap */
 .bosp-orb-stage[data-emotion='semangat'] .bosp-orb-eye {
-  width: 14px;
-  height: 32px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #BAE6FD 65%, #7DD3FC 100%);
-  box-shadow: 0 0 18px rgba(125, 211, 252, 0.95);
+  width: 15px;
+  height: 33px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #BAE6FD 55%, #38BDF8 100%);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.95), 0 0 8px #ffffff;
 }
 
 .bosp-orb-stage[data-emotion='semangat'] .bosp-orb-eye--left {
-  transform: rotate(5deg);
+  transform: rotate(6deg) translateY(-1px);
 }
 
 .bosp-orb-stage[data-emotion='semangat'] .bosp-orb-eye--right {
-  transform: rotate(-5deg);
+  transform: rotate(-6deg) translateY(-1px);
+}
+
+.bosp-orb-stage[data-emotion='semangat'] .bosp-orb-sphere {
+  border-color: rgba(224, 242, 254, 0.95);
+  box-shadow: 0 0 34px rgba(56, 189, 248, 0.6),
+    inset 0 0 20px rgba(186, 230, 253, 0.4);
 }
 
 /* 3. BERPIKIR: Satu mata menyipit fokus, satu mata tinggi melirik ke atas */
 .bosp-orb-stage[data-emotion='berpikir'] .bosp-orb-eye--left {
-  height: 16px;
-  width: 13.5px;
-  transform: translateY(2px);
+  height: 15px;
+  width: 14px;
+  transform: translateY(3px) scaleX(1.08);
+  box-shadow: 0 0 12px rgba(147, 197, 253, 0.7);
 }
 
 .bosp-orb-stage[data-emotion='berpikir'] .bosp-orb-eye--right {
-  height: 29px;
+  height: 30px;
   width: 13px;
-  transform: translateY(-2px);
+  transform: translateY(-3px) rotate(4deg);
+  box-shadow: 0 0 16px rgba(147, 197, 253, 0.9);
 }
 
-/* 4. BINGUNG: Mata tidak simetris (satu pendek miring, satu tinggi terangkat) */
+/* 4. BINGUNG: Mata asimetris (satu pendek miring heran, satu tinggi terangkat) */
 .bosp-orb-stage[data-emotion='bingung'] .bosp-orb-eye--left {
   height: 15px;
   width: 13.5px;
-  transform: translateY(3px) rotate(-9deg);
+  transform: translateY(4px) rotate(-14deg);
 }
 
 .bosp-orb-stage[data-emotion='bingung'] .bosp-orb-eye--right {
-  height: 31px;
+  height: 32px;
   width: 13px;
-  transform: translateY(-3px) rotate(6deg);
+  transform: translateY(-4px) rotate(8deg);
 }
 
 /* 5. EMPATI: Mata melunak & miring lembut penuh perhatian */
 .bosp-orb-stage[data-emotion='empati'] .bosp-orb-eye {
   height: 23px;
   width: 13px;
-  box-shadow: 0 0 14px rgba(186, 230, 253, 0.78);
+  box-shadow: 0 0 14px rgba(186, 230, 253, 0.85);
 }
 
 .bosp-orb-stage[data-emotion='empati'] .bosp-orb-eye--left {
-  transform: rotate(11deg) translateY(2px);
+  transform: rotate(12deg) translateY(2px);
 }
 
 .bosp-orb-stage[data-emotion='empati'] .bosp-orb-eye--right {
-  transform: rotate(-11deg) translateY(2px);
+  transform: rotate(-12deg) translateY(2px);
+}
+
+/* 6. MARAH / TEGAS (Anti-Pungli & Kecam Pelanggaran): Alis tajam menukik ke dalam (\ /) + api merah-oranye */
+.bosp-orb-stage[data-emotion='marah'] .bosp-orb-eye {
+  width: 14px;
+  height: 26px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FED7AA 35%, #F97316 75%, #DC2626 100%);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.95), 0 0 8px rgba(249, 115, 22, 0.9);
+}
+
+.bosp-orb-stage[data-emotion='marah'] .bosp-orb-eye--left {
+  transform: rotate(-18deg) translateY(-2px) scaleY(0.92);
+}
+
+.bosp-orb-stage[data-emotion='marah'] .bosp-orb-eye--right {
+  transform: rotate(18deg) translateY(-2px) scaleY(0.92);
+}
+
+.bosp-orb-stage[data-emotion='marah'] .bosp-orb-sphere {
+  border-color: rgba(254, 202, 202, 0.95);
+  box-shadow: 0 0 34px rgba(239, 68, 68, 0.55),
+    inset 0 0 20px rgba(249, 115, 22, 0.4);
+}
+
+.bosp-orb-stage[data-emotion='marah'] .bosp-orb-aura {
+  background: radial-gradient(
+    circle,
+    rgba(239, 68, 68, 0.45) 0%,
+    rgba(249, 115, 22, 0.3) 38%,
+    transparent 65%
+  );
+  filter: blur(14px);
+}
+
+/* 7. KAGET / WASPADA: Mata membulat lebar terperangah (O O) + kilau terkejut */
+.bosp-orb-stage[data-emotion='kaget'] .bosp-orb-eye {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFFFFF 35%, #E0F2FE 70%, #38BDF8 100%);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 1), 0 0 10px #FFFFFF;
+}
+
+.bosp-orb-stage[data-emotion='kaget'] .bosp-orb-eye--left {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.bosp-orb-stage[data-emotion='kaget'] .bosp-orb-eye--right {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.bosp-orb-stage[data-emotion='kaget'] .bosp-orb-sphere {
+  border-color: rgba(224, 242, 254, 1);
+  box-shadow: 0 0 38px rgba(56, 189, 248, 0.65),
+    inset 0 0 22px rgba(186, 230, 253, 0.5);
+}
+
+.bosp-orb-stage[data-emotion='kaget'] .bosp-orb-aura {
+  background: radial-gradient(
+    circle,
+    rgba(56, 189, 248, 0.45) 0%,
+    rgba(125, 211, 252, 0.25) 45%,
+    transparent 68%
+  );
+  filter: blur(15px);
+}
+
+/* 8. SEDIH / PRIHATIN: Mata miring melengkung ke bawah (/ \) + pudar sendu */
+.bosp-orb-stage[data-emotion='sedih'] .bosp-orb-eye {
+  height: 20px;
+  width: 12.5px;
+  background: linear-gradient(180deg, #F0F9FF 0%, #BAE6FD 45%, #60A5FA 100%);
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.75);
+  opacity: 0.92;
+}
+
+.bosp-orb-stage[data-emotion='sedih'] .bosp-orb-eye--left {
+  transform: rotate(16deg) translateY(3px);
+}
+
+.bosp-orb-stage[data-emotion='sedih'] .bosp-orb-eye--right {
+  transform: rotate(-16deg) translateY(3px);
+}
+
+.bosp-orb-stage[data-emotion='sedih'] .bosp-orb-sphere {
+  border-color: rgba(186, 230, 253, 0.65);
+  box-shadow: 0 0 22px rgba(96, 165, 250, 0.35),
+    inset 0 0 16px rgba(59, 130, 246, 0.25);
 }
 
 /* ============================================================================

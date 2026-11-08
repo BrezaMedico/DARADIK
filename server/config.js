@@ -39,6 +39,10 @@ export const VALID_EMOTIONS = new Set([
   'semangat',
   'empati',
   'berpikir',
+  'marah',
+  'sedih',
+  'kaget',
+  'menyapa',
 ]);
 
 // Re-read .env on each call so key rotations take effect without restarting the server.

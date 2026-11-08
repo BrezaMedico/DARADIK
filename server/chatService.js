@@ -103,6 +103,9 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
                 'semangat',
                 'empati',
                 'berpikir',
+                'marah',
+                'sedih',
+                'kaget',
               ],
             },
             tombol: {

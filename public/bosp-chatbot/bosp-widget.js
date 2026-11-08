@@ -499,6 +499,57 @@
       };
     }
 
+    // Respon tegas (marah) untuk pungli liar & pemaksaan iuran ilegal
+    if (
+      q.includes('marah') ||
+      q.includes('dipaksa') ||
+      q.includes('pemaksaan') ||
+      q.includes('uang gedung') ||
+      q.includes('dipalak') ||
+      q.includes('ancaman') ||
+      q.includes('rapor ditahan') ||
+      q.includes('ijazah ditahan') ||
+      (q.includes('pungli') && (q.includes('sekolah') || q.includes('guru') || q.includes('kepala')))
+    ) {
+      return {
+        teks: 'Segala bentuk pungli, penahanan ijazah atau rapor, serta pemaksaan uang gedung di sekolah negeri adalah pelanggaran hukum berat! Dana BOSP sudah menanggung operasional sekolah secara penuh. Jangan ragu, kamu bisa segera kirim bukti dan laporkan kasus ini lewat fitur Lapor Anonim agar tim pengawas menindaklanjutinya.',
+        emosi: 'marah',
+      };
+    }
+
+    // Respon terkejut (kaget) atas nominal tak masuk akal atau kejadian mengejutkan
+    if (
+      q.includes('kaget') ||
+      q.includes('astaga') ||
+      q.includes('terkejut') ||
+      q.includes('mahal banget') ||
+      q.includes('jutaan') ||
+      q.includes('gila') ||
+      q.includes('kok bisa')
+    ) {
+      return {
+        teks: 'Astaga, tarikan biaya sebesar itu jelas mencurigakan dan wajib dipertanyakan dasarnya! Sekolah negeri tidak diperbolehkan menarik iuran wajib bernilai besar tanpa dasar hukum yang jelas. Coba unggah rinciannya ke menu Cek Iuran WA atau laporkan langsung secara anonim ya.',
+        emosi: 'kaget',
+      };
+    }
+
+    // Respon sedih dan prihatin atas fasilitas rusak atau ketidakmampuan biaya
+    if (
+      q.includes('sedih') ||
+      q.includes('rusak parah') ||
+      q.includes('ambruk') ||
+      q.includes('atap bocor') ||
+      q.includes('kasihan') ||
+      q.includes('tidak mampu') ||
+      q.includes('miskin') ||
+      q.includes('kurang mampu')
+    ) {
+      return {
+        teks: 'Kami sangat prihatin mendengar kondisi tersebut. Siswa berhak belajar di lingkungan yang aman dan layak tanpa terbebani biaya yang mencekik. Kamu bisa mengajukan laporan kerusakan fasilitas atau kendala bantuan pendidikan ini melalui sistem pelaporan agar segera mendapat perhatian dinas pendidikan.',
+        emosi: 'sedih',
+      };
+    }
+
     if (
       q.includes('lapor') ||
       q.includes('pungli') ||
@@ -539,6 +590,9 @@
     'semangat',
     'empati',
     'berpikir',
+    'marah',
+    'sedih',
+    'kaget',
     'menyapa',
   ]);
 
@@ -948,8 +1002,30 @@
           floatY -= state.voiceEnergy * 5.5;
           scaleX = 1 + state.voiceEnergy * 0.05;
           scaleY = 1 + state.voiceEnergy * 0.07;
+          if (emo === 'marah') {
+            tiltDeg += Math.sin(elapsed * 18) * (state.voiceEnergy * 1.6);
+            floatY += 1.5;
+          } else if (emo === 'kaget') {
+            floatY -= 2.5 + state.voiceEnergy * 1.5;
+          } else if (emo === 'sedih') {
+            floatY += 2;
+          }
         } else if (emo === 'senang' || emo === 'menyapa' || emo === 'semangat') {
           floatY = -Math.abs(Math.sin(elapsed * 5.2)) * 5.5;
+        } else if (emo === 'marah') {
+          // Sikap tegang, condong ke depan, getaran kecil penuh ketegasan
+          floatY = 2 + Math.sin(elapsed * 15) * 0.7;
+          scaleX = 1.03;
+          scaleY = 0.97;
+        } else if (emo === 'kaget') {
+          // Terperanjat ke atas sesaat
+          floatY = -5 + Math.sin(elapsed * 3.5) * 1.5;
+          scaleX = 0.96;
+          scaleY = 1.05;
+        } else if (emo === 'sedih') {
+          // Menunduk lesu penuh prihatin
+          floatY = 4 + Math.sin(elapsed * 1.5) * 1.5;
+          tiltDeg = Math.sin(elapsed * 1.2) * 1.5;
         } else if (emo === 'berpikir') {
           tiltDeg = -6 + Math.sin(elapsed * 2.5) * 3;
         } else if (emo === 'bingung') {
@@ -1270,6 +1346,18 @@
               emotionPitch = 1.03;
               emotionRate = 1.35;
               break;
+            case 'marah':
+              emotionPitch = 0.96;
+              emotionRate = 1.34;
+              break;
+            case 'kaget':
+              emotionPitch = 1.08;
+              emotionRate = 1.38;
+              break;
+            case 'sedih':
+              emotionPitch = 0.94;
+              emotionRate = 1.22;
+              break;
             case 'empati':
               emotionPitch = 0.99;
               emotionRate = 1.25;
@@ -1342,6 +1430,14 @@
       if (mySession === speechSessionId) {
         state.isSpeaking = false;
         state.voiceEnergy = 0;
+        if (state.currentEmotion !== 'netral') {
+          if (emotionResetTimerId) clearTimeout(emotionResetTimerId);
+          emotionResetTimerId = setTimeout(function () {
+            if (!state.isThinking && !state.isSpeaking) {
+              setBotEmotion('netral', 0);
+            }
+          }, 4500);
+        }
       }
     }
 
@@ -1524,7 +1620,7 @@
 
       state.lastReplyText = text;
       state.lastReplyButtons = Array.isArray(buttons) ? buttons : [];
-      setBotEmotion(emotion || 'netral', 7000);
+      setBotEmotion(emotion || 'netral', 0);
       triggerBlink(false);
       replyCard.classList.add('is-fading-out');
 
@@ -1596,6 +1692,14 @@
             typingTimerId = null;
             cursorSpan.remove();
             showButtons();
+            if (state.isMuted && state.currentEmotion !== 'netral') {
+              if (emotionResetTimerId) clearTimeout(emotionResetTimerId);
+              emotionResetTimerId = setTimeout(function () {
+                if (!state.isThinking && !state.isSpeaking) {
+                  setBotEmotion('netral', 0);
+                }
+              }, 4500);
+            }
           }
         }, stepMs);
       }, 170);
