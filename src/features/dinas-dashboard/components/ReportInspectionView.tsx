@@ -2,7 +2,10 @@ import React from 'react';
 import {
   Check,
   CheckCircle2,
-  ShieldAlert,
+  ExternalLink,
+  Eye,
+  FileText,
+  Image as ImageIcon,
   X,
 } from 'lucide-react';
 import type { InspectionMethodCode, OfficerFullReportRow } from '@/types';
@@ -11,6 +14,7 @@ import {
   formatWibDateTime,
   getResolutionOutcomeOption,
 } from '@/utils/reportTracking';
+import type { LightboxMeta } from '../dinasDashboardTypes';
 
 interface ReportInspectionViewProps {
   report: OfficerFullReportRow;
@@ -24,6 +28,7 @@ interface ReportInspectionViewProps {
   onOpenRejectDialog: () => void;
   onOpenCompleteDialog: () => void;
   onSaveInspectionProgress: () => void;
+  onPreviewAttachment: (meta: LightboxMeta) => void;
 }
 
 export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
@@ -38,6 +43,7 @@ export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
   onOpenRejectDialog,
   onOpenCompleteDialog,
   onSaveInspectionProgress,
+  onPreviewAttachment,
 }) => {
   return (
     <div className="space-y-6 animate-view-enter">
@@ -74,23 +80,111 @@ export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <span className="text-xs font-bold text-[#1E293B] block">
-          Bukti Foto / Berkas Pelapor:
-        </span>
-        {report.attachment_count > 0 || (report.attachments_json && report.attachments_json.length > 0) ? (
-          <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-2">
-            <div className="flex items-start gap-2.5">
-              <ShieldAlert className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
-              <div className="space-y-1 text-xs">
-                <span className="font-bold text-[#1E293B] block">
-                  Foto / Dokumen Pelapor Terproteksi ({report.attachment_count || report.attachments_json?.length || 1} berkas terunggah)
-                </span>
-                <p className="text-[#475569] leading-relaxed">
-                  Sesuai ketentuan keamanan dan perlindungan privasi pengaduan masyarakat DARADIK, seluruh berkas foto atau dokumen bukti yang diunggah oleh pelapor bersifat rahasia dan tidak dapat dibuka atau dilihat oleh pihak Dinas Pendidikan.
-                </p>
-              </div>
-            </div>
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-bold text-[#1E293B] block">
+            Bukti Foto / Berkas Pendukung Pelapor:
+          </span>
+          {report.attachments_json && report.attachments_json.length > 0 && (
+            <span className="text-[11px] font-semibold text-[#2E6496] bg-[#EBF3F8] px-2.5 py-0.5 rounded-full">
+              {report.attachments_json.length} Berkas Tersedia
+            </span>
+          )}
+        </div>
+
+        {report.attachments_json && report.attachments_json.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {report.attachments_json.map((att, idx) => {
+              const isPdf =
+                att.mimeType === 'application/pdf' ||
+                att.name.toLowerCase().endsWith('.pdf');
+              const fileUrl =
+                att.url ||
+                (att.storagePath
+                  ? `https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/report-evidence/${att.storagePath}`
+                  : '');
+
+              return (
+                <div
+                  key={`att-det-${idx}`}
+                  className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] hover:border-[#2E6496] transition-colors flex flex-col justify-between gap-3 text-xs shadow-2xs"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    {!isPdf && fileUrl ? (
+                      <div
+                        onClick={() =>
+                          onPreviewAttachment({ url: fileUrl, title: att.name })
+                        }
+                        className="w-16 h-16 rounded-lg bg-[#EBF3F8] border border-[#C9DFDC] overflow-hidden shrink-0 cursor-pointer relative group flex items-center justify-center"
+                        title="Klik untuk memperbesar foto bukti"
+                      >
+                        <img
+                          src={fileUrl}
+                          alt={att.name}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Eye className="w-5 h-5 text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-[#EBF3F8] border border-[#C9DFDC] flex items-center justify-center shrink-0 text-[#2E6496]">
+                        {isPdf ? (
+                          <FileText className="w-7 h-7" />
+                        ) : (
+                          <ImageIcon className="w-7 h-7" />
+                        )}
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <span className="font-bold text-[#1E293B] block truncate" title={att.name}>
+                        {att.name}
+                      </span>
+                      <div className="flex items-center gap-2 text-[11px] text-[#475569]">
+                        <span>{att.sizeFormatted}</span>
+                        <span>•</span>
+                        <span className="uppercase">{isPdf ? 'PDF' : 'FOTO'}</span>
+                      </div>
+                      <span className="text-[11px] text-[#166534] font-medium block">
+                        ✓ Bukti Asli Pengaduan
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-[#E4E0D8]">
+                    {fileUrl && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onPreviewAttachment({ url: fileUrl, title: att.name })
+                        }
+                        className="flex-1 min-h-[34px] px-3 py-1.5 rounded-lg bg-[#2E6496] hover:bg-[#245385] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Lihat Bukti</span>
+                      </button>
+                    )}
+
+                    {fileUrl && (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[34px] px-3 py-1.5 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] hover:bg-[#EBF3F8] text-[#2E6496] text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                        title="Buka foto di tab baru"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Tab Baru</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-[#475569] bg-[#FAF8F5] border border-[#E4E0D8] rounded-xl p-3.5">

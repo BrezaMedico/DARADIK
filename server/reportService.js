@@ -167,6 +167,7 @@ export async function handleUploadEvidence(body, maskedIp, customClient = null) 
   }
 
   const sizeKb = Math.max(1, Math.round(buffer.length / 1024));
+  const { data: pubData } = supabase.storage.from('report-evidence').getPublicUrl(storagePath);
 
   return {
     status: 200,
@@ -174,6 +175,7 @@ export async function handleUploadEvidence(body, maskedIp, customClient = null) 
       name: maskedDisplayName,
       sizeFormatted: `${sizeKb} KB`,
       storagePath,
+      url: pubData?.publicUrl || '',
       mimeType: detectedMime,
       uploadedAt: new Date().toISOString(),
     },
@@ -267,12 +269,13 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
   const tokenHash = hashTrackingToken(trackingSecret);
   const tokenHashHex = `\\x${tokenHash.toString('hex')}`;
 
-  // 7. Bersihkan lampiran: pastikan hanya metadata aman yang dikirim ke database
+  // 7. Bersihkan lampiran: pastikan metadata aman dan URL disimpan ke database
   const cleanAttachments = Array.isArray(attachments)
     ? attachments.map((att) => ({
         name: String(att.name || 'Berkas Lampiran').slice(0, 120),
         sizeFormatted: String(att.sizeFormatted || '-').slice(0, 20),
         storagePath: String(att.storagePath || ''),
+        url: String(att.url || ''),
         mimeType: String(att.mimeType || '').slice(0, 60),
         uploadedAt: String(att.uploadedAt || new Date().toISOString()).slice(0, 40),
       }))

@@ -274,14 +274,9 @@ export const TrackingDetailSummary: React.FC<TrackingDetailSummaryProps> = ({
 
         {report.attachments_json && report.attachments_json.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-xs font-bold text-[#475569] block">
-                Lampiran Bukti ({report.attachments_json.length} berkas):
-              </span>
-              <span className="text-[11px] text-[#166534] bg-[#DCFCE7] px-2.5 py-0.5 rounded-full font-semibold">
-                Privat (Tidak dapat dilihat oleh Dinas Pendidikan)
-              </span>
-            </div>
+            <span className="text-xs font-bold text-[#475569] block">
+              Lampiran Bukti ({report.attachments_json.length} berkas):
+            </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {report.attachments_json.map((att, idx) => (
                 <div

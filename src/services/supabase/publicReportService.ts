@@ -90,6 +90,7 @@ export async function uploadReportEvidenceFile(
         name: String(data.name || 'Bukti_Anonim.jpg'),
         sizeFormatted: String(data.sizeFormatted || '-'),
         storagePath: String(data.storagePath || ''),
+        url: data.url ? String(data.url) : undefined,
         mimeType: String(data.mimeType || mimeType),
         uploadedAt: String(data.uploadedAt || new Date().toISOString()),
       };

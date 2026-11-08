@@ -144,6 +144,38 @@ export async function fetchOfficerReportDetailSnapshot(
   const schoolNpsn = String(r.school_npsn || '');
   const schoolIdentity = await fetchOfficialSchoolIdentityByNpsn(schoolNpsn);
 
+  const rawAttachments = normalizeAttachments(r.attachments_json);
+  const resolvedAttachments = await Promise.all(
+    rawAttachments.map(async (att) => {
+      let finalUrl = att.url || '';
+      if (!finalUrl && att.storagePath) {
+        try {
+          const { data: signed } = await supabase.storage
+            .from('report-evidence')
+            .createSignedUrl(att.storagePath, 3600);
+          if (signed?.signedUrl) {
+            finalUrl = signed.signedUrl;
+          }
+        } catch {}
+
+        if (!finalUrl) {
+          try {
+            const { data: pub } = supabase.storage
+              .from('report-evidence')
+              .getPublicUrl(att.storagePath);
+            if (pub?.publicUrl) {
+              finalUrl = pub.publicUrl;
+            }
+          } catch {}
+        }
+      }
+      return {
+        ...att,
+        url: finalUrl || undefined,
+      };
+    })
+  );
+
   const fullReport: OfficerFullReportRow = {
     id: String(r.id || ''),
     ticket_code: String(r.ticket_code || ''),
@@ -173,13 +205,8 @@ export async function fetchOfficerReportDetailSnapshot(
       : null,
     field_inspection_conducted: Boolean(r.field_inspection_conducted),
     inspection_methods: normalizeMethods(r.inspection_methods),
-    attachment_count: Number(r.attachment_count || 0),
-    // Foto / berkas bukti pelapor tidak dapat dilihat atau diakses URL-nya oleh Dinas Pendidikan
-    attachments_json: normalizeAttachments(r.attachments_json).map((att) => ({
-      name: att.name,
-      sizeFormatted: att.sizeFormatted,
-      mimeType: att.mimeType,
-    })),
+    attachment_count: Number(r.attachment_count || resolvedAttachments.length || 0),
+    attachments_json: resolvedAttachments,
     opened_at: r.opened_at ? String(r.opened_at) : null,
     opened_by_name: r.opened_by_name ? String(r.opened_by_name) : null,
     resolved_at: r.resolved_at ? String(r.resolved_at) : null,

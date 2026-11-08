@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
+  ExternalLink,
   X,
 } from 'lucide-react';
 import type {
@@ -91,6 +92,7 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
   const [resolutionPublicNote, setResolutionPublicNote] = useState<string>('');
   const [skipReasonInput, setSkipReasonInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
+  const [lightboxMeta, setLightboxMeta] = useState<LightboxMeta | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -681,6 +683,7 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
                   setIsCompleteDialogOpen(true);
                 }}
                 onSaveInspectionProgress={handleSaveInspectionProgress}
+                onPreviewAttachment={setLightboxMeta}
               />
             )}
 
@@ -955,6 +958,66 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
               >
                 {isCompleting ? 'Menyimpan Hasil...' : 'Simpan & Selesaikan Laporan'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {lightboxMeta && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-view-enter"
+          onClick={() => setLightboxMeta(null)}
+        >
+          <div
+            className="bg-[#FFFFFF] rounded-2xl max-w-3xl w-full p-4 sm:p-5 space-y-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4E0D8]">
+              <div className="flex items-center gap-2 min-w-0 pr-3">
+                <span className="text-xs sm:text-sm font-bold text-[#1E293B] truncate">
+                  {lightboxMeta.title}
+                </span>
+                <span className="text-[11px] font-semibold text-[#166534] bg-[#DCFCE7] px-2 py-0.5 rounded-full shrink-0">
+                  Bukti Pelapor
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={lightboxMeta.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-h-[32px] px-3 py-1 rounded-lg bg-[#FAF8F5] border border-[#C9DFDC] hover:bg-[#EBF3F8] text-[11px] font-bold text-[#2E6496] inline-flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Buka Penuh</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setLightboxMeta(null)}
+                  className="p-1.5 rounded-lg text-[#475569] hover:text-[#1E293B] hover:bg-[#FAF8F5] cursor-pointer"
+                  aria-label="Tutup pratinjau"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[75vh] overflow-auto flex items-center justify-center bg-[#0F172A]/5 rounded-xl p-2 border border-[#E4E0D8]">
+              {lightboxMeta.url.toLowerCase().endsWith('.pdf') ? (
+                <iframe
+                  src={lightboxMeta.url}
+                  title={lightboxMeta.title}
+                  className="w-full h-[65vh] rounded-lg border-0"
+                />
+              ) : (
+                <img
+                  src={lightboxMeta.url}
+                  alt={lightboxMeta.title}
+                  className="max-h-[70vh] w-auto max-w-full object-contain rounded-lg shadow-xs"
+                />
+              )}
             </div>
           </div>
         </div>
