@@ -79,9 +79,6 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
   const [newInternalNote, setNewInternalNote] = useState<string>('');
   const [isSubmittingNote, setIsSubmittingNote] = useState<boolean>(false);
 
-  const [infoRequestMessage, setInfoRequestMessage] = useState<string>('');
-  const [isSendingInfoRequest, setIsSendingInfoRequest] = useState<boolean>(false);
-
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState<boolean>(false);
   const [rejectReasonQuick, setRejectReasonQuick] = useState<string>(
     REJECTION_QUICK_REASONS[0]
@@ -94,8 +91,6 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
   const [resolutionPublicNote, setResolutionPublicNote] = useState<string>('');
   const [skipReasonInput, setSkipReasonInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
-
-  const [lightboxMeta, setLightboxMeta] = useState<LightboxMeta | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -291,7 +286,6 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
       setIsForwardedCheck(Boolean(bundle.report.is_forwarded));
       setForwardedToInput(bundle.report.forwarded_to || 'Inspektorat Daerah');
       setNewInternalNote('');
-      setInfoRequestMessage('');
 
       if (bundle.autoTransitionedOnOpen) {
         onShowToast(
@@ -408,41 +402,6 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
     }
   };
 
-  const handleSendInfoRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeReportDetail) return;
-    const msg = infoRequestMessage.trim();
-    if (!msg) {
-      onShowToast('Ketikkan rincian informasi atau dokumen tambahan yang diminta.');
-      return;
-    }
-
-    setIsSendingInfoRequest(true);
-    setConflictBanner(null);
-
-    try {
-      await transitionReportByOfficerRpc({
-        reportId: activeReportDetail.report.id,
-        expectedVersion: activeReportDetail.report.version,
-        action: 'REQUEST_ADDITIONAL_INFO',
-        messageToReporter: msg,
-      });
-
-      setInfoRequestMessage('');
-      onShowToast('Permintaan informasi tambahan berhasil dikirim ke pelapor.');
-      const updatedBundle = await openReportDetailByOfficer(activeReportDetail.report.id);
-      setActiveReportDetail(updatedBundle);
-      await loadQueue(true);
-    } catch (err: unknown) {
-      if (err instanceof ReportVersionConflictError) {
-        setConflictBanner(err.message);
-      } else {
-        onShowToast(err instanceof Error ? err.message : 'Gagal mengirim permintaan info.');
-      }
-    } finally {
-      setIsSendingInfoRequest(false);
-    }
-  };
 
   const handleConfirmCompletion = async () => {
     if (!activeReportDetail) return;
@@ -678,14 +637,14 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
 
               <button
                 type="button"
-                onClick={() => setDetailTab('komunikasi')}
+                onClick={() => setDetailTab('catatan')}
                 className={`min-h-[40px] px-4 py-2 text-xs font-bold rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
-                  detailTab === 'komunikasi'
+                  detailTab === 'catatan'
                     ? 'bg-[#2E6496] text-[#FFFFFF]'
                     : 'text-[#475569] hover:bg-[#FAF8F5]'
                 }`}
               >
-                Komunikasi &amp; Catatan Internal ({activeReportDetail.messages.length + activeReportDetail.internalNotes.length})
+                Catatan Internal Petugas ({activeReportDetail.internalNotes.length})
               </button>
 
               <button
@@ -722,7 +681,6 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
                   setIsCompleteDialogOpen(true);
                 }}
                 onSaveInspectionProgress={handleSaveInspectionProgress}
-                onPreviewAttachment={setLightboxMeta}
               />
             )}
 
@@ -733,15 +691,9 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
               />
             )}
 
-            {detailTab === 'komunikasi' && (
+            {detailTab === 'catatan' && (
               <ReportCommunicationTab
-                report={activeReportDetail.report}
-                messages={activeReportDetail.messages}
                 internalNotes={activeReportDetail.internalNotes}
-                infoRequestMessage={infoRequestMessage}
-                onInfoRequestMessageChange={setInfoRequestMessage}
-                isSendingInfoRequest={isSendingInfoRequest}
-                onSendInfoRequest={handleSendInfoRequest}
                 newInternalNote={newInternalNote}
                 onNewInternalNoteChange={setNewInternalNote}
                 isSubmittingNote={isSubmittingNote}
@@ -1003,40 +955,6 @@ export const DinasDashboardPage: React.FC<DinasDashboardPageProps> = ({
               >
                 {isCompleting ? 'Menyimpan Hasil...' : 'Simpan & Selesaikan Laporan'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {lightboxMeta && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-view-enter"
-          onClick={() => setLightboxMeta(null)}
-        >
-          <div
-            className="bg-[#FFFFFF] rounded-2xl max-w-2xl w-full p-4 space-y-3 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-[#E4E0D8]">
-              <span className="text-sm font-bold text-[#1E293B] truncate">
-                {lightboxMeta.title}
-              </span>
-              <button
-                type="button"
-                onClick={() => setLightboxMeta(null)}
-                className="p-1 rounded text-[#475569] hover:text-[#1E293B] cursor-pointer"
-                aria-label="Tutup pratinjau"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-[#FAF8F5] rounded-xl p-2">
-              <img
-                src={lightboxMeta.url}
-                alt={lightboxMeta.title}
-                className="max-h-[65vh] w-auto object-contain rounded-lg"
-              />
             </div>
           </div>
         </div>

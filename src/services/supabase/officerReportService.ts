@@ -174,7 +174,12 @@ export async function fetchOfficerReportDetailSnapshot(
     field_inspection_conducted: Boolean(r.field_inspection_conducted),
     inspection_methods: normalizeMethods(r.inspection_methods),
     attachment_count: Number(r.attachment_count || 0),
-    attachments_json: normalizeAttachments(r.attachments_json),
+    // Foto / berkas bukti pelapor tidak dapat dilihat atau diakses URL-nya oleh Dinas Pendidikan
+    attachments_json: normalizeAttachments(r.attachments_json).map((att) => ({
+      name: att.name,
+      sizeFormatted: att.sizeFormatted,
+      mimeType: att.mimeType,
+    })),
     opened_at: r.opened_at ? String(r.opened_at) : null,
     opened_by_name: r.opened_by_name ? String(r.opened_by_name) : null,
     resolved_at: r.resolved_at ? String(r.resolved_at) : null,

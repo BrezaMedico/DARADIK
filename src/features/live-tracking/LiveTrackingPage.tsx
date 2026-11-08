@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   Search,
@@ -7,13 +7,10 @@ import {
 } from 'lucide-react';
 import type {
   PublicReportTrackingPayload,
-  ReportAttachmentMeta,
 } from '@/types';
 import {
   supabase,
   fetchPublicReportTrackingRpc,
-  submitReporterAdditionalInfoRpc,
-  uploadReportEvidenceFile,
 } from '@/services/supabase';
 import {
   buildParentTimelineStages,
@@ -22,12 +19,10 @@ import {
 import { computeTicketSignalHash } from '@/utils/cryptoSecurity';
 import {
   TRACKED_COOKIE_KEY,
-  compressReplyAttachment,
   getTrackingTokenForTicket,
   readTicketBookmarksFromCookie,
   setCookie,
   writeTicketBookmarkToCookie,
-  type PendingReplyFile,
   type TicketBookmarkItem,
 } from './trackingCookieUtils';
 import { TrackingLookupView } from './components/TrackingLookupView';
@@ -36,7 +31,6 @@ import {
   TrackingDetailSummary,
 } from './components/TrackingDetailSummary';
 import { TrackingProgressTimeline } from './components/TrackingProgressTimeline';
-import { TrackingTwoWayChat } from './components/TrackingTwoWayChat';
 
 export interface LiveTrackingPageProps {
   ticketCode?: string;
@@ -69,13 +63,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   const [bookmarks, setBookmarks] = useState<TicketBookmarkItem[]>(() =>
     readTicketBookmarksFromCookie()
   );
-
-  const [replyMessage, setReplyMessage] = useState<string>('');
-  const [replyFiles, setReplyFiles] = useState<PendingReplyFile[]>([]);
-  const [isCompressingReply, setIsCompressingReply] = useState<boolean>(false);
-  const [isSendingReply, setIsSendingReply] = useState<boolean>(false);
-  const [replyError, setReplyError] = useState<string | null>(null);
-  const replyFileInputRef = useRef<HTMLInputElement>(null);
 
   const [lightboxImage, setLightboxImage] = useState<{
     url: string;
@@ -247,84 +234,9 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
     setTimeout(() => setCopiedTicket(false), 2200);
   };
 
-  const handleReplyFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const remaining = 3 - replyFiles.length;
-    if (remaining <= 0) {
-      setReplyError('Maksimal 3 berkas bukti tambahan per pengiriman.');
-      return;
-    }
-
-    const slice = Array.from(files).slice(0, remaining);
-    setIsCompressingReply(true);
-    setReplyError(null);
-    try {
-      const processed = await Promise.all(slice.map((f) => compressReplyAttachment(f)));
-      setReplyFiles((prev) => [...prev, ...processed]);
-    } finally {
-      setIsCompressingReply(false);
-      if (replyFileInputRef.current) {
-        replyFileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleRemoveReplyFile = (id: string) => {
-    setReplyFiles((prev) => {
-      const target = prev.find((f) => f.id === id);
-      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
-      return prev.filter((f) => f.id !== id);
-    });
-  };
-
-  const handleSendAdditionalInfo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackingPayload || isSendingReply) return;
-
-    if (!replyMessage.trim() && replyFiles.length === 0) {
-      setReplyError('Tuliskan pesan penjelasan atau lampirkan bukti foto tambahan.');
-      return;
-    }
-
-    setIsSendingReply(true);
-    setReplyError(null);
-
-    try {
-      const uploadedMeta: ReportAttachmentMeta[] = [];
-      for (const f of replyFiles) {
-        const uploaded = await uploadReportEvidenceFile(f.blob, f.name, 'followup');
-        uploadedMeta.push(uploaded);
-      }
-
-      await submitReporterAdditionalInfoRpc(
-        trackingPayload.report.ticket_code,
-        replyMessage.trim(),
-        uploadedMeta
-      );
-
-      replyFiles.forEach((f) => {
-        if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
-      });
-      setReplyMessage('');
-      setReplyFiles([]);
-      onShowToast('Informasi tambahan berhasil dikirim ke petugas pemeriksa.');
-      await loadTrackingData(trackingPayload.report.ticket_code, true);
-    } catch (err: unknown) {
-      setReplyError(
-        err instanceof Error
-          ? err.message
-          : 'Gagal mengirim informasi tambahan. Silakan coba lagi.'
-      );
-    } finally {
-      setIsSendingReply(false);
-    }
-  };
 
   const report = trackingPayload?.report || null;
   const history = trackingPayload?.history || [];
-  const messages = trackingPayload?.messages || [];
 
   const timelineStages = report
     ? buildParentTimelineStages(
@@ -340,11 +252,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
   const outcomeOption = report
     ? getResolutionOutcomeOption(report.resolution_outcome)
     : null;
-
-  const canReplyAdditionalInfo = Boolean(
-    report &&
-      (report.status === 'PEMERIKSAAN_LANJUTAN' || report.waiting_additional_info)
-  );
 
   return (
     <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
@@ -482,25 +389,6 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                 <TrackingProgressTimeline
                   timelineStages={timelineStages}
                   inspectionMethods={report.inspection_methods}
-                />
-
-                <TrackingTwoWayChat
-                  messages={messages}
-                  canReplyAdditionalInfo={canReplyAdditionalInfo}
-                  replyMessage={replyMessage}
-                  replyFiles={replyFiles}
-                  isCompressingReply={isCompressingReply}
-                  isSendingReply={isSendingReply}
-                  replyError={replyError}
-                  replyFileInputRef={replyFileInputRef}
-                  onReplyMessageChange={(val) => {
-                    setReplyMessage(val);
-                    if (replyError) setReplyError(null);
-                  }}
-                  onReplyFileSelect={handleReplyFileSelect}
-                  onRemoveReplyFile={handleRemoveReplyFile}
-                  onSendAdditionalInfo={handleSendAdditionalInfo}
-                  onPreviewAttachment={setLightboxImage}
                 />
               </TrackingDetailSummary>
             )}

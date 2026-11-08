@@ -17,7 +17,7 @@ export type QueueCategoryTab =
 export type DetailActiveSection =
   | 'pemeriksaan'
   | 'sekolah'
-  | 'komunikasi'
+  | 'catatan'
   | 'riwayat';
 
 export interface QueueCounters {

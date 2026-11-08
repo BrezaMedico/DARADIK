@@ -2,8 +2,7 @@ import React from 'react';
 import {
   Check,
   CheckCircle2,
-  Eye,
-  Paperclip,
+  ShieldAlert,
   X,
 } from 'lucide-react';
 import type { InspectionMethodCode, OfficerFullReportRow } from '@/types';
@@ -12,7 +11,6 @@ import {
   formatWibDateTime,
   getResolutionOutcomeOption,
 } from '@/utils/reportTracking';
-import type { LightboxMeta } from '../dinasDashboardTypes';
 
 interface ReportInspectionViewProps {
   report: OfficerFullReportRow;
@@ -26,7 +24,6 @@ interface ReportInspectionViewProps {
   onOpenRejectDialog: () => void;
   onOpenCompleteDialog: () => void;
   onSaveInspectionProgress: () => void;
-  onPreviewAttachment: (meta: LightboxMeta) => void;
 }
 
 export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
@@ -41,7 +38,6 @@ export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
   onOpenRejectDialog,
   onOpenCompleteDialog,
   onSaveInspectionProgress,
-  onPreviewAttachment,
 }) => {
   return (
     <div className="space-y-6 animate-view-enter">
@@ -80,41 +76,21 @@ export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
 
       <div className="space-y-2">
         <span className="text-xs font-bold text-[#1E293B] block">
-          Bukti Pendukung:
+          Bukti Foto / Berkas Pelapor:
         </span>
-        {report.attachments_json && report.attachments_json.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {report.attachments_json.map((att, idx) => (
-              <div
-                key={`att-det-${idx}`}
-                className="p-3 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] flex items-center justify-between gap-2 text-xs"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Paperclip className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
-                  <div className="truncate">
-                    <span className="font-semibold text-[#1E293B] block truncate">
-                      {att.name}
-                    </span>
-                    <span className="text-[11px] text-[#475569]">
-                      {att.sizeFormatted}
-                    </span>
-                  </div>
-                </div>
-
-                {att.url && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onPreviewAttachment({ url: att.url!, title: att.name })
-                    }
-                    className="min-h-[32px] px-3 py-1 rounded-lg bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#2E6496] hover:bg-[#EBF3F8] cursor-pointer inline-flex items-center gap-1 shrink-0"
-                  >
-                    <Eye className="w-3 h-3" />
-                    <span>Lihat</span>
-                  </button>
-                )}
+        {report.attachment_count > 0 || (report.attachments_json && report.attachments_json.length > 0) ? (
+          <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] space-y-2">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-[#2E6496] shrink-0 mt-0.5" />
+              <div className="space-y-1 text-xs">
+                <span className="font-bold text-[#1E293B] block">
+                  Foto / Dokumen Pelapor Terproteksi ({report.attachment_count || report.attachments_json?.length || 1} berkas terunggah)
+                </span>
+                <p className="text-[#475569] leading-relaxed">
+                  Sesuai ketentuan keamanan dan perlindungan privasi pengaduan masyarakat DARADIK, seluruh berkas foto atau dokumen bukti yang diunggah oleh pelapor bersifat rahasia dan tidak dapat dibuka atau dilihat oleh pihak Dinas Pendidikan.
+                </p>
               </div>
-            ))}
+            </div>
           </div>
         ) : (
           <p className="text-xs text-[#475569] bg-[#FAF8F5] border border-[#E4E0D8] rounded-xl p-3.5">
