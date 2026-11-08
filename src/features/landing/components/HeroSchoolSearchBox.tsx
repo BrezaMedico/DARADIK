@@ -48,9 +48,13 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState<boolean>(false);
 
+  const provinsiOptions = useMemo(() => {
+    return Object.keys(REGION_HIERARCHY).sort((a, b) => a.localeCompare(b, 'id'));
+  }, []);
+
   const kabupatenOptions = useMemo(() => {
     if (!provinsi || !REGION_HIERARCHY[provinsi]) return [];
-    return Object.keys(REGION_HIERARCHY[provinsi]);
+    return Object.keys(REGION_HIERARCHY[provinsi]).sort((a, b) => a.localeCompare(b, 'id'));
   }, [provinsi]);
 
   const handleProvinsiChange = (newProv: string) => {
@@ -328,19 +332,24 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               >
                 Provinsi
               </label>
-              <select
-                id="hero-prov"
-                value={provinsi}
-                onChange={(e) => handleProvinsiChange(e.target.value)}
-                className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-              >
-                <option value="">Semua Provinsi</option>
-                {Object.keys(REGION_HIERARCHY).map((prov) => (
-                  <option key={prov} value={prov}>
-                    {prov}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  id="hero-prov"
+                  value={provinsi}
+                  onChange={(e) => handleProvinsiChange(e.target.value)}
+                  className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+                >
+                  <option value="">Semua Provinsi</option>
+                  {provinsiOptions.map((prov) => (
+                    <option key={prov} value={prov}>
+                      {prov}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                  <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+                </div>
+              </div>
             </div>
 
             <div className="col-span-2 sm:col-span-1">
@@ -350,20 +359,27 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               >
                 Kota / Kabupaten
               </label>
-              <select
-                id="hero-kab"
-                value={kabupaten}
-                onChange={(e) => handleKabupatenChange(e.target.value)}
-                disabled={!provinsi}
-                className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium disabled:opacity-50 disabled:bg-[#F1F5F9] focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-              >
-                <option value="">Semua Kota/Kab.</option>
-                {kabupatenOptions.map((kab) => (
-                  <option key={kab} value={kab}>
-                    {kab}
+              <div className="relative">
+                <select
+                  id="hero-kab"
+                  value={kabupaten}
+                  onChange={(e) => handleKabupatenChange(e.target.value)}
+                  disabled={!provinsi}
+                  className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none disabled:opacity-50 disabled:bg-[#F1F5F9] disabled:cursor-not-allowed cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+                >
+                  <option value="">
+                    {provinsi ? 'Semua Kota/Kab.' : 'Pilih Provinsi dahulu'}
                   </option>
-                ))}
-              </select>
+                  {kabupatenOptions.map((kab) => (
+                    <option key={kab} value={kab}>
+                      {kab}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                  <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+                </div>
+              </div>
             </div>
 
             <div className="col-span-1">
@@ -373,18 +389,23 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               >
                 Jenjang
               </label>
-              <select
-                id="hero-jenjang"
-                value={jenjangFilter}
-                onChange={(e) => handleJenjangChange(e.target.value)}
-                className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-              >
-                <option value="">Semua Jenjang</option>
-                <option value="SD">SD</option>
-                <option value="SMP">SMP</option>
-                <option value="SMA">SMA</option>
-                <option value="SMK">SMK</option>
-              </select>
+              <div className="relative">
+                <select
+                  id="hero-jenjang"
+                  value={jenjangFilter}
+                  onChange={(e) => handleJenjangChange(e.target.value)}
+                  className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+                >
+                  <option value="">Semua Jenjang</option>
+                  <option value="SD">SD</option>
+                  <option value="SMA">SMA</option>
+                  <option value="SMK">SMK</option>
+                  <option value="SMP">SMP</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                  <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+                </div>
+              </div>
             </div>
 
             <div className="col-span-1">
@@ -394,16 +415,21 @@ export const HeroSchoolSearchBox: React.FC<HeroSchoolSearchBoxProps> = ({
               >
                 Status Sekolah
               </label>
-              <select
-                id="hero-status"
-                value={statusFilter}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="w-full min-h-[42px] px-2.5 py-2 text-xs bg-[#FFFFFF] border border-[#C9DFDC] rounded-lg text-[#1E293B] font-medium focus:outline-none focus:ring-1 focus:ring-[#2E6496]"
-              >
-                <option value="">Semua Status</option>
-                <option value="Negeri">Negeri</option>
-                <option value="Swasta">Swasta</option>
-              </select>
+              <div className="relative">
+                <select
+                  id="hero-status"
+                  value={statusFilter}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="Negeri">Negeri</option>
+                  <option value="Swasta">Swasta</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                  <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+                </div>
+              </div>
             </div>
           </div>
 

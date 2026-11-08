@@ -53,7 +53,8 @@ export const SchoolTargetSelector: React.FC<SchoolTargetSelectorProps> = ({
       try {
         const results = await searchMasterSchoolsInSupabase(schoolSearchQuery, 20);
         if (!cancelled) {
-          setRemoteSchools(results);
+          const sorted = [...results].sort((a, b) => a.name.localeCompare(b.name, 'id'));
+          setRemoteSchools(sorted);
         }
       } catch {
         if (!cancelled) {

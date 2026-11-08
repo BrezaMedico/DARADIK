@@ -95,11 +95,14 @@ export const SchoolSearchPage: React.FC<SchoolSearchPageProps> = ({
   const isPopStateSyncRef = useRef<boolean>(false);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
 
-  const provinceOptions = useMemo(() => Object.keys(REGION_HIERARCHY), []);
+  const provinceOptions = useMemo(
+    () => Object.keys(REGION_HIERARCHY).sort((a, b) => a.localeCompare(b, 'id')),
+    []
+  );
 
   const cityOptions = useMemo(() => {
     if (!province || !REGION_HIERARCHY[province]) return [];
-    return Object.keys(REGION_HIERARCHY[province]);
+    return Object.keys(REGION_HIERARCHY[province]).sort((a, b) => a.localeCompare(b, 'id'));
   }, [province]);
 
   useEffect(() => {

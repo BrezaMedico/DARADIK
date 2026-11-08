@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Search, X } from 'lucide-react';
+import { RotateCcw, Search, X, ChevronDown } from 'lucide-react';
 
 interface SearchFilterPanelProps {
   searchInput: string;
@@ -93,19 +93,24 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             >
               Provinsi
             </label>
-            <select
-              id="search-page-province"
-              value={province}
-              onChange={(e) => onProvinceChange(e.target.value)}
-              className="w-full min-h-[44px] px-3 py-2 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/25 focus:border-[#2E6496] transition-colors cursor-pointer"
-            >
-              <option value="">Semua Provinsi</option>
-              {provinceOptions.map((prov) => (
-                <option key={prov} value={prov}>
-                  {prov}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                id="search-page-province"
+                value={province}
+                onChange={(e) => onProvinceChange(e.target.value)}
+                className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+              >
+                <option value="">Semua Provinsi</option>
+                {provinceOptions.map((prov) => (
+                  <option key={prov} value={prov}>
+                    {prov}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+              </div>
+            </div>
           </div>
 
           <div className="col-span-2 sm:col-span-1">
@@ -115,22 +120,27 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             >
               Kabupaten/Kota
             </label>
-            <select
-              id="search-page-city"
-              value={city}
-              onChange={(e) => onCityChange(e.target.value)}
-              disabled={!province}
-              className="w-full min-h-[44px] px-3 py-2 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium disabled:opacity-55 disabled:bg-[#F1F5F9] disabled:cursor-not-allowed focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/25 focus:border-[#2E6496] transition-colors cursor-pointer"
-            >
-              <option value="">
-                {province ? 'Semua Kabupaten/Kota' : 'Pilih Provinsi dahulu'}
-              </option>
-              {cityOptions.map((kab) => (
-                <option key={kab} value={kab}>
-                  {kab}
+            <div className="relative">
+              <select
+                id="search-page-city"
+                value={city}
+                onChange={(e) => onCityChange(e.target.value)}
+                disabled={!province}
+                className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none disabled:opacity-50 disabled:bg-[#F1F5F9] disabled:cursor-not-allowed cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+              >
+                <option value="">
+                  {province ? 'Semua Kabupaten/Kota' : 'Pilih Provinsi dahulu'}
                 </option>
-              ))}
-            </select>
+                {cityOptions.map((kab) => (
+                  <option key={kab} value={kab}>
+                    {kab}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+              </div>
+            </div>
           </div>
 
           <div className="col-span-1">
@@ -140,18 +150,23 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             >
               Jenjang
             </label>
-            <select
-              id="search-page-level"
-              value={level}
-              onChange={(e) => onLevelChange(e.target.value)}
-              className="w-full min-h-[44px] px-3 py-2 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/25 focus:border-[#2E6496] transition-colors cursor-pointer"
-            >
-              <option value="">Semua Jenjang</option>
-              <option value="SD">SD</option>
-              <option value="SMP">SMP</option>
-              <option value="SMA">SMA</option>
-              <option value="SMK">SMK</option>
-            </select>
+            <div className="relative">
+              <select
+                id="search-page-level"
+                value={level}
+                onChange={(e) => onLevelChange(e.target.value)}
+                className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+              >
+                <option value="">Semua Jenjang</option>
+                <option value="SD">SD</option>
+                <option value="SMA">SMA</option>
+                <option value="SMK">SMK</option>
+                <option value="SMP">SMP</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+              </div>
+            </div>
           </div>
 
           <div className="col-span-1">
@@ -161,16 +176,21 @@ export const SearchFilterPanel: React.FC<SearchFilterPanelProps> = ({
             >
               Status
             </label>
-            <select
-              id="search-page-status"
-              value={status}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="w-full min-h-[44px] px-3 py-2 text-xs sm:text-sm bg-[#FAF8F5] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/25 focus:border-[#2E6496] transition-colors cursor-pointer"
-            >
-              <option value="">Semua Status</option>
-              <option value="Negeri">Negeri</option>
-              <option value="Swasta">Swasta</option>
-            </select>
+            <div className="relative">
+              <select
+                id="search-page-status"
+                value={status}
+                onChange={(e) => onStatusChange(e.target.value)}
+                className="w-full min-h-[44px] pl-3.5 pr-10 py-2.5 text-xs sm:text-sm bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl text-[#1E293B] font-medium appearance-none cursor-pointer hover:border-[#A8C8C4] focus:outline-none focus:ring-2 focus:ring-[#2E6496]/20 focus:border-[#2E6496] shadow-2xs transition-all"
+              >
+                <option value="">Semua Status</option>
+                <option value="Negeri">Negeri</option>
+                <option value="Swasta">Swasta</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#64748B]">
+                <ChevronDown className="w-4 h-4 text-[#475569]" aria-hidden="true" />
+              </div>
+            </div>
           </div>
         </div>
       </div>

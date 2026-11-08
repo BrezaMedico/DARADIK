@@ -547,7 +547,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsJenisDropdownOpen((prev) => !prev)}
-                  className={`w-full min-h-[44px] px-4 py-2.5 rounded-xl border text-left text-sm flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full min-h-[44px] pl-3.5 pr-10 py-2.5 rounded-xl border text-left text-sm flex items-center justify-between transition-all cursor-pointer relative shadow-2xs ${
                     isJenisDropdownOpen
                       ? 'border-[#2E6496] ring-2 ring-[#2E6496]/20 bg-[#FFFFFF]'
                       : 'border-[#C9DFDC] bg-[#FFFFFF] hover:border-[#A8C8C4]'
@@ -562,11 +562,13 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                   >
                     {selectedJenisLabel}
                   </span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-[#475569] transition-transform duration-200 ${
-                      isJenisDropdownOpen ? 'rotate-180 text-[#2E6496]' : ''
-                    }`}
-                  />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5">
+                    <ChevronDown
+                      className={`w-4 h-4 text-[#475569] transition-transform duration-200 ${
+                        isJenisDropdownOpen ? 'rotate-180 text-[#2E6496]' : ''
+                      }`}
+                    />
+                  </div>
                 </button>
 
                 {isJenisDropdownOpen && (

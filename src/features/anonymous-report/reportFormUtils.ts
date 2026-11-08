@@ -35,29 +35,9 @@ export interface ChosenSchoolTarget {
 
 export const JENIS_PUNGUTAN_OPTIONS = [
   {
-    value: 'uang pembangunan',
-    label: 'Uang Pembangunan',
-    desc: 'Iuran sarana prasarana, renovasi gedung, paving, atau perbaikan fasilitas',
-  },
-  {
-    value: 'uang buku/LKS',
-    label: 'Uang Buku / LKS',
-    desc: 'Kewajiban membeli buku paket atau lembar kerja siswa berbayar',
-  },
-  {
-    value: 'seragam',
-    label: 'Seragam',
-    desc: 'Kewajiban membeli paket kain seragam, atribut, atau kaos olahraga di sekolah',
-  },
-  {
-    value: 'pungutan ujian/kelulusan',
-    label: 'Pungutan Ujian / Kelulusan',
-    desc: 'Biaya cetak soal ujian, penulisan ijazah, atau wisuda/perpisahan',
-  },
-  {
-    value: 'uang les/ekskul wajib',
-    label: 'Uang Les / Ekskul Wajib',
-    desc: 'Bimbingan belajar atau ekstrakurikuler wajib berbayar',
+    value: 'jual beli bangku',
+    label: 'Jual Beli Bangku',
+    desc: 'Mahar atau uang titipan kursi penerimaan murid baru',
   },
   {
     value: 'pungutan PPDB/mutasi',
@@ -65,9 +45,29 @@ export const JENIS_PUNGUTAN_OPTIONS = [
     desc: 'Biaya pendaftaran ulang siswa baru atau perpindahan mutasi',
   },
   {
-    value: 'jual beli bangku',
-    label: 'Jual Beli Bangku',
-    desc: 'Mahar atau uang titipan kursi penerimaan murid baru',
+    value: 'pungutan ujian/kelulusan',
+    label: 'Pungutan Ujian / Kelulusan',
+    desc: 'Biaya cetak soal ujian, penulisan ijazah, atau wisuda/perpisahan',
+  },
+  {
+    value: 'seragam',
+    label: 'Seragam',
+    desc: 'Kewajiban membeli paket kain seragam, atribut, atau kaos olahraga di sekolah',
+  },
+  {
+    value: 'uang buku/LKS',
+    label: 'Uang Buku / LKS',
+    desc: 'Kewajiban membeli buku paket atau lembar kerja siswa berbayar',
+  },
+  {
+    value: 'uang les/ekskul wajib',
+    label: 'Uang Les / Ekskul Wajib',
+    desc: 'Bimbingan belajar atau ekstrakurikuler wajib berbayar',
+  },
+  {
+    value: 'uang pembangunan',
+    label: 'Uang Pembangunan',
+    desc: 'Iuran sarana prasarana, renovasi gedung, paving, atau perbaikan fasilitas',
   },
   {
     value: 'lainnya',
@@ -77,8 +77,8 @@ export const JENIS_PUNGUTAN_OPTIONS = [
 ];
 
 export const PIHAK_MEMINTA_OPTIONS = [
-  'Kepala Sekolah',
   'Guru',
+  'Kepala Sekolah',
   'Komite Sekolah',
   'Tata Usaha (TU)',
   'Pihak Lain',
