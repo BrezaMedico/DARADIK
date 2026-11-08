@@ -88,7 +88,7 @@ function bospChatbotMiddlewarePlugin(): Plugin {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.end(JSON.stringify(fallback?.payload || {
-            teks: 'Halo! Aku Tanya BOS, siap membantu menjawab pertanyaan seputar dana BOSP dan penggunaan website DARADIK.',
+            teks: 'Halo! Aku Bos, siap membantu menjawab pertanyaan seputar dana BOSP dan penggunaan website DARADIK.',
             emosi: 'senang',
           }));
         } catch {
@@ -96,7 +96,7 @@ function bospChatbotMiddlewarePlugin(): Plugin {
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.end(
             JSON.stringify({
-              teks: 'Halo! Aku Tanya BOS, siap membantu menjawab pertanyaan seputar dana BOSP dan penggunaan website DARADIK.',
+              teks: 'Halo! Aku Bos, siap membantu menjawab pertanyaan seputar dana BOSP dan penggunaan website DARADIK.',
               emosi: 'senang',
             })
           );

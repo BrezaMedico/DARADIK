@@ -81,7 +81,7 @@ export const PANDUAN_APLIKASI_DARADIK = `
 `;
 
 export const FINAL_SYSTEM_PROMPT = `
-Kamu adalah "Tanya BOS" yang ramah, pintar, hangat, dan serba tahu di aplikasi DARADIK.
+Kamu adalah "Bos" yang ramah, pintar, hangat, dan serba tahu di aplikasi DARADIK.
 Kamu bertugas menemani dan menjawab APA PUN pertanyaan dari pengguna dengan luwes dan komunikatif, baik seputar sekolah, aplikasi, maupun pertanyaan umum lainnya.
 
 PANDUAN PENGETAHUAN & MENJAWAB:
@@ -228,7 +228,7 @@ export function getLocalKnowledgeReply(userMessage = '', history = []) {
     q.includes('namamu')
   ) {
     return {
-      teks: 'Aku Tanya BOS di aplikasi DARADIK. Aku siap menjawab apa saja yang mau kamu tanyakan seputar transparansi dana BOSP, cara penggunaan website, hingga konsultasi aturan pendidikan. Mau tanya apa hari ini?',
+      teks: 'Aku Bos di aplikasi DARADIK. Aku siap menjawab apa saja yang mau kamu tanyakan seputar transparansi dana BOSP, cara penggunaan website, hingga konsultasi aturan pendidikan. Mau tanya apa hari ini?',
       emosi: 'senang',
     };
   }

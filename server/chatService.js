@@ -57,7 +57,7 @@ export async function handleChatRequest(body = {}, clientIp = 'anonymous') {
   if (rawHistory.length > 0) {
     const formattedHistory = rawHistory
       .map((item) => {
-        const role = item?.role === 'bot' ? 'Tanya BOS' : 'Pengguna';
+        const role = item?.role === 'bot' ? 'Bos' : 'Pengguna';
         const text = sanitizeUserInput(item?.text || '');
         return text ? `${role}: ${text}` : '';
       })
