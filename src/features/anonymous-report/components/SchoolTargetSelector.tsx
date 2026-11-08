@@ -195,7 +195,7 @@ export const SchoolTargetSelector: React.FC<SchoolTargetSelectorProps> = ({
           </div>
 
           {isSchoolDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto divide-y divide-[#E4E0D8]/60">
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl shadow-slate-900/10 z-30 max-h-64 overflow-y-auto p-1.5 space-y-1 animate-view-enter custom-scrollbar">
               {isLoadingSchools ? (
                 <div className="p-4 text-center text-xs text-[#475569]">
                   Mencari data sekolah dari basis data...
@@ -206,7 +206,7 @@ export const SchoolTargetSelector: React.FC<SchoolTargetSelectorProps> = ({
                     key={`${s.jenjang}-${s.npsn}`}
                     type="button"
                     onClick={() => handleSelectSchoolOption(s)}
-                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#EBF3F8] transition-colors flex items-center justify-between gap-3 group cursor-pointer"
+                    className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-[#EBF3F8] transition-colors flex items-center justify-between gap-3 group cursor-pointer"
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <div className="flex items-center gap-2">

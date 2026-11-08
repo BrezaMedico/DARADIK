@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
-import { REGION_HIERARCHY } from '@/data';
+import { REGION_HIERARCHY, sortCitiesAlphabetically } from '@/data';
 import type { SchoolData } from '@/types';
 import { fetchPaginatedSchoolsFromSupabase } from '@/services/supabase';
 import {
@@ -102,7 +102,7 @@ export const SchoolSearchPage: React.FC<SchoolSearchPageProps> = ({
 
   const cityOptions = useMemo(() => {
     if (!province || !REGION_HIERARCHY[province]) return [];
-    return Object.keys(REGION_HIERARCHY[province]).sort((a, b) => a.localeCompare(b, 'id'));
+    return sortCitiesAlphabetically(Object.keys(REGION_HIERARCHY[province]));
   }, [province]);
 
   useEffect(() => {

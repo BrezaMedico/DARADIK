@@ -572,7 +572,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                 </button>
 
                 {isJenisDropdownOpen && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#FFFFFF] border border-[#C9DFDC] rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto divide-y divide-[#E4E0D8]/60">
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl shadow-xl shadow-slate-900/10 z-30 max-h-64 overflow-y-auto p-1.5 space-y-1 animate-view-enter custom-scrollbar">
                     {JENIS_PUNGUTAN_OPTIONS.map((opt) => {
                       const isSelected = jenisPungutan === opt.value;
                       return (
@@ -586,7 +586,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
                               setValidationError(null);
                             }
                           }}
-                          className={`w-full text-left px-4 py-2.5 transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                          className={`w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between gap-2 cursor-pointer ${
                             isSelected
                               ? 'bg-[#EBF3F8] text-[#1D4F7A] font-bold'
                               : 'hover:bg-[#FAF8F5] text-[#1E293B]'
