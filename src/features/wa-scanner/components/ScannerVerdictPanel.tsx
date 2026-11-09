@@ -53,9 +53,16 @@ export const ScannerVerdictPanel: React.FC<ScannerVerdictPanelProps> = ({
             </span>
           </div>
 
-          <span className="text-xs font-semibold text-[#64748B] tabular-nums">
-            Kecocokan {ocrScanResult.confidenceScore}%
-          </span>
+          <div className="flex items-center gap-1.5">
+            {ocrScanResult.aiJudgement && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#2E6496]/10 text-[#2E6496]">
+                AI Hakim Pungli
+              </span>
+            )}
+            <span className="text-xs font-semibold text-[#64748B] tabular-nums">
+              Kecocokan {ocrScanResult.confidenceScore}%
+            </span>
+          </div>
         </div>
 
         <h3
@@ -73,6 +80,24 @@ export const ScannerVerdictPanel: React.FC<ScannerVerdictPanelProps> = ({
         >
           {ocrScanResult.bospFact}
         </p>
+
+        {ocrScanResult.aiJudgement?.evidenceQuotes && ocrScanResult.aiJudgement.evidenceQuotes.length > 0 && (
+          <div className="pt-2 border-t border-current/10 space-y-1">
+            <span className="text-[11px] font-bold block opacity-80">
+              Kutipan Kunci yang Dideteksi AI:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {ocrScanResult.aiJudgement.evidenceQuotes.slice(0, 3).map((q, idx) => (
+                <span
+                  key={idx}
+                  className="inline-block text-[11px] px-2 py-0.5 rounded bg-black/5 font-mono truncate max-w-full"
+                >
+                  &ldquo;{q}&rdquo;
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl overflow-hidden shadow-xs">

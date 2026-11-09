@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import type { AiScanAnalysisResult, SchoolData, WaScenarioData } from '@/types';
 import {
   analyzeDirectTextMessage,
+  enhanceWithAiJudgement,
   runAdvancedWaOcrPipeline,
 } from './engine';
 import { ScannerInputCard } from './components/ScannerInputCard';
@@ -94,24 +95,32 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
     setDisplayedFileName('Teks Obrolan WhatsApp');
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 550));
-      const result = analyzeDirectTextMessage(
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      const schoolContext = {
+        schoolName: school.name,
+        studentCount: school.studentCount,
+        schoolType: school.schoolType,
+        educationLevel: school.educationLevel || school.jenjang,
+        totalBosp: school.totalBosp,
+        compositions: school.compositions,
+        tahap1Compositions: school.tahap1Compositions,
+        tahap2Compositions: school.tahap2Compositions,
+      };
+      const baseResult = analyzeDirectTextMessage(
         text,
         school.items,
         school.name,
         school.studentCount,
-        {
-          schoolName: school.name,
-          studentCount: school.studentCount,
-          schoolType: school.schoolType,
-          educationLevel: school.educationLevel || school.jenjang,
-          totalBosp: school.totalBosp,
-          compositions: school.compositions,
-          tahap1Compositions: school.tahap1Compositions,
-          tahap2Compositions: school.tahap2Compositions,
-        }
+        schoolContext
       );
-      setOcrScanResult(result);
+      const finalResult = await enhanceWithAiJudgement(baseResult, {
+        text,
+        bospItems: school.items,
+        schoolName: school.name,
+        studentCount: school.studentCount,
+        schoolContext,
+      });
+      setOcrScanResult(finalResult);
     } catch (err: any) {
       setScanError(err?.message || 'Gagal menganalisis teks pesan.');
     } finally {

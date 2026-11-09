@@ -211,6 +211,17 @@ export interface ThreeWayComparison {
   };
 }
 
+export interface AiJudgementSummary {
+  verdict: 'PUNGLI' | 'BUKAN_PUNGLI';
+  category: string;
+  confidence: number;
+  alasan: string;
+  evidenceQuotes: string[];
+  coerciveSignals: string[];
+  model: string;
+  agreedWithRules: boolean;
+}
+
 export interface AiScanAnalysisResult {
   rawOcrText: string;
   fullStructuredTranscript: string;
@@ -236,4 +247,6 @@ export interface AiScanAnalysisResult {
   processedPreviewDataUrl: string;
   privacyMode: 'local-browser' | 'hybrid-vision-ai' | 'vision-assisted';
   evaluationMetrics?: OcrEvaluationMetrics;
+  aiJudgement?: AiJudgementSummary;
+  analysisEngine?: 'rules-only' | 'rules+ai';
 }

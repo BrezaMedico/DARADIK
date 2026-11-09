@@ -49,4 +49,14 @@ export {
   analyzeDirectTextMessage,
 } from './bospLegalMatcher';
 
+export {
+  analyzePragmatics,
+} from './pragmaticsGate';
+
+export {
+  enhanceWithAiJudgement,
+  requestAiJudgement,
+  fuseRulesWithAiJudgement,
+} from './aiJudge';
+
 export type * from './internalTypes';

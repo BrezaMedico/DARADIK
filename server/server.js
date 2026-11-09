@@ -17,6 +17,7 @@ import {
   handleTrackReport,
   handleReplyReport,
 } from './reportService.js';
+import { handleScanJudge } from './scanJudgeService.js';
 
 export async function handleScanVision(body) {
   try {
@@ -64,6 +65,7 @@ export {
   handleSubmitReport,
   handleTrackReport,
   handleReplyReport,
+  handleScanJudge,
 };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -111,7 +113,10 @@ export function createExpressApp() {
     })
   );
 
-  app.use(['/api/scan-vision', '/api/scanner/vision'], express.json({ limit: '10mb' }));
+  app.use(
+    ['/api/scan-vision', '/api/scanner/vision', '/api/scan-judge', '/api/scanner/judge'],
+    express.json({ limit: '10mb' })
+  );
   app.use('/api/reports/upload', express.json({ limit: '10mb' }));
   app.use(express.json({ limit: '256kb' }));
 
@@ -133,6 +138,12 @@ export function createExpressApp() {
 
   app.post(['/api/scan-vision', '/api/scanner/vision'], async (req, res) => {
     const result = await handleScanVision(req.body);
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post(['/api/scan-judge', '/api/scanner/judge'], async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleScanJudge(req.body, maskedIp);
     res.status(result.status).json(result.payload);
   });
 

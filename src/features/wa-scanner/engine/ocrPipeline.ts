@@ -21,6 +21,7 @@ import {
   runOptionalVisionAiPass,
 } from './ocrReconciler';
 import { analyzeChatWithBospItems } from './bospLegalMatcher';
+import { enhanceWithAiJudgement } from './aiJudge';
 
 function estimateAutoDeskewAngle(sourceCanvas: HTMLCanvasElement): number {
   const w = sourceCanvas.width;
@@ -699,7 +700,7 @@ export async function runAdvancedWaOcrPipeline(
     100
   );
 
-  return {
+  const baseResult: AiScanAnalysisResult = {
     ...bospAnalysis,
     rawOcrText: finalRawText,
     fullStructuredTranscript:
@@ -715,6 +716,24 @@ export async function runAdvancedWaOcrPipeline(
     privacyMode,
     evaluationMetrics,
   };
+
+  if (adjustments?.enableVisionAi !== false) {
+    try {
+      const fused = await enhanceWithAiJudgement(baseResult, {
+        text: fullStructuredTranscript.trim() || finalRawText,
+        imageDataUrl: processedPreviewDataUrl,
+        bospItems,
+        schoolName,
+        studentCount,
+        schoolContext: adjustments,
+      });
+      return fused;
+    } catch {
+      return baseResult;
+    }
+  }
+
+  return baseResult;
 }
 
 export async function performImageOcr(

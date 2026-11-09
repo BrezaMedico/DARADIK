@@ -77,7 +77,9 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         url !== '/api/reports/track' &&
         url !== '/api/reports/reply' &&
         url !== '/api/scan-vision' &&
-        url !== '/api/scanner/vision'
+        url !== '/api/scanner/vision' &&
+        url !== '/api/scan-judge' &&
+        url !== '/api/scanner/judge'
       ) {
         return next();
       }
@@ -89,6 +91,14 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         const maskedIp = serverMod.anonymizeClientIp
           ? serverMod.anonymizeClientIp(req.socket?.remoteAddress || 'anonymous')
           : 'anonymous';
+
+        if (url === '/api/scan-judge' || url === '/api/scanner/judge') {
+          const result = await serverMod.handleScanJudge(body, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
 
         if (url === '/api/scan-vision' || url === '/api/scanner/vision') {
           const result = await serverMod.handleScanVision(body);

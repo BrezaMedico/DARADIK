@@ -646,6 +646,10 @@ export function computeSmartWordSimilarity(docTok: EnrichedToken, targetWord: st
   if (docTok.raw === tw) return 1.0;
 
   const targetStem = stripIndonesianMorphology(tw);
+  // "berpulang" (meninggal dunia) tidak boleh dianggap sama dengan "dipulangkan" (sanksi/disuruh pulang).
+  if (docTok.raw === 'berpulang' && (tw === 'dipulangkan' || targetStem === 'pulang')) {
+    return 0;
+  }
   if (docTok.stem === tw || docTok.raw === targetStem || (targetStem.length >= 4 && docTok.stem === targetStem)) {
     return 0.96;
   }

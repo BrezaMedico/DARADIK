@@ -17,6 +17,7 @@ import {
   extractMonetaryAmounts,
   matchPhraseSmart,
 } from './indonesianNlu';
+import { analyzePragmatics, type NonDemandReason } from './pragmaticsGate';
 
 export function analyzeCoercionAndLevyIntent(
   doc: EnrichedMessageDoc,
@@ -31,6 +32,11 @@ export function analyzeCoercionAndLevyIntent(
     /\b(?:gratis|bebas)\s+(?:tanpa\s+)?(?:biaya|pungutan|iuran|nominal)\b/g,
     /\bnominal\s+(?:bebas|seikhlasnya|sukarela)\b/g,
     /\btidak\s+ditentukan\s+(?:nominal|besaran)\b/g,
+    // "tidak ada batas waktu", "tanpa sanksi apapun", "tidak ada nominal tetap" — pesan sukarela yang menolak unsur paksaan.
+    /\b(?:tidak|tak|bukan|tanpa|tiada|nihil)\s+(?:ada\s+|ditentukan\s+|dikenakan\s+|dikenai\s+|diberlakukan\s+)?(?:batas\s+waktu|batas\s+akhir|tenggat(?:\s+waktu)?|tenggat|jatuh\s+tempo|nominal(?:\s+tetap|\s+minimal|\s+minimum)?|besaran(?:\s+tetap)?|sanksi|konsekuensi|hukuman|denda|syarat|minimal|minimum|target|kuota|tarif|jumlah\s+tertentu)(?:\s+(?:maupun|dan|atau)\s+(?:batas\s+waktu|batas\s+akhir|tenggat(?:\s+waktu)?|tenggat|jatuh\s+tempo|nominal(?:\s+tetap|\s+minimal|\s+minimum)?|besaran(?:\s+tetap)?|sanksi|konsekuensi|hukuman|denda|syarat|minimal|minimum|target|kuota|tarif|jumlah\s+tertentu))?(?:\s+apa\s*pun)?\b/g,
+    /\b(?:kapan\s+saja\s+berapa\s+saja|seikhlasnya\s+saja)\b/g,
+    /\b(?:tidak|tak)\s+(?:berpengaruh|berdampak|mempengaruhi|memengaruhi|ada\s+pengaruh)\s+(?:pada|terhadap|ke|dengan)?\s*(?:nilai|hak|rapor|ujian|kelulusan)(?:\s+(?:maupun|atau|dan)\s+(?:nilai|hak|rapor|ujian|kelulusan))?(?:\s+siswa)?\b/g,
+    /\b(?:yang\s+)?(?:tidak\s+ikut|berhalangan|tidak\s+berpartisipasi|tidak\s+menyumbang|tidak\s+iuran)\s+(?:pun\s+)?(?:tidak\s+(?:apa\s*apa|masalah|mengapa)|tidak\s+ada\s+(?:masalah|sanksi))\b/g,
   ];
 
   let guardedNorm = norm;
@@ -78,15 +84,18 @@ export function analyzeCoercionAndLevyIntent(
     'dimohon segera',
     'harap segera',
     'mohon segera',
+    'tolong segera',
     'diharapkan melunasi',
     'segera melunasi',
     'segera dilunasi',
+    'segera kirim',
     'mengingatkan pembayaran',
     'mengingatkan tunggakan',
     'mengingatkan tagihan',
     'bagi yang belum lunas',
     'bagi yang belum membayar',
     'yang belum bayar',
+    'yang belum tolong',
     'rekap tunggakan',
     'daftar belum lunas',
     'kesepakatan rapat ditetapkan',
@@ -107,6 +116,7 @@ export function analyzeCoercionAndLevyIntent(
     'maksimal tanggal',
     'maksimal hari',
     'ditunggu sampai',
+    'sudah ditunggu',
     'terakhir pembayaran',
     'besok terakhir',
     'hari ini terakhir',
@@ -148,7 +158,9 @@ export function analyzeCoercionAndLevyIntent(
   const hasMinimumAmount =
     /\bminimal\s+(?:rp\.?\s*|sumbangan\s+|infaq\s+|infak\s+|donasi\s+|iuran\s+|bayar\s+)?(?:\d+|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas|seratus|seribu|sejuta)/i.test(
       guardedNorm
-    ) || /\bmin\.?\s*(?:rp\.?\s*)?\d+\s*(?:rb|ribu|k|jt|juta)\b/i.test(rawText);
+    ) ||
+    /\bmin\.?\s*(?:rp\.?\s*)?\d+\s*(?:rb|ribu|k|jt|juta)\b/i.test(rawText) ||
+    /\b(?:paling\s+sedikit|minimum|tidak\s+(?:boleh\s+)?kurang\s+dari)\s+(?:rp\.?\s*)?\d/i.test(guardedNorm);
   if (hasMinimumAmount) {
     tariffHits.push('batas nominal minimal');
   }
@@ -933,6 +945,10 @@ export function matchKamusBospAndCompositions(
       phrases: [
         'uang administrasi',
         'biaya administrasi',
+        'biaya admin',
+        'legalisir',
+        'legalisir ijazah',
+        'biaya legalisir',
         'kartu pelajar',
         'uang kartu pelajar',
         'kartu osis',
@@ -948,6 +964,40 @@ export function matchKamusBospAndCompositions(
         compMatch
           ? `Administrasi kesiswaan di ${schoolName} tercakup dalam pos RKAS "${compMatch.label}" (${formatRp(compMatch.amount)}). Pungutan ${tarikanStr} untuk kartu pelajar/administrasi berindikasi duplikasi BOSP.`
           : `Layanan administrasi sekolah, Dapodik, dan kartu identitas siswa merupakan layanan dasar operasional BOSP di ${schoolName} yang bebas pungutan (${tarikanStr}).`,
+    },
+    {
+      id: 'kamus-gratifikasi-pelicin',
+      categoryTitle: 'Uang Pelicin / Uang Terima Kasih / Gratifikasi Layanan Sekolah',
+      kind: 'PROHIBITED_STRUCTURAL_LEVY',
+      requiresFinancialOrSanction: true,
+      phrases: [
+        'uang terima kasih',
+        'uang pelicin',
+        'uang pelancar',
+        'uang kerohiman',
+        'uang sogok',
+        'uang suap',
+        'uang rokok',
+        'uang administrasi tambahan',
+        'titip amplop',
+        'salam tempel',
+        'jalur belakang',
+        'jalur khusus',
+        'jalur khusus masuk',
+        'bayar kursi',
+        'uang kursi',
+        'jual beli kursi',
+        'titip anak',
+        'titip lewat saya',
+        'uang tutup mulut',
+        'ucapan terima kasih panitia',
+      ],
+      primaryRegulation: 'UU 31/1999 jo. UU 20/2001 (Gratifikasi/Suap) & Perpres 87/2016 (Saber Pungli)',
+      statusTitleDanger: 'Terindikasi Uang Pelicin / Gratifikasi Layanan Pendidikan',
+      legalNoteDanger:
+        'Permintaan uang terima kasih, uang pelicin, atau titipan amplop untuk memperlancar penerimaan siswa/layanan sekolah termasuk pungutan liar dan gratifikasi yang dilarang (UU Tipikor, Perpres 87/2016 tentang Satgas Saber Pungli). Layanan pendidikan negeri tidak boleh dikaitkan dengan pembayaran apa pun.',
+      buildFact: ({ schoolName, tarikanStr }) =>
+        `Pesan meminta/menyiratkan pemberian uang di luar ketentuan resmi (${tarikanStr}) untuk memperlancar layanan di ${schoolName}. Hal ini bukan komponen BOSP maupun sumbangan sah, dan tetap melanggar meskipun disebut "seikhlasnya".`,
     },
     {
       id: 'kamus-uang-gedung-pangkal',
@@ -1201,6 +1251,92 @@ export function matchKamusBospAndCompositions(
   return best;
 }
 
+const NON_DEMAND_NARRATIVES: Record<
+  Exclude<NonDemandReason, 'none'>,
+  {
+    statusType: 'safe' | 'neutral';
+    title: string;
+    badge: string;
+    keyword: string;
+    confidence: number;
+    discrepancy: string;
+    legal: string;
+    fact: (school: string) => string;
+  }
+> = {
+  free_assurance: {
+    statusType: 'safe',
+    title: 'Pernyataan Bebas Pungutan (Tidak Ada Penarikan Biaya)',
+    badge: 'Bebas Pungutan',
+    keyword: 'Pernyataan Gratis / Bebas Biaya',
+    confidence: 93,
+    discrepancy: 'SESUAI KETENTUAN — Pesan menegaskan tidak ada pungutan kepada wali murid.',
+    legal:
+      'Pesan menyatakan tidak ada pungutan atau biaya yang dibebankan kepada orang tua. Ini sejalan dengan ketentuan BOSP; tetap laporkan bila praktik di lapangan berbeda dari pernyataan ini.',
+    fact: (school) =>
+      `Pesan ini justru menegaskan bahwa tidak ada pungutan atau biaya yang dibebankan kepada wali murid ${school}. Tidak ditemukan permintaan pembayaran.`,
+  },
+  warning_awareness: {
+    statusType: 'neutral',
+    title: 'Pesan Peringatan / Edukasi Anti-Pungli (Bukan Penarikan Dana)',
+    badge: 'Edukasi',
+    keyword: 'Peringatan Pungli',
+    confidence: 91,
+    discrepancy: 'TIDAK ADA TARIKAN — Pesan berisi peringatan atau ajakan melaporkan pungli.',
+    legal:
+      'Pesan bersifat peringatan atau ajakan waspada terhadap pungutan, bukan permintaan pembayaran. Tidak ada pelanggaran yang dilakukan oleh pengirim pesan ini.',
+    fact: (school) =>
+      `Pesan ini berisi peringatan/ajakan waspada terhadap pungutan, bukan permintaan uang kepada wali murid ${school}.`,
+  },
+  question_hearsay: {
+    statusType: 'neutral',
+    title: 'Pertanyaan / Konfirmasi Warga (Belum Ada Tagihan Nyata)',
+    badge: 'Pertanyaan',
+    keyword: 'Pertanyaan tentang Iuran',
+    confidence: 86,
+    discrepancy: 'TIDAK ADA TARIKAN — Pesan berupa pertanyaan atau kabar, bukan tagihan.',
+    legal:
+      'Pesan berupa pertanyaan atau konfirmasi, bukan perintah membayar. Jika iuran yang dibicarakan benar-benar ditagihkan, kirim tangkapan layar pesan penagihan aslinya untuk diperiksa.',
+    fact: (school) =>
+      `Pesan ini bertanya atau mengonfirmasi soal iuran dan tidak menagih pembayaran kepada wali murid ${school}. Unggah pesan penagihan aslinya bila ada.`,
+  },
+  financial_report: {
+    statusType: 'safe',
+    title: 'Laporan Penggunaan Dana (Transparansi, Bukan Penarikan)',
+    badge: 'Laporan Dana',
+    keyword: 'Laporan Penggunaan Dana',
+    confidence: 90,
+    discrepancy: 'SESUAI KETENTUAN — Pesan melaporkan penggunaan dana, tidak menagih wali murid.',
+    legal:
+      'Pesan melaporkan realisasi/penggunaan dana secara transparan dan tidak meminta pembayaran dari wali murid.',
+    fact: (school) =>
+      `Pesan ini melaporkan penggunaan dana ${school} dan tidak meminta pembayaran dari orang tua.`,
+  },
+  personal_transaction: {
+    statusType: 'neutral',
+    title: 'Percakapan Pribadi (Tidak Terkait Pungutan Sekolah)',
+    badge: 'Pribadi',
+    keyword: 'Transaksi Pribadi',
+    confidence: 88,
+    discrepancy: 'TIDAK ADA TARIKAN — Transaksi pribadi di luar urusan sekolah.',
+    legal: 'Pesan merupakan transaksi/obrolan pribadi dan tidak berkaitan dengan pungutan sekolah.',
+    fact: (school) =>
+      `Pesan ini tampak sebagai transaksi pribadi dan tidak menyangkut penarikan dana oleh pihak ${school}.`,
+  },
+  voluntary_info: {
+    statusType: 'safe',
+    title: 'Ajakan Sukarela Murni (Tanpa Tagihan, Tarif, atau Tenggat)',
+    badge: 'Sukarela',
+    keyword: 'Ajakan Sukarela',
+    confidence: 90,
+    discrepancy: 'SESUAI KETENTUAN — Ajakan sukarela tanpa paksaan.',
+    legal:
+      'Sesuai Permendikbud No. 75/2016, sumbangan sah apabila sukarela, tidak memaksa, tidak mematok nominal atau tenggat, dan tanpa konsekuensi bagi siswa yang tidak ikut.',
+    fact: (school) =>
+      `Pesan hanya berisi ajakan sukarela tanpa nominal mengikat, tenggat, maupun sanksi, sehingga tidak tergolong pungutan di ${school}.`,
+  },
+};
+
 export function analyzeChatWithBospItems(
   ocrText: string,
   bospItems: BospRealizationItem[],
@@ -1217,13 +1353,19 @@ export function analyzeChatWithBospItems(
   const detectedAmount = extractMonetaryAmounts(ocrText || '', doc.normalizedText);
   const coercion = analyzeCoercionAndLevyIntent(doc, ocrText || '', detectedAmount);
 
-  const itemMatch = matchSchoolBudgetItems(
-    doc,
-    bospItems,
-    coercion.hasFinancialOrLevyContext
-  );
+  // Lapisan pragmatik: pesan yang hanya membahas uang tanpa MENAGIH (gratis, peringatan, pertanyaan, laporan, obrolan pribadi, sukarela murni)
+  // tidak boleh dicap pungli hanya karena memuat kata "kipas", "iuran", atau nominal rupiah.
+  const pragmatics = analyzePragmatics(ocrText || '');
+  const gateReason: NonDemandReason = coercion.hasAcademicSanction ? 'none' : pragmatics.nonDemandReason;
+  const gateActive = gateReason !== 'none';
 
-  const kamusMatch = matchKamusBospAndCompositions(doc, schoolContext, coercion);
+  const itemMatch = gateActive
+    ? null
+    : matchSchoolBudgetItems(doc, bospItems, coercion.hasFinancialOrLevyContext);
+
+  const kamusMatch = gateActive
+    ? null
+    : matchKamusBospAndCompositions(doc, schoolContext, coercion);
 
   const lines = (ocrText || '')
     .split('\n')
@@ -1382,6 +1524,7 @@ export function analyzeChatWithBospItems(
     ) {
       const isSwastaPureVoluntary =
         kamusMatch.kind === 'PROHIBITED_STRUCTURAL_LEVY' &&
+        kamusMatch.id !== 'kamus-gratifikasi-pelicin' &&
         effectiveSchoolType.toLowerCase() === 'swasta' &&
         coercion.hasPureVoluntary &&
         !coercion.isMandatory;
@@ -1502,7 +1645,7 @@ export function analyzeChatWithBospItems(
         confidenceScore = 92;
       }
     }
-  } else if (coercion.isMandatory && coercion.hasFinancialOrLevyContext) {
+  } else if (!gateActive && coercion.isMandatory && coercion.hasFinancialOrLevyContext) {
     statusType = 'danger';
     detectedItemKeyword = coercion.hasAcademicSanction
       ? 'Tagihan Disertai Ancaman Sanksi'
@@ -1541,6 +1684,28 @@ export function analyzeChatWithBospItems(
     primaryRegulation = 'Permendikbud 75/2016 Pasal 1 & Pasal 10';
     policySummary = legalNote;
     confidenceScore = 91;
+  }
+
+  if (gateActive && statusType !== 'danger') {
+    const narrative = NON_DEMAND_NARRATIVES[gateReason];
+    const keepVoluntaryBranch = gateReason === 'voluntary_info' && statusType === 'safe';
+    isMandatoryEffective = false;
+    if (!keepVoluntaryBranch && narrative) {
+      statusType = narrative.statusType;
+      statusTitle = narrative.title;
+      bospFact = narrative.fact(effectiveSchoolName);
+      legalNote = narrative.legal;
+      detectedItemKeyword = narrative.keyword;
+      budgetStatusLabel = 'Tidak Ada Penarikan Dana dari Wali Murid';
+      budgetFactText = `Pesan tidak menagih pembayaran kepada wali murid ${effectiveSchoolName}.`;
+      discrepancyVerdict = narrative.discrepancy;
+      verdictType = 'BELUM_TERIDENTIFIKASI';
+      verdictTitle = narrative.title;
+      policySummary = narrative.legal;
+      primaryRegulation = 'Permendikbud 75/2016 Pasal 10 & 12';
+      effectiveToneBadge = narrative.badge;
+      confidenceScore = narrative.confidence;
+    }
   }
 
   const itemDisplayLabel =
