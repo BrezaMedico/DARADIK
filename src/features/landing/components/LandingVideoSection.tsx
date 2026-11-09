@@ -7,7 +7,7 @@ export const LandingVideoSection: React.FC = () => {
 
   return (
     <section className="w-full bg-[#FAF8F5] pt-2 sm:pt-4 pb-12 sm:pb-16 px-3.5 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <ScrollRevealOnce>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-4 sm:mb-5">
             <div>

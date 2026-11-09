@@ -185,6 +185,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmitModalSuccess, setIsSubmitModalSuccess] = useState<boolean>(false);
   const [submitStepLabel, setSubmitStepLabel] = useState<string>('Menyimpan ke server...');
   const [submissionSuccess, setSubmissionSuccess] =
     useState<SubmissionSuccessState | null>(null);
@@ -401,7 +402,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
         createdAt: dbResult.created_at,
       });
 
-      setSubmissionSuccess({
+      const successData: SubmissionSuccessState = {
         ticketCode: dbResult.ticket_code,
         trackingToken: dbResult.tracking_token,
         timestamp: formatWibDateTime(dbResult.created_at),
@@ -410,7 +411,16 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
         category: dbResult.category,
         role: roleLabel,
         fullNotes,
-      });
+      };
+
+      // Tampilkan animasi centang dan teks 'Laporan Berhasil Dikirim' di popup loading
+      setIsSubmitModalSuccess(true);
+      await new Promise((resolve) => setTimeout(resolve, 1700));
+
+      // Tutup popup loading dan tampilkan informasi detail pelaporan
+      setIsSubmitting(false);
+      setIsSubmitModalSuccess(false);
+      setSubmissionSuccess(successData);
 
       window.scrollTo({ top: 40, behavior: 'smooth' });
     } catch (err: unknown) {
@@ -420,8 +430,8 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
           : 'Gagal mengirim laporan ke server Supabase. Periksa koneksi internet Anda.';
       setValidationError(message);
       handleRegenerateCaptcha();
-    } finally {
       setIsSubmitting(false);
+      setIsSubmitModalSuccess(false);
     }
   };
 
@@ -433,26 +443,92 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
     <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
       {isSubmitting && (
         <div className="fixed inset-0 z-50 bg-[#FAF8F5]/85 backdrop-blur-xs flex flex-col items-center justify-center p-4">
-          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 max-w-sm w-full text-center shadow-lg space-y-4">
-            <div className="flex justify-center py-1">
-              <div className="ccw-square-container">
-                <div className="ccw-square-item ccw-sq-1" />
-                <div className="ccw-square-item ccw-sq-2" />
-                <div className="ccw-square-item ccw-sq-3" />
-                <div className="ccw-square-item ccw-sq-4" />
-              </div>
-            </div>
+          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-6 sm:p-7 max-w-sm w-full text-center shadow-lg space-y-4">
+            {isSubmitModalSuccess ? (
+              <>
+                <div className="flex items-center justify-center py-2">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
+                    <svg
+                      className="w-16 h-16 sm:w-20 sm:h-20 daradik-success-circle-svg"
+                      viewBox="0 0 72 72"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-label="Ikon centang sukses pengiriman laporan"
+                    >
+                      {/* Lingkaran latar belakang hijau lembut */}
+                      <circle
+                        cx="36"
+                        cy="36"
+                        r="32"
+                        fill="#DCFCE7"
+                        className="daradik-success-circle-bg"
+                      />
+                      {/* Garis tepi lingkaran */}
+                      <circle
+                        cx="36"
+                        cy="36"
+                        r="32"
+                        stroke="#86EFAC"
+                        strokeWidth="2.5"
+                        className="daradik-success-circle-ring"
+                      />
+                      {/* Path centang yang digambar bertahap dari pojok ke pojok */}
+                      <path
+                        d="M22 37.5L31.5 47L50 26.5"
+                        fill="none"
+                        stroke="#166534"
+                        strokeWidth="4.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        pathLength="100"
+                        className="daradik-success-check-path"
+                      />
+                    </svg>
+                  </div>
+                </div>
 
-            <div className="space-y-1">
-              <h3 className="font-sturdy-heading text-base font-bold text-[#1E293B]">
-                Mengirim Laporan ke Sistem DARADIK
-              </h3>
-              <p className="text-xs text-[#475569] leading-relaxed">
-                Laporan disimpan ke basis data pengawasan tanpa mencatat identitas pribadi Anda.
-              </p>
-            </div>
+                <div className="daradik-success-text-enter space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#166534]">
+                    Sukses Terkirim
+                  </span>
+                  <h3 className="font-sturdy-heading text-lg sm:text-xl font-extrabold text-[#1E293B]">
+                    Laporan Berhasil Dikirim
+                  </h3>
+                  <p className="text-xs text-[#475569] leading-relaxed">
+                    Data laporan Anda telah dienkripsi dan berhasil diterima oleh sistem pengawasan DARADIK.
+                  </p>
+                </div>
 
-            <ScrambleToAsteriskCipher progressLabel={submitStepLabel} />
+                <div className="pt-1">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#166534] bg-[#DCFCE7]/60 border border-[#86EFAC]/60 px-3 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#166534] animate-ping" />
+                    Membuka informasi pelaporan...
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-center py-1">
+                  <div className="ccw-square-container">
+                    <div className="ccw-square-item ccw-sq-1" />
+                    <div className="ccw-square-item ccw-sq-2" />
+                    <div className="ccw-square-item ccw-sq-3" />
+                    <div className="ccw-square-item ccw-sq-4" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="font-sturdy-heading text-base font-bold text-[#1E293B]">
+                    Mengirim Laporan ke Sistem DARADIK
+                  </h3>
+                  <p className="text-xs text-[#475569] leading-relaxed">
+                    Laporan disimpan ke basis data pengawasan tanpa mencatat identitas pribadi Anda.
+                  </p>
+                </div>
+
+                <ScrambleToAsteriskCipher progressLabel={submitStepLabel} />
+              </>
+            )}
           </div>
         </div>
       )}

@@ -211,7 +211,7 @@ export async function runOptionalVisionAiPass(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 18000);
 
-      const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
+      const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
 
       for (const modelCandidate of candidateModels) {
         try {

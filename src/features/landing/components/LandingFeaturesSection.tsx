@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -6,6 +6,7 @@ import {
   ChevronUp,
   ReceiptText,
   ScanLine,
+  SearchCheck,
   ShieldCheck,
 } from 'lucide-react';
 import { ScrollRevealOnce } from './ScrollRevealOnce';
@@ -22,111 +23,229 @@ export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
   onOpenKamusModal,
 }) => {
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
+  const gridContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isGridVisible, setIsGridVisible] = useState<boolean>(false);
+
+  useEffect(() => {
+    const el = gridContainerRef.current;
+    if (!el) return;
+
+    // Jika posisi scroll sudah berada di area seksi saat dimuat
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setIsGridVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsGridVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const staggerDelayClasses = [
+    'card-stagger-1',
+    'card-stagger-2',
+    'card-stagger-3',
+    'card-stagger-4',
+  ];
+
+  const capabilityCards = [
+    {
+      num: '1',
+      title: 'Transparansi Sekolah',
+      desc: 'Cari informasi alokasi dana BOSP sekolah, rincian kuitansi SIPLah resmi, dan dokumentasi bukti fisik lapangan secara terbuka.',
+      icon: ReceiptText,
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+      actionLabel: 'Cari Data Sekolah',
+    },
+    {
+      num: '2',
+      title: 'Pemindai AI',
+      desc: 'Periksa indikasi pungutan dari pesan WhatsApp wali murid secara otomatis untuk mencocokkan kewajaran dengan anggaran BOSP.',
+      icon: ScanLine,
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      },
+      actionLabel: 'Mulai Pindai Chat',
+    },
+    {
+      num: '3',
+      title: 'Laporan Anonim',
+      desc: 'Kirim dugaan pelanggaran pungli melalui sistem laporan terenkripsi aman tanpa perlu khawatir identitas pribadi Anda terungkap.',
+      icon: ShieldCheck,
+      action: onOpenAnonymousReport,
+      actionLabel: 'Buat Laporan',
+    },
+    {
+      num: '4',
+      title: 'Pelacakan Aduan',
+      desc: 'Pantau perkembangan dan tindak lanjut laporan Anda bersama Dinas Pendidikan secara berkala cukup menggunakan kode tiket.',
+      icon: SearchCheck,
+      action: onOpenLiveTracking,
+      actionLabel: 'Lacak Tiket',
+    },
+  ];
+
+  const timelineSteps = [
+    {
+      step: '01',
+      title: 'Temukan Informasi',
+      desc: 'Cari sekolah tujuan dan telusuri pagu anggaran, pencairan dana BOSP, serta bukti pembelanjaan barang yang telah terverifikasi.',
+    },
+    {
+      step: '02',
+      title: 'Periksa dan Pahami',
+      desc: 'Gunakan informasi data sekolah, regulasi juknis BOSP, dan bantuan analisis AI untuk membedakan iuran sukarela sah dari pungutan liar.',
+    },
+    {
+      step: '03',
+      title: 'Laporkan Temuan',
+      desc: 'Kirim informasi pendukung atau foto kuitansi ke Inspektorat dan Dinas Pendidikan secara aman, terenkripsi, dan sepenuhnya anonim.',
+    },
+    {
+      step: '04',
+      title: 'Pantau Tindak Lanjut',
+      desc: 'Gunakan nomor kode tiket rahasia untuk memantau status telaah, investigasi lapangan, hingga penyelesaian resmi dari petugas.',
+    },
+  ];
 
   return (
-    <section className="w-full bg-[#FAF8F5] pt-6 sm:pt-10 pb-16 sm:pb-28 px-3.5 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <ScrollRevealOnce className="mb-8 sm:mb-14 text-left">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug">
-            Satu tempat untuk tahu ke mana dana sekolah mengalir.
+    <section className="w-full bg-[#FAF8F5] pt-10 sm:pt-14 pb-16 sm:pb-28 px-3.5 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* BAGIAN 1: GRID 2x2 CARD "Apa yang Bisa Dilakukan di DARADIK?" */}
+        <ScrollRevealOnce className="mb-8 sm:mb-10 text-left">
+          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496]">
+            Fitur Utama Platform
+          </span>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug mt-1">
+            Apa yang Bisa Dilakukan di DARADIK?
           </h2>
           <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed max-w-2xl">
-            Tanpa istilah akuntansi yang rumit. Tiga fitur utama untuk memantau realisasi dana BOSP, memvalidasi bukti belanja fisik, dan melindungi hak siswa secara terbuka.
+            Empat pilar utama untuk mengawal transparansi dana sekolah, memeriksa indikasi pungutan liar, dan melindungi hak pendidikan anak Anda.
           </p>
         </ScrollRevealOnce>
 
-        <div className="space-y-0">
-          <ScrollRevealOnce delayMs={0} className="relative">
-            <div className="flex items-start gap-3 sm:gap-6">
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
-                  01
-                </div>
-                <div className="w-[2px] bg-[#C9DFDC] flex-1 my-1.5 sm:my-2 min-h-[56px] sm:min-h-[80px]" />
-              </div>
+        {/* 2 x 2 Rectangular Cards Grid (Desktop) & Sticky Stacking Cards (Mobile) */}
+        <div
+          ref={gridContainerRef}
+          className="mobile-card-stack-container grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pb-28 sm:pb-0"
+        >
+          {capabilityCards.map((card, idx) => {
+            const Icon = card.icon;
+            const mobileStackClass = `mobile-card-stack-${idx + 1}`;
 
-              <div className="pt-0.5 pb-8 sm:pb-12 max-w-2xl flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#1E293B]">
-                    Transparansi Dana &amp; Bukti Belanja BOSP
-                  </h3>
-                  <ReceiptText className="w-6 h-6 sm:w-8 sm:h-8 text-[#2E6496] shrink-0 stroke-[1.75]" aria-hidden="true" />
-                </div>
-                <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
-                  Pantau langsung pencairan dana BOSP Tahap 1 &amp; 2 lengkap dengan arsip nota kuitansi, rincian belanja barang, serta titik koordinat bukti fisik (geotagging) di ruang kelas.
-                </p>
-              </div>
-            </div>
-          </ScrollRevealOnce>
+            return (
+              <div
+                key={card.num}
+                className={`scroll-reveal-slide-up mobile-card-stack-item ${mobileStackClass} h-full ${staggerDelayClasses[idx]} ${
+                  isGridVisible ? 'scroll-reveal-visible' : 'scroll-reveal-hidden'
+                }`}
+              >
+                <div
+                  className="group relative rounded-2xl p-5 sm:p-6 border border-[#C9DFDC] bg-gradient-to-br from-[#F4F9FC]/90 via-[#FFFFFF] to-[#EAF3F8]/95 shadow-xs hover:border-[#2E6496]/50 hover:shadow-sm transition-all duration-200 flex flex-col justify-between min-h-[210px] sm:min-h-[230px] h-full daradik-card-glass-sweep"
+                >
+                  {/* Bagian Kiri Atas: Judul Diperbesar & Berwarna Biru Tua Senada Icon */}
+                  <div className="relative z-10 space-y-1.5">
+                    <h3 className="text-xl sm:text-[22px] font-extrabold text-[#2E6496] tracking-tight leading-snug">
+                      {card.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#475569] leading-relaxed pr-2">
+                      {card.desc}
+                    </p>
+                  </div>
 
-          <ScrollRevealOnce delayMs={60} className="relative">
-            <div className="flex items-start gap-3 sm:gap-6">
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
-                  02
-                </div>
-                <div className="w-[2px] bg-[#C9DFDC] flex-1 my-1.5 sm:my-2 min-h-[56px] sm:min-h-[80px]" />
-              </div>
+                  {/* Bagian Bawah: Nomor Ditempelkan ke Bawah Tanpa Jarak & Icon Tebal Senada Judul */}
+                  <div className="relative z-10 mt-6 sm:mt-8 flex items-end justify-between -mb-5 sm:-mb-6">
+                    <div className="flex items-end">
+                      <span className="text-[76px] sm:text-[100px] font-black text-[#66A3BF]/30 tabular-nums tracking-tighter leading-[0.72] select-none pointer-events-none -ml-0.5">
+                        {card.num}
+                      </span>
+                    </div>
 
-              <div className="pt-0.5 pb-8 sm:pb-12 max-w-2xl flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#1E293B]">
-                    Pemindai Iuran Grup WhatsApp
-                  </h3>
-                  <ScanLine className="w-6 h-6 sm:w-8 sm:h-8 text-[#2E6496] shrink-0 stroke-[1.75]" aria-hidden="true" />
-                </div>
-                <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
-                  Unggah screenshot pengumuman iuran dari grup WhatsApp wali murid untuk mencocokkan otomatis dengan anggaran BOSP dan mendeteksi indikasi tumpang tindih biaya.
-                </p>
-              </div>
-            </div>
-          </ScrollRevealOnce>
-
-          <ScrollRevealOnce delayMs={120} className="relative">
-            <div className="flex items-start gap-3 sm:gap-6">
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums">
-                  03
+                    <div className="pb-5 sm:pb-6">
+                      <Icon
+                        className="w-[52px] h-[52px] sm:w-16 sm:h-16 text-[#2E6496] stroke-[1.6] sm:stroke-[1.75] shrink-0"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="pt-0.5 max-w-2xl flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg sm:text-xl font-bold text-[#1E293B]">
-                    Pelaporan Anonim &amp; Lacak Tiket Aduan
-                  </h3>
-                  <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-[#2E6496] shrink-0 stroke-[1.75]" aria-hidden="true" />
-                </div>
-                <p className="mt-2 text-sm sm:text-base text-[#475569] leading-relaxed">
-                  Laporkan temuan indikasi pungutan liar ke Inspektorat dan Dinas Pendidikan secara terenkripsi tanpa menyertakan identitas pribadi, serta pantau status tindak lanjutnya melalui kode tiket.
-                </p>
-                <div className="mt-3.5 flex flex-wrap items-center gap-4 text-xs sm:text-sm">
-                  <button
-                    type="button"
-                    onClick={onOpenAnonymousReport}
-                    className="inline-flex items-center gap-2 font-bold text-[#2E6496] hover:text-[#1E293B] group transition-colors cursor-pointer"
-                  >
-                    <span>Buat laporan anonim</span>
-                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  <span className="text-[#C9DFDC]">•</span>
-                  <button
-                    type="button"
-                    onClick={onOpenLiveTracking}
-                    className="font-semibold text-[#475569] hover:text-[#2E6496] transition-colors cursor-pointer"
-                  >
-                    Lacak status tiket aduan
-                  </button>
-                </div>
-              </div>
-            </div>
-          </ScrollRevealOnce>
+            );
+          })}
         </div>
 
-        <ScrollRevealOnce delayMs={180} className="mt-16 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
+        {/* BAGIAN 2: TIMELINE VERTICAL ALUR KERJA (01, 02, 03, 04) */}
+        <div className="mt-16 sm:mt-24 pt-10 sm:pt-14 border-t border-[#C9DFDC]">
+          <ScrollRevealOnce className="mb-8 sm:mb-12 text-left">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496]">
+              Alur Panduan Pengawasan
+            </span>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#1E293B] tracking-tight leading-snug mt-1">
+              Cara Kerja Kawal Dana Sekolah
+            </h2>
+            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed max-w-2xl">
+              Tahapan terstruktur dari menelusuri data awal sekolah hingga memantau penyelesaian resmi oleh Dinas Pendidikan.
+            </p>
+          </ScrollRevealOnce>
+
+          <div className="relative pl-11 sm:pl-16">
+            {/* Garis vertikal timeline yang menghubungkan titik tengah 01 hingga 04 secara konsisten */}
+            <div
+              className="absolute left-[15px] sm:left-[19px] top-4 sm:top-5 bottom-4 sm:bottom-5 w-[2px] bg-[#C9DFDC]"
+              aria-hidden="true"
+            />
+
+            <div className="space-y-8 sm:space-y-11">
+              {timelineSteps.map((stepItem, idx) => {
+                return (
+                  <ScrollRevealOnce
+                    key={stepItem.step}
+                    delayMs={idx * 60}
+                    className="relative"
+                  >
+                    {/* Lingkaran nomor yang berada tepat di atas garis vertikal */}
+                    <div className="absolute -left-11 sm:-left-16 top-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#FAF8F5] border-2 border-[#2E6496] flex items-center justify-center font-bold text-xs sm:text-sm text-[#2E6496] shadow-sm select-none tabular-nums z-10">
+                      {stepItem.step}
+                    </div>
+
+                    <div className="pt-0.5 max-w-2xl">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-[#1E293B]">
+                        {stepItem.title}
+                      </h3>
+                      <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-[#475569] leading-relaxed">
+                        {stepItem.desc}
+                      </p>
+                    </div>
+                  </ScrollRevealOnce>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* BAGIAN 3: REGULASI & PANDUAN HAK BELAJAR */}
+        <ScrollRevealOnce delayMs={160} className="mt-14 sm:mt-20 pt-10 border-t border-[#C9DFDC]">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="max-w-xl">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#2E6496]">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#2E6496]">
                 Panduan Hak Belajar &amp; Regulasi
               </span>
               <h3 className="text-base sm:text-lg font-bold text-[#1E293B] mt-1">

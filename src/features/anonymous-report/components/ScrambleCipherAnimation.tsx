@@ -49,18 +49,13 @@ export const ScrambleToAsteriskCipher: React.FC<ScrambleToAsteriskCipherProps> =
   }, []);
 
   return (
-    <div className="w-full bg-[#FAF8F5] rounded-xl p-3 border border-[#E4E0D8] text-left space-y-2">
-      <div className="flex items-center justify-between text-[11px] text-[#475569]">
-        <span className="flex items-center gap-1.5 font-medium">
-          <Lock className="w-3.5 h-3.5 text-[#2E6496]" />
-          <span>Pengiriman Terlindungi</span>
-        </span>
-        <span className="text-[#475569] font-medium text-[11px]">
-          {progressLabel}
-        </span>
+    <div className="w-full text-center space-y-1.5 pt-1">
+      <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-[#2E6496]">
+        <Lock className="w-3.5 h-3.5" />
+        <span>{progressLabel}</span>
       </div>
 
-      <div className="py-2 px-3 rounded-lg bg-[#F1EFEA] text-xs font-mono font-bold tracking-widest text-[#1E293B] text-center select-none border border-[#E4E0D8]">
+      <div className="text-xs sm:text-sm font-mono font-bold tracking-widest text-[#1E293B] select-none py-1">
         {displayText}
       </div>
     </div>

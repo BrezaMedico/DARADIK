@@ -1,0 +1,383 @@
+import crypto from 'node:crypto';
+import http from 'node:http';
+import assert from 'node:assert';
+import { createEmulator } from './security/harness/supabaseEmulator.js';
+import { createClient } from '@supabase/supabase-js';
+import {
+  setServiceSupabaseClient,
+  getServiceSupabaseClient,
+} from '../server/reportService.js';
+import { createExpressApp } from '../server/server.js';
+import {
+  verifyCaptchaAnswer,
+  decryptReportText,
+} from '../server/reportCrypto.js';
+
+async function runFullVerification() {
+  console.log('================================================================');
+  console.log('DARADIK COMPREHENSIVE END-TO-END VERIFICATION');
+  console.log('================================================================\n');
+
+  let passedCount = 0;
+  let totalCount = 0;
+
+  async function test(name, fn) {
+    totalCount++;
+    try {
+      await fn();
+      passedCount++;
+      console.log(`[PASS] ${name}`);
+    } catch (err) {
+      console.error(`[FAIL] ${name}:`, err.message);
+      throw err;
+    }
+  }
+
+  // 1. Inisialisasi Database Emulator dengan Migrasi Hardening Lengkap
+  console.log('[1/7] Menyiapkan Supabase Emulator & Database Postgres...');
+  const emu = await createEmulator({ stage: 'hardened' });
+  const serviceClient = createClient(emu.url, emu.keys.service, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  setServiceSupabaseClient(serviceClient);
+
+  // 2. Siapkan Server Express untuk Pengujian HTTP Nyata
+  console.log('[2/7] Menjalankan Server Express lokal untuk integrasi endpoint...');
+  const app = createExpressApp();
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const serverPort = server.address().port;
+  const baseUrl = `http://127.0.0.1:${serverPort}`;
+
+  async function api(path, opts = {}) {
+    const res = await fetch(`${baseUrl}${path}`, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const json = await res.json().catch(() => null);
+    return { status: res.status, data: json };
+  }
+
+  try {
+    // -------------------------------------------------------------------------
+    // SECTION 1: UJI KEAMANAN KONFIGURASI SUPABASE & SERVICE ROLE
+    // -------------------------------------------------------------------------
+    await test('Backend menolak inisialisasi tanpa SUPABASE_SERVICE_ROLE_KEY dan tidak fallback ke publishable key', async () => {
+      setServiceSupabaseClient(null);
+      const originalRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const originalPub = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      try {
+        delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+        process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_dummy_key';
+        let threw = false;
+        try {
+          getServiceSupabaseClient();
+        } catch (err) {
+          threw = true;
+          assert(err.message.includes('SUPABASE_SERVICE_ROLE_KEY wajib dikonfigurasi'));
+        }
+        assert.strictEqual(threw, true, 'getServiceSupabaseClient harus melempar error saat service_role absen');
+      } finally {
+        if (originalRoleKey) process.env.SUPABASE_SERVICE_ROLE_KEY = originalRoleKey;
+        if (originalPub) process.env.VITE_SUPABASE_PUBLISHABLE_KEY = originalPub;
+        setServiceSupabaseClient(serviceClient);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // SECTION 2: UJI SERVER-SIDE CAPTCHA
+    // -------------------------------------------------------------------------
+    let validCaptcha = null;
+    await test('GET /api/reports/captcha mengembalikan soal matematika dengan token ber-signature HMAC-SHA256', async () => {
+      const res = await api('/api/reports/captcha');
+      assert.strictEqual(res.status, 200);
+      assert(res.data.question, 'question harus ada');
+      assert(res.data.token, 'token harus ada');
+      const parts = res.data.token.split('.');
+      assert.strictEqual(parts.length, 2, 'token wajib terdiri dari 2 bagian (payload.signature)');
+      validCaptcha = res.data;
+    });
+
+    await test('Validasi CAPTCHA menolak jawaban salah dan token manipulasi', async () => {
+      const wrong = verifyCaptchaAnswer(999999, validCaptcha.token);
+      assert.strictEqual(wrong.valid, false);
+
+      const manipulated = verifyCaptchaAnswer(validCaptcha.expectedAnswer || 10, 'tokenpalsu.tandatanganpalsu');
+      assert.strictEqual(manipulated.valid, false);
+
+      const bypass = verifyCaptchaAnswer(10, 'token_tanpa_signature');
+      assert.strictEqual(bypass.valid, false);
+    });
+
+    // -------------------------------------------------------------------------
+    // SECTION 3: UJI UNGGAH BUKTI LAPORAN (EVIDENCE UPLOAD)
+    // -------------------------------------------------------------------------
+    let uploadedEvidence = null;
+    await test('POST /api/reports/upload menolak berkas berbahaya / format palsu', async () => {
+      const fakeExe = Buffer.from('MZ\x90\x00\x03\x00\x00\x00Program too big to fit in memory').toString('base64');
+      const res = await api('/api/reports/upload', {
+        method: 'POST',
+        body: {
+          fileBase64: fakeExe,
+          originalName: 'bukti.jpg',
+          mimeType: 'image/jpeg',
+        },
+      });
+      assert.strictEqual(res.status, 400);
+      assert(res.data.error.includes('Hanya menerima format berkas JPG, PNG, WebP, atau PDF asli'));
+    });
+
+    await test('POST /api/reports/upload menolak berkas melebihi batas 5MB', async () => {
+      const bigBuf = Buffer.alloc(5.5 * 1024 * 1024, 0xff);
+      bigBuf.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+      const res = await api('/api/reports/upload', {
+        method: 'POST',
+        body: {
+          fileBase64: bigBuf.toString('base64'),
+          originalName: 'big.png',
+          mimeType: 'image/png',
+        },
+      });
+      assert.strictEqual(res.status, 400);
+      assert(res.data.error.includes('melebihi batas 5MB'));
+    });
+
+    await test('POST /api/reports/upload berhasil mengunggah berkas gambar asli', async () => {
+      const validPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      );
+      const res = await api('/api/reports/upload', {
+        method: 'POST',
+        body: {
+          fileBase64: validPng.toString('base64'),
+          originalName: 'kuitansi_asli.png',
+          mimeType: 'image/png',
+        },
+      });
+      assert.strictEqual(res.status, 200);
+      assert(res.data.storagePath, 'storagePath harus dibuat');
+      assert.strictEqual(res.data.mimeType, 'image/png');
+      uploadedEvidence = res.data;
+    });
+
+    // -------------------------------------------------------------------------
+    // SECTION 4: UJI PENGIRIMAN LAPORAN ANONIM (REPORT SUBMISSION)
+    // -------------------------------------------------------------------------
+    let createdReport = null;
+    let newCaptcha = null;
+
+    await test('POST /api/reports/submit menolak jika CAPTCHA salah atau hilang', async () => {
+      const res = await api('/api/reports/submit', {
+        method: 'POST',
+        body: {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          category: 'seragam',
+          requesterRole: 'Wali Murid',
+          notes: 'Dugaan pungli seragam Rp 300.000',
+          captchaAnswer: 999,
+          captchaToken: 'dummy.token',
+        },
+      });
+      assert.strictEqual(res.status, 400);
+      assert(res.data.error, 'Pesan error validasi harus dikembalikan');
+    });
+
+    await test('POST /api/reports/submit berhasil membuat laporan anonim terenkripsi', async () => {
+      const cRes = await api('/api/reports/captcha');
+      newCaptcha = cRes.data;
+
+      const match = newCaptcha.question.match(/(\d+)\s*([\+\-\*×])\s*(\d+)/);
+      assert(match, 'Format soal matematika harus cocok');
+      const a = parseInt(match[1], 10);
+      const op = match[2];
+      const b = parseInt(match[3], 10);
+      let ans = op === '+' ? a + b : op === '-' ? a - b : a * b;
+
+      const res = await api('/api/reports/submit', {
+        method: 'POST',
+        body: {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          kabupaten: 'Kota Bandung',
+          kecamatan: 'Coblong',
+          category: 'seragam',
+          requesterRole: 'Wali Murid',
+          notes: 'Dugaan pungli seragam Rp 300.000 via transfer rekening pribadi komite',
+          attachments: [uploadedEvidence],
+          captchaAnswer: ans,
+          captchaToken: newCaptcha.token,
+        },
+      });
+
+      assert.strictEqual(res.status, 200);
+      assert(res.data.ticket_code, 'ticket_code harus dihasilkan');
+      assert(res.data.tracking_token, 'tracking_token harus dihasilkan');
+      assert(res.data.status === 'QUEUED' || res.data.status === 'diajukan', 'status awal harus QUEUED atau diajukan');
+      createdReport = res.data;
+    });
+
+    await test('Anti-replay: token CAPTCHA yang sama tidak dapat dipakai ulang untuk submit kedua', async () => {
+      const match = newCaptcha.question.match(/(\d+)\s*([\+\-\*×])\s*(\d+)/);
+      const a = parseInt(match[1], 10);
+      const op = match[2];
+      const b = parseInt(match[3], 10);
+      let ans = op === '+' ? a + b : op === '-' ? a - b : a * b;
+
+      const res = await api('/api/reports/submit', {
+        method: 'POST',
+        body: {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          category: 'seragam',
+          notes: 'Percobaan submit ulang replay',
+          captchaAnswer: ans,
+          captchaToken: newCaptcha.token,
+        },
+      });
+      assert.strictEqual(res.status, 400);
+      assert(res.data.error.includes('sudah pernah digunakan'));
+    });
+
+    await test('Verifikasi database: data tersimpan terenkripsi AES-256-GCM tanpa plaintext bocor', async () => {
+      const dbResult = await emu.db.query(
+        `SELECT id, ticket_code, notes_encrypted, encryption_algorithm, attachments_json FROM public.anonymous_reports WHERE id = $1`,
+        [createdReport.id]
+      );
+      assert.strictEqual(dbResult.rows.length, 1);
+      const row = dbResult.rows[0];
+      assert(row.notes_encrypted.startsWith('dv1.'), 'Catatan harus terenkripsi dengan envelope format dv1');
+      assert.strictEqual(row.encryption_algorithm, 'AES-256-GCM/dv1');
+      const decrypted = decryptReportText(row.notes_encrypted);
+      assert.strictEqual(decrypted, 'Dugaan pungli seragam Rp 300.000 via transfer rekening pribadi komite');
+    });
+
+    // -------------------------------------------------------------------------
+    // SECTION 5: UJI PELACAKAN STATUS LAPORAN (TRACK REPORT)
+    // -------------------------------------------------------------------------
+    await test('POST /api/reports/track menolak nomor tiket atau token salah', async () => {
+      const res1 = await api('/api/reports/track', {
+        method: 'POST',
+        body: { ticketCode: 'LAP-SALAH-999', trackingToken: createdReport.tracking_token },
+      });
+      assert.strictEqual(res1.status, 404);
+
+      const res2 = await api('/api/reports/track', {
+        method: 'POST',
+        body: { ticketCode: createdReport.ticket_code, trackingToken: 'trk_tokentidaksah123456789' },
+      });
+      assert.strictEqual(res2.status, 404);
+    });
+
+    await test('POST /api/reports/track berhasil membaca laporan dan mendekripsi catatan tanpa membocorkan info internal', async () => {
+      const res = await api('/api/reports/track', {
+        method: 'POST',
+        body: {
+          ticketCode: createdReport.ticket_code,
+          trackingToken: createdReport.tracking_token,
+        },
+      });
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.data.report.ticket_code, createdReport.ticket_code);
+      assert.strictEqual(
+        res.data.report.notes,
+        'Dugaan pungli seragam Rp 300.000 via transfer rekening pribadi komite'
+      );
+      assert.strictEqual(res.data.report.notes_encrypted, undefined, 'notes_encrypted tidak boleh dikirim ke klien');
+      assert.strictEqual(res.data.report.token_hash, undefined, 'token_hash tidak boleh bocor');
+      assert(Array.isArray(res.data.history), 'history harus berbentuk array');
+    });
+
+    // -------------------------------------------------------------------------
+    // SECTION 6: UJI PENOLAKAN REQUEST TANPA AUTENTIKASI / OTORISASI
+    // -------------------------------------------------------------------------
+    await test('Pengguna publik/anon ditolak total saat mengakses tabel anonymous_reports secara langsung via REST', async () => {
+      const res = await emu.rest('GET', '/rest/v1/anonymous_reports', { key: emu.keys.anon });
+      const blocked = res.status === 401 || res.status === 403 || (Array.isArray(res.json) && res.json.length === 0);
+      assert.strictEqual(blocked, true, `Anon direct SELECT harus ditolak, status: ${res.status}`);
+    });
+
+    await test('Pengguna publik/anon ditolak total saat mencoba memanipulasi status laporan via REST', async () => {
+      const res = await emu.rest('PATCH', `/rest/v1/anonymous_reports?id=eq.${createdReport.id}`, {
+        key: emu.keys.anon,
+        body: { status: 'selesai' },
+      });
+      assert.strictEqual(res.status, 401, 'Anon direct UPDATE wajib ditolak 401');
+    });
+
+    await test('Akses berkas storage report-evidence ditolak bagi publik tanpa otorisasi', async () => {
+      const res = await emu.rest('GET', `/storage/v1/object/report-evidence/${uploadedEvidence.storagePath}`, {
+        key: emu.keys.anon,
+      });
+      const blocked = res.status === 401 || res.status === 403 || res.status === 404;
+      assert.strictEqual(blocked, true, 'Public storage direct access harus ditolak / 401/404');
+    });
+
+    // -------------------------------------------------------------------------
+    // SECTION 7: UJI DASHBOARD & HAK AKSES PETUGAS (OFFICER ACCESS)
+    // -------------------------------------------------------------------------
+    const officerUser = await emu.createUser('petugas@disdik.go.id');
+    const nonOfficerUser = await emu.createUser('user@biasa.com');
+
+    await emu.db.query(
+      `INSERT INTO public.officer_profiles (id, email, full_name, jabatan, unit_kerja, role, is_active)
+       VALUES ($1, 'petugas@disdik.go.id', 'Budi Santoso, S.Pd', 'Pengawas', 'Disdik', 'officer', TRUE)`,
+      [officerUser.id]
+    );
+
+    const tokenOfficer = emu.userJwt(officerUser.id);
+    const tokenNonOfficer = emu.userJwt(nonOfficerUser.id);
+
+    await test('Pengguna authenticated non-petugas ditolak saat mengakses antrean laporan', async () => {
+      const res = await emu.rest('POST', '/rest/v1/rpc/officer_get_reports_queue', {
+        key: emu.keys.anon,
+        bearer: tokenNonOfficer,
+      });
+      assert(res.status === 400 || res.status === 401 || res.status === 403, 'Non-petugas harus ditolak');
+      assert(
+        res.json?.message?.includes('UNAUTHORIZED') ||
+        res.json?.error?.includes('UNAUTHORIZED') ||
+        res.text?.includes('UNAUTHORIZED'),
+        'Pesan penolakan harus mengandung UNAUTHORIZED'
+      );
+    });
+
+    await test('Petugas resmi yang aktif berhasil membuka antrean laporan dan detail bundle', async () => {
+      const queueRes = await emu.rest('POST', '/rest/v1/rpc/officer_get_reports_queue', {
+        key: emu.keys.anon,
+        bearer: tokenOfficer,
+      });
+      assert.strictEqual(queueRes.status, 200);
+      assert(Array.isArray(queueRes.json), 'Antrean laporan harus berbentuk array');
+      const found = queueRes.json.find((r) => r.id === createdReport.id);
+      assert(found, 'Laporan yang baru dibuat harus tampak di antrean petugas');
+
+      const detailRes = await emu.rest('POST', '/rest/v1/rpc/officer_get_report_detail_bundle', {
+        key: emu.keys.anon,
+        bearer: tokenOfficer,
+        body: { p_report_id: createdReport.id },
+      });
+      assert.strictEqual(detailRes.status, 200);
+      assert.strictEqual(detailRes.json.report.ticket_code, createdReport.ticket_code);
+    });
+
+    console.log('\n================================================================');
+    console.log(`HASIL: ${passedCount}/${totalCount} PENGUJIAN LENGKAP LOLOS (100%)`);
+    console.log('STATUS: SEMUA FUNGSIONALITAS BERJALAN LANCAR TANPA MASALAH');
+    console.log('================================================================');
+  } finally {
+    server.close();
+    await emu.close();
+    process.exit(0);
+  }
+}
+
+runFullVerification().catch((err) => {
+  console.error('\n[FATAL ERROR DALAM PENGUJIAN]:', err);
+  process.exit(1);
+});

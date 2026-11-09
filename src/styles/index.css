@@ -31,7 +31,7 @@
 @layer base {
   html,
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   html {
@@ -474,6 +474,64 @@
 }
 
 /* =====================================================================
+   CARD GLOSSY GLASS SHEEN SWEEP (Top-Left to Bottom-Right on Hover)
+   ===================================================================== */
+.daradik-card-glass-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.daradik-card-glass-sweep::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -80%;
+  width: 260%;
+  height: 220%;
+  background: linear-gradient(
+    118deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.15) 42%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.15) 58%,
+    transparent 65%,
+    transparent 100%
+  );
+  transform: translate3d(-90%, -90%, 0) rotate(18deg);
+  pointer-events: none;
+  z-index: 25;
+  opacity: 0;
+}
+
+.daradik-card-glass-sweep:hover::after {
+  animation: daradikGlassSheenSweep 1700ms cubic-bezier(0.25, 1, 0.4, 1) forwards;
+}
+
+@keyframes daradikGlassSheenSweep {
+  0% {
+    opacity: 0;
+    transform: translate3d(-90%, -90%, 0) rotate(18deg);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(90%, 90%, 0) rotate(18deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daradik-card-glass-sweep::after {
+    display: none !important;
+  }
+}
+
+/* =====================================================================
    DIRECTED ENTRANCE ANIMATIONS FOR SCHOOL PAGE (220ms–450ms, smooth easing)
    ===================================================================== */
 @keyframes schoolEnterUp {
@@ -584,6 +642,211 @@
   pointer-events: auto;
 }
 
+/* =====================================================================
+   REPORT SUBMISSION SUCCESS: ANIMATED CHECKMARK DRAWN FROM CORNER TO CORNER
+   ===================================================================== */
+.daradik-success-circle-svg {
+  overflow: visible;
+}
+
+.daradik-success-circle-bg {
+  transform-origin: center;
+  animation: successCirclePop 380ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.daradik-success-circle-ring {
+  transform-origin: center;
+  stroke-dasharray: 202;
+  stroke-dashoffset: 202;
+  animation:
+    successCirclePop 380ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both,
+    successRingDraw 450ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.daradik-success-check-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: successCheckDraw 550ms cubic-bezier(0.2, 0.9, 0.3, 1) 220ms both;
+}
+
+.daradik-success-text-enter {
+  animation: successTextReveal 420ms cubic-bezier(0.16, 1, 0.3, 1) 280ms both;
+}
+
+@keyframes successCirclePop {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes successRingDraw {
+  0% {
+    stroke-dashoffset: 202;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes successCheckDraw {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes successTextReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daradik-success-circle-bg,
+  .daradik-success-circle-ring,
+  .daradik-success-check-path,
+  .daradik-success-text-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+/* =====================================================================
+   CARD STAGGERED SLIDE UP FROM BOTTOM (Muncul dari Bawah Bergantian)
+   ===================================================================== */
+@keyframes cardSlideUpFromBottom {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 56px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.scroll-reveal-slide-up.scroll-reveal-hidden {
+  opacity: 0 !important;
+  transform: translate3d(0, 56px, 0) !important;
+  filter: none !important;
+  pointer-events: none;
+}
+
+.scroll-reveal-slide-up.scroll-reveal-visible {
+  animation-name: cardSlideUpFromBottom !important;
+  animation-duration: 750ms !important;
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+  animation-fill-mode: both !important;
+  pointer-events: auto;
+}
+
+/* Delay bertahap berurutan: 1 (Kiri Atas) -> 2 (Kanan Atas) -> 3 (Kiri Bawah) -> 4 (Kanan Bawah) */
+.card-stagger-1.scroll-reveal-visible {
+  animation-delay: 0ms !important;
+}
+
+.card-stagger-2.scroll-reveal-visible {
+  animation-delay: 380ms !important;
+}
+
+.card-stagger-3.scroll-reveal-visible {
+  animation-delay: 760ms !important;
+}
+
+.card-stagger-4.scroll-reveal-visible {
+  animation-delay: 1140ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal-slide-up.scroll-reveal-visible,
+  .card-stagger-1.scroll-reveal-visible,
+  .card-stagger-2.scroll-reveal-visible,
+  .card-stagger-3.scroll-reveal-visible,
+  .card-stagger-4.scroll-reveal-visible {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* =====================================================================
+   MOBILE STACKING CARDS (Efek Tumpukan Terasering Khusus HP)
+   ===================================================================== */
+@media (max-width: 639px) {
+  .mobile-card-stack-container {
+    display: block !important;
+  }
+
+  .mobile-card-stack-item {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    margin-bottom: 2.25rem !important; /* Jarak scroll antar kartu sebelum menimpa */
+  }
+
+  .mobile-card-stack-item:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .mobile-card-stack-1 {
+    top: calc(50vh - 140px) !important;
+    top: calc(50dvh - 140px) !important;
+    z-index: 10 !important;
+  }
+
+  .mobile-card-stack-2 {
+    top: calc(50vh - 110px) !important;
+    top: calc(50dvh - 110px) !important;
+    z-index: 20 !important;
+  }
+
+  .mobile-card-stack-3 {
+    top: calc(50vh - 80px) !important;
+    top: calc(50dvh - 80px) !important;
+    z-index: 30 !important;
+  }
+
+  .mobile-card-stack-4 {
+    top: calc(50vh - 50px) !important;
+    top: calc(50dvh - 50px) !important;
+    z-index: 40 !important;
+  }
+
+  .mobile-card-stack-item > div {
+    background: #FFFFFF !important;
+    background: linear-gradient(135deg, #F4F9FC 0%, #FFFFFF 50%, #EAF3F8 100%) !important;
+    box-shadow:
+      0 -4px 18px -2px rgba(46, 100, 150, 0.16),
+      0 12px 24px -4px rgba(30, 41, 59, 0.12) !important;
+  }
+
+  /* Di HP kartu langsung terlihat tanpa transform agar sticky tidak terkunci */
+  .scroll-reveal-slide-up.scroll-reveal-hidden,
+  .scroll-reveal-slide-up.scroll-reveal-visible {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+}
+
 /* 3D Parallax Tilt for Phone */
 .parallax-phone-container {
   perspective: 1000px;
@@ -624,8 +887,8 @@
   }
   100% {
     opacity: 1;
-    transform: perspective(750px) rotateX(0deg) scale(1) translate3d(0, 0, 0);
-    filter: blur(0px);
+    transform: none;
+    filter: none;
   }
 }
 
@@ -636,20 +899,18 @@
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: none;
   }
 }
 
 .animate-view-enter {
   animation: concavePageEnter 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: 50% 12%;
-  will-change: transform, opacity;
 }
 
 @media (max-width: 639px) {
   .animate-view-enter {
     animation: mobilePageEnter 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    will-change: transform, opacity;
   }
 }
 

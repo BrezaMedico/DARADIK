@@ -18,6 +18,40 @@ import {
   handleReplyReport,
 } from './reportService.js';
 
+export async function handleScanVision(body) {
+  try {
+    const { imageBase64, mimeType = 'image/jpeg' } = body || {};
+    if (!imageBase64) {
+      return { status: 400, payload: { error: 'Gambar tidak ditemukan.' } };
+    }
+    const aiClient = getAiClient();
+    if (!aiClient) {
+      return { status: 503, payload: { error: 'AI Client tidak tersedia.' } };
+    }
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9-+.]+;base64,/, '');
+    const response = await aiClient.models.generateContent({
+      model: GEMINI_MODEL || 'gemini-3.5-flash-lite',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { inlineData: { mimeType: mimeType, data: cleanBase64 } },
+            {
+              text:
+                'Transkripsikan seluruh isi teks dalam gambar screenshot percakapan atau pengumuman WhatsApp ini secara lengkap dan persis kata demi kata tanpa ada yang terlewat, termasuk pengumuman nominal uang, nama kegiatan/barang, tanggal batas waktu, dan pihak yang memungut/bendahara.',
+            },
+          ],
+        },
+      ],
+    });
+    const transcribedText = response?.text || '';
+    return { status: 200, payload: { text: transcribedText } };
+  } catch (err) {
+    console.warn('[Vision API] Error:', err?.message || err);
+    return { status: 500, payload: { error: 'Gagal memproses Vision AI.' } };
+  }
+}
+
 export {
   anonymizeClientIp,
   sanitizeUserInput,
@@ -77,7 +111,7 @@ export function createExpressApp() {
     })
   );
 
-  app.use('/api/scan-vision', express.json({ limit: '10mb' }));
+  app.use(['/api/scan-vision', '/api/scanner/vision'], express.json({ limit: '10mb' }));
   app.use('/api/reports/upload', express.json({ limit: '10mb' }));
   app.use(express.json({ limit: '256kb' }));
 
@@ -97,38 +131,9 @@ export function createExpressApp() {
     return anonymizeClientIp(raw);
   };
 
-  app.post('/api/scan-vision', async (req, res) => {
-    try {
-      const { imageBase64, mimeType = 'image/jpeg' } = req.body || {};
-      if (!imageBase64) {
-        return res.status(400).json({ error: 'Gambar tidak ditemukan.' });
-      }
-      const aiClient = getAiClient();
-      if (!aiClient) {
-        return res.status(503).json({ error: 'AI Client tidak tersedia.' });
-      }
-      const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9-+.]+;base64,/, '');
-      const response = await aiClient.models.generateContent({
-        model: GEMINI_MODEL || 'gemini-3.5-flash-lite',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { inlineData: { mimeType: mimeType, data: cleanBase64 } },
-              {
-                text:
-                  'Transkripsikan seluruh isi teks dalam gambar screenshot percakapan atau pengumuman WhatsApp ini secara lengkap dan persis kata demi kata tanpa ada yang terlewat, termasuk pengumuman nominal uang, nama kegiatan/barang, tanggal batas waktu, dan pihak yang memungut/bendahara.',
-              },
-            ],
-          },
-        ],
-      });
-      const transcribedText = response?.text || '';
-      return res.status(200).json({ text: transcribedText });
-    } catch (err) {
-      console.warn('[Vision API] Error:', err?.message || err);
-      return res.status(500).json({ error: 'Gagal memproses Vision AI.' });
-    }
+  app.post(['/api/scan-vision', '/api/scanner/vision'], async (req, res) => {
+    const result = await handleScanVision(req.body);
+    res.status(result.status).json(result.payload);
   });
 
   app.post('/api/chat', async (req, res) => {

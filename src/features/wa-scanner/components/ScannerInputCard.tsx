@@ -5,10 +5,9 @@ import {
   FileText,
   Send,
   ShieldCheck,
-  Sparkles,
   Upload,
 } from 'lucide-react';
-import { WA_SAMPLE_SCENARIOS, type WaSampleScenario } from '../sampleScenarios';
+import type { WaSampleScenario } from '../sampleScenarios';
 
 interface ScannerInputCardProps {
   inputMode: 'upload' | 'text';
@@ -19,8 +18,8 @@ interface ScannerInputCardProps {
   onPastedTextChange: (text: string) => void;
   onPasteFromClipboard: () => void;
   onAnalyzeDirectText: () => void;
-  onLoadSampleImage: (scenario: WaSampleScenario) => void;
-  onLoadSampleText: (text: string) => void;
+  onLoadSampleImage?: (scenario: WaSampleScenario) => void;
+  onLoadSampleText?: (text: string) => void;
 }
 
 export const ScannerInputCard: React.FC<ScannerInputCardProps> = ({
@@ -32,8 +31,6 @@ export const ScannerInputCard: React.FC<ScannerInputCardProps> = ({
   onPastedTextChange,
   onPasteFromClipboard,
   onAnalyzeDirectText,
-  onLoadSampleImage,
-  onLoadSampleText,
 }) => {
   return (
     <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-4 sm:p-8 shadow-xs space-y-5 sm:space-y-6 max-w-2xl mx-auto">
@@ -111,26 +108,6 @@ export const ScannerInputCard: React.FC<ScannerInputCardProps> = ({
               </button>
             </div>
           </div>
-
-          <div className="rounded-xl bg-[#FAF8F5] border border-[#C9DFDC] p-3.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#475569]">
-              <Sparkles className="w-3.5 h-3.5 text-[#2E6496]" />
-              <span>Coba Langsung Contoh Screenshot:</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {WA_SAMPLE_SCENARIOS.map((scen) => (
-                <button
-                  key={scen.id}
-                  type="button"
-                  onClick={() => onLoadSampleImage(scen)}
-                  className="px-2.5 py-1.5 rounded-lg bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-left text-[11px] font-semibold text-[#1E293B] hover:text-[#2E6496] transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${scen.category === 'sukarela_sah' ? 'bg-[#0F766E]' : 'bg-[#DC2626]'}`} />
-                  <span>{scen.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
@@ -155,25 +132,6 @@ export const ScannerInputCard: React.FC<ScannerInputCardProps> = ({
             placeholder="Tempelkan pesan atau pengumuman iuran dari grup chat di sini untuk memeriksa keselarasan dengan data BOSP..."
             className="w-full p-3.5 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] text-xs sm:text-sm text-[#1E293B] placeholder-[#94A3B8] focus:outline-none focus:border-[#2E6496] leading-relaxed resize-none"
           />
-
-          <div className="space-y-1.5 pt-0.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B]">
-              <Sparkles className="w-3.5 h-3.5 text-[#2E6496]" />
-              <span>Contoh Pesan Cepat:</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {WA_SAMPLE_SCENARIOS.map((scen) => (
-                <button
-                  key={scen.id}
-                  type="button"
-                  onClick={() => onLoadSampleText(scen.sampleText)}
-                  className="px-2.5 py-1 rounded-md bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-[11px] font-medium text-[#475569] hover:text-[#2E6496] transition-colors cursor-pointer"
-                >
-                  {scen.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="flex items-center justify-end pt-1">
             <button

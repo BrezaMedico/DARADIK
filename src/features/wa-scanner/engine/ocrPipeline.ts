@@ -447,8 +447,10 @@ export async function runAdvancedWaOcrPipeline(
       passesExecuted.push(variant.name);
 
       // If the primary natural pass succeeded with high confidence and sufficient text,
-      // skip destructive morphological passes that degrade anti-aliased digital fonts.
-      if (vIdx === 0 && parsedLines.length >= 6) {
+      // skip destructive morphological passes that degrade anti-aliased digital fonts,
+      // UNLESS dark regions exist which require Dark-Polarity-Inverted pass for white text in dark bubbles.
+      const hasDarkPassPending = variants.some((v, idx) => idx > vIdx && v.name.includes('Dark-Polarity'));
+      if (!hasDarkPassPending && vIdx === 0 && parsedLines.length >= 6) {
         const avgPassConf =
           parsedLines.reduce((acc, l) => acc + l.confidence, 0) / parsedLines.length;
         if (avgPassConf >= 68) {

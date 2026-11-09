@@ -75,19 +75,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   return (
-    <div className="w-full animate-view-enter overflow-x-hidden">
+    <div className="w-full animate-view-enter overflow-x-clip">
       <section
         ref={heroSectionRef}
         onMouseMove={handleHeroMouseMove}
         onMouseLeave={handleHeroMouseLeave}
-        className="relative w-full min-h-0 sm:min-h-[100vh] lg:min-h-[100vh] daradik-hero-blue-gradient flex flex-col justify-center pt-24 sm:pt-32 pb-20 sm:pb-28 lg:pt-16 lg:pb-12 overflow-hidden"
+        className="relative w-full min-h-0 sm:min-h-[100vh] lg:min-h-[100vh] daradik-hero-blue-gradient flex flex-col justify-center pt-16 sm:pt-32 pb-14 sm:pb-28 lg:pt-16 lg:pb-12 overflow-hidden"
       >
         <HeroAmbientBackground mousePos={mousePos} />
 
-        <div className="relative lg:translate-y-0 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-auto pt-6 sm:pt-8 pb-16 sm:pb-20 lg:pt-8 lg:pb-12">
+        <div className="relative lg:translate-y-0 max-w-6xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 my-0 lg:my-auto pt-1 sm:pt-8 pb-10 sm:pb-20 lg:pt-8 lg:pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* Negative bottom margin on mobile lets the headline overlap the lower half of the 3D phone. */}
-            <div className="order-first lg:order-last lg:col-span-5 flex items-center justify-center lg:justify-end mt-1 sm:mt-2 lg:mt-0 lg:translate-x-2 xl:translate-x-4">
+            <div className="order-first lg:order-last lg:col-span-5 flex items-center justify-center lg:justify-end -mt-3 sm:mt-2 lg:mt-0 lg:translate-x-2 xl:translate-x-4">
               <div className="relative w-full max-w-[270px] sm:max-w-[310px] lg:max-w-[340px] xl:max-w-[360px] mx-auto lg:mr-0 flex items-center justify-center -mb-[85px] sm:-mb-[105px] lg:mb-0 lg:mt-0 z-10">
                 <div
                   className="absolute inset-x-[8%] top-[18%] bottom-[12%] rounded-full bg-[radial-gradient(closest-side,rgba(201,223,220,0.38),rgba(102,163,191,0.12)_60%,transparent)] blur-2xl pointer-events-none"
