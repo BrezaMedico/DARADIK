@@ -12,6 +12,16 @@ services:
         value: gemini-3.5-flash-lite
       - key: GEMINI_API_KEY
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: REPORT_ENCRYPTION_KEY
+        sync: false
+      - key: REPORT_ENCRYPTION_ACTIVE_KEY_ID
+        value: k1
+      - key: CAPTCHA_SECRET
+        sync: false
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_PUBLISHABLE_KEY

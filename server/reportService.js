@@ -24,17 +24,16 @@ export function getServiceSupabaseClient(overrideClient = null) {
   if (overrideClient) return overrideClient;
   if (defaultSupabaseClient) return defaultSupabaseClient;
 
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
-  if (!url || !key) {
-    return null;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      'Konfigurasi Supabase server belum lengkap: SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib dikonfigurasi.'
+    );
   }
 
-  defaultSupabaseClient = createClient(url, key, {
+  defaultSupabaseClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return defaultSupabaseClient;
@@ -107,7 +106,15 @@ export async function handleGetCaptcha() {
 }
 
 export async function handleUploadEvidence(body, maskedIp, customClient = null) {
-  const supabase = getServiceSupabaseClient(customClient);
+  let supabase;
+  try {
+    supabase = getServiceSupabaseClient(customClient);
+  } catch (err) {
+    return {
+      status: 500,
+      payload: { error: err.message || 'Layanan penyimpanan berkas belum terkonfigurasi.' },
+    };
+  }
   if (!supabase) {
     return { status: 500, payload: { error: 'Layanan penyimpanan berkas belum terkonfigurasi.' } };
   }
@@ -183,7 +190,15 @@ export async function handleUploadEvidence(body, maskedIp, customClient = null) 
 }
 
 export async function handleSubmitReport(body, maskedIp, customClient = null) {
-  const supabase = getServiceSupabaseClient(customClient);
+  let supabase;
+  try {
+    supabase = getServiceSupabaseClient(customClient);
+  } catch (err) {
+    return {
+      status: 500,
+      payload: { error: err.message || 'Layanan database pengaduan belum terkonfigurasi.' },
+    };
+  }
   if (!supabase) {
     return { status: 500, payload: { error: 'Layanan database pengaduan belum terkonfigurasi.' } };
   }
@@ -355,7 +370,15 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
 }
 
 export async function handleTrackReport(body, maskedIp, customClient = null) {
-  const supabase = getServiceSupabaseClient(customClient);
+  let supabase;
+  try {
+    supabase = getServiceSupabaseClient(customClient);
+  } catch (err) {
+    return {
+      status: 500,
+      payload: { error: err.message || 'Layanan database pengaduan belum terkonfigurasi.' },
+    };
+  }
   if (!supabase) {
     return { status: 500, payload: { error: 'Layanan database pengaduan belum terkonfigurasi.' } };
   }
@@ -496,7 +519,15 @@ export async function handleTrackReport(body, maskedIp, customClient = null) {
 }
 
 export async function handleReplyReport(body, maskedIp, customClient = null) {
-  const supabase = getServiceSupabaseClient(customClient);
+  let supabase;
+  try {
+    supabase = getServiceSupabaseClient(customClient);
+  } catch (err) {
+    return {
+      status: 500,
+      payload: { error: err.message || 'Layanan database pengaduan belum terkonfigurasi.' },
+    };
+  }
   if (!supabase) {
     return { status: 500, payload: { error: 'Layanan database pengaduan belum terkonfigurasi.' } };
   }
