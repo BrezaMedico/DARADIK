@@ -1,35 +1,104 @@
 import crypto from 'node:crypto';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// Server-managed AES-256-GCM encryption for sensitive report fields.
-// The key NEVER leaves the server and is never transmitted to the browser or stored in git.
-const DEFAULT_FALLBACK_KEY = 'daradik_default_secure_aes256_vault_key_2026_dev_mode!';
+// Load environment variables strictly without relying on caller context
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ENV_FILE_PATH = path.resolve(__dirname, '..', '.env');
+dotenv.config({ path: ENV_FILE_PATH, override: false });
+dotenv.config({ override: false });
 
-function getReportMasterKey() {
-  const envKey = (process.env.REPORT_ENCRYPTION_KEY || '').trim();
-  if (envKey) {
-    if (envKey.length === 64 && /^[0-9a-fA-F]+$/.test(envKey)) {
-      return Buffer.from(envKey, 'hex');
-    }
-    return crypto.createHash('sha256').update(envKey).digest();
+/**
+ * Validasi ketat kunci enkripsi master AES-256-GCM.
+ * Menghapus seluruh fallback key default di source code.
+ * Kunci WAJIB didefinisikan di environment variable REPORT_ENCRYPTION_KEY
+ * dalam format Base64 (32 byte) atau Hex (64 karakter hexadecimal).
+ */
+export function parseEncryptionKey(rawKey, varName = 'REPORT_ENCRYPTION_KEY') {
+  if (!rawKey || typeof rawKey !== 'string') {
+    throw new Error(
+      `[SECURITY ERROR] ${varName} wajib dikonfigurasi melalui environment variables. Sistem menolak berjalan tanpa kunci enkripsi rahasia!`
+    );
   }
-  return crypto.createHash('sha256').update(DEFAULT_FALLBACK_KEY).digest();
+  const trimmed = rawKey.trim();
+  if (!trimmed) {
+    throw new Error(`[SECURITY ERROR] ${varName} tidak boleh kosong.`);
+  }
+
+  // Dukungan 64 hex characters (32 bytes)
+  if (trimmed.length === 64 && /^[0-9a-fA-F]+$/.test(trimmed)) {
+    return Buffer.from(trimmed, 'hex');
+  }
+
+  // Dukungan Base64 dari 32 bytes
+  const buf = Buffer.from(trimmed, 'base64');
+  if (buf.length === 32 && (buf.toString('base64') === trimmed || trimmed.replace(/=+$/, '') === buf.toString('base64').replace(/=+$/, ''))) {
+    return buf;
+  }
+
+  throw new Error(
+    `[SECURITY ERROR] ${varName} harus berupa 32 byte (Base64 atau 64 karakter Hex). Ditemukan panjang: ${buf.length} byte.`
+  );
 }
 
-const REPORT_KEY = getReportMasterKey();
+/**
+ * Vault Kunci dengan Dukungan Versioning & Rotasi Kunci
+ * Memungkinkan dekripsi laporan lama saat kunci dirotasi di masa depan.
+ */
+function initReportKeyVault() {
+  const activeKeyRaw = (process.env.REPORT_ENCRYPTION_KEY || '').trim();
+  const activeKeyId = (process.env.REPORT_ENCRYPTION_ACTIVE_KEY_ID || 'k1').trim();
+
+  const activeKeyBuffer = parseEncryptionKey(activeKeyRaw, 'REPORT_ENCRYPTION_KEY');
+  const keyMap = new Map();
+  keyMap.set(activeKeyId, activeKeyBuffer);
+
+  // Dukungan rotasi kunci tambahan via REPORT_ENCRYPTION_KEYS (JSON: {"k1":"...", "k2":"..."})
+  if (process.env.REPORT_ENCRYPTION_KEYS) {
+    try {
+      const parsed = JSON.parse(process.env.REPORT_ENCRYPTION_KEYS);
+      if (typeof parsed === 'object' && parsed !== null) {
+        for (const [kId, kVal] of Object.entries(parsed)) {
+          if (!keyMap.has(kId) && typeof kVal === 'string' && kVal.trim()) {
+            keyMap.set(kId, parseEncryptionKey(kVal, `REPORT_ENCRYPTION_KEYS[${kId}]`));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[SECURITY WARNING] Format JSON pada REPORT_ENCRYPTION_KEYS tidak valid:', e.message);
+    }
+  }
+
+  return { activeKeyId, activeKeyBuffer, keyMap };
+}
+
+const VAULT = initReportKeyVault();
 
 function getCaptchaSecret() {
   const envSecret = (process.env.CAPTCHA_SECRET || '').trim();
-  if (envSecret) return envSecret;
-  return crypto.createHash('sha256').update(REPORT_KEY).update('captcha_salt').digest('hex');
+  if (envSecret && envSecret.length >= 16) {
+    return envSecret;
+  }
+  if (!envSecret) {
+    throw new Error(
+      '[SECURITY ERROR] CAPTCHA_SECRET wajib dikonfigurasi melalui environment variables (minimal 16 karakter acak).'
+    );
+  }
+  throw new Error(
+    '[SECURITY ERROR] CAPTCHA_SECRET terlalu pendek. Gunakan minimal 16 karakter acak.'
+  );
 }
 
 const CAPTCHA_SECRET = getCaptchaSecret();
 
-export function encryptReportText(text, keyId = 'k1') {
+export function encryptReportText(text, keyId = VAULT.activeKeyId) {
   if (text === null || text === undefined) return null;
   const str = String(text);
+  const key = VAULT.keyMap.get(keyId) || VAULT.activeKeyBuffer;
   const nonce = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', REPORT_KEY, nonce);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
   const enc = Buffer.concat([cipher.update(str, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
 
@@ -50,7 +119,14 @@ export function decryptReportText(envelope) {
     throw new Error('Format envelope terenkripsi tidak valid');
   }
 
-  const [, , nonceB64u, ctB64u, tagB64u] = parts;
+  const [, keyId, nonceB64u, ctB64u, tagB64u] = parts;
+  const key = VAULT.keyMap.get(keyId);
+  if (!key) {
+    throw new Error(
+      `Kunci enkripsi versi "${keyId}" tidak ditemukan pada vault untuk mendekripsi laporan ini.`
+    );
+  }
+
   const nonce = Buffer.from(nonceB64u, 'base64url');
   const ct = Buffer.from(ctB64u, 'base64url');
   const tag = Buffer.from(tagB64u, 'base64url');
@@ -59,7 +135,7 @@ export function decryptReportText(envelope) {
     throw new Error('Parameter kriptografi envelope tidak valid');
   }
 
-  const decipher = crypto.createDecipheriv('aes-256-gcm', REPORT_KEY, nonce);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, nonce);
   decipher.setAuthTag(tag);
   const dec = Buffer.concat([decipher.update(ct), decipher.final()]);
   return dec.toString('utf8');

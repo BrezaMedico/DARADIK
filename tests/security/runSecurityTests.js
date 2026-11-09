@@ -3,6 +3,7 @@ import { createEmulator } from './harness/supabaseEmulator.js';
 import {
   encryptReportText,
   decryptReportText,
+  parseEncryptionKey,
   generateTrackingSecret,
   hashTrackingToken,
   generateCaptchaChallenge,
@@ -400,12 +401,24 @@ async function runAllTests() {
       tamperCaught = true;
     }
 
-    const s15Passed = decrypted === sampleSecretText && tamperCaught;
+    // Verifikasi penolakan kunci tidak valid / tanpa fallback
+    let keyValidationPassed = false;
+    try {
+      parseEncryptionKey(null);
+    } catch {
+      try {
+        parseEncryptionKey('short_key');
+      } catch {
+        keyValidationPassed = true;
+      }
+    }
+
+    const s15Passed = decrypted === sampleSecretText && tamperCaught && keyValidationPassed;
     recordTest(
       15,
       'Integritas dan autentikasi enkripsi AES-256-GCM',
       s15Passed,
-      `Decryption verified (${decrypted === sampleSecretText}); ciphertext bit tampering detected and rejected.`
+      `Decryption verified (${decrypted === sampleSecretText}); bit tampering rejected (${tamperCaught}); strict key validation verified (${keyValidationPassed}).`
     );
 
     console.log('\n================================================================');
