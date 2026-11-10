@@ -1,4 +1,3 @@
-import html2canvas from 'html2canvas';
 import type { BospRealizationItem, SchoolData } from '@/types/school';
 import { formatRupiah } from './formatters';
 
@@ -137,9 +136,7 @@ export function buildReceiptPrintHtml(
       color: #1E293B;
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       border: 2px solid #CBD5E1;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+      border-radius: 0;
       margin: 0;
       padding: 0;
     ">
@@ -378,74 +375,791 @@ export function buildReceiptPrintHtml(
   `;
 }
 
+const RECEIPT_SANS_FONT = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif";
+const RECEIPT_MONO_FONT = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+
+function drawRoundedRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  rawText: string,
+  maxWidth: number
+): string[] {
+  const text = String(rawText || '').trim();
+  if (!text) return ['-'];
+
+  const paragraphs = text.split(/\r?\n/);
+  const lines: string[] = [];
+
+  for (const para of paragraphs) {
+    const words = para.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        current = candidate;
+        continue;
+      }
+
+      if (current) {
+        lines.push(current);
+        current = '';
+      }
+
+      if (ctx.measureText(word).width <= maxWidth) {
+        current = word;
+      } else {
+        // Pecah token panjang tanpa spasi (mis. nomor nota panjang) per karakter
+        let chunk = '';
+        for (const ch of word) {
+          if (ctx.measureText(chunk + ch).width <= maxWidth) {
+            chunk += ch;
+          } else {
+            if (chunk) lines.push(chunk);
+            chunk = ch;
+          }
+        }
+        current = chunk;
+      }
+    }
+
+    if (current) lines.push(current);
+  }
+
+  return lines.length > 0 ? lines : ['-'];
+}
+
+function drawWrappedLines(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  x: number,
+  startY: number,
+  lineHeight: number,
+  align: CanvasTextAlign = 'left'
+): number {
+  ctx.textAlign = align;
+  ctx.textBaseline = 'top';
+  lines.forEach((line, idx) => {
+    ctx.fillText(line, x, startY + idx * lineHeight);
+  });
+  return startY + lines.length * lineHeight;
+}
+
+function triggerCanvasPngDownload(canvas: HTMLCanvasElement, fileName: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          resolve();
+          return;
+        }
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        resolve();
+      }, 'image/png');
+      return;
+    }
+
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    resolve();
+  });
+}
+
 /**
- * Mengunduh kuitansi digital ke dalam format gambar PNG beresolusi tinggi (scale 2),
- * di-render pada elemen khusus yang independen dari scroll modal atau ukuran layar saat ini,
- * menjamin tidak ada bagian yang terpotong dan semua elemen berada di posisi yang sempurna.
+ * Mengunduh kuitansi digital ke dalam format gambar PNG beresolusi tinggi (scale 2).
+ * Dirender langsung ke Canvas 2D dengan pengukuran teks adaptif dan sudut luar siku tajam (0px),
+ * bebas dari kendala scroll viewport atau pemotongan header html2canvas.
  */
 export async function downloadReceiptPng(
   item: BospRealizationItem,
   school: SchoolData
 ): Promise<void> {
-  const container = document.createElement('div');
-  container.id = 'daradik-receipt-render-surface';
-  container.style.position = 'fixed';
-  container.style.top = '0';
-  container.style.left = '0';
-  container.style.width = '780px';
-  container.style.zIndex = '-99999';
-  container.style.backgroundColor = '#FFFFFF';
-  container.style.pointerEvents = 'none';
-  container.style.boxSizing = 'border-box';
-  container.style.padding = '0';
-  container.style.margin = '0';
-  container.style.opacity = '1';
-  container.style.visibility = 'visible';
-
-  container.innerHTML = buildReceiptPrintHtml(item, school);
-  document.body.appendChild(container);
-
-  try {
-    // Tunggu font selesai termuat dan layout selesai dikalkulasi
-    if (document.fonts) {
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    try {
       await document.fonts.ready;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    const cardElement = (container.firstElementChild as HTMLElement) || container;
-    const renderWidth = 780;
-    const renderHeight = cardElement.offsetHeight || container.scrollHeight;
-
-    const canvas = await html2canvas(cardElement, {
-      scale: 2, // Resolusi tinggi (1560px lebar gambar asli)
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#FFFFFF',
-      width: renderWidth,
-      height: renderHeight,
-      windowWidth: renderWidth,
-      windowHeight: renderHeight,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-    });
-
-    const dataUrl = canvas.toDataURL('image/png');
-    const invoiceNumClean = (item.invoice?.number || 'BOSP')
-      .replace(/[^a-zA-Z0-9]/g, '_')
-      .slice(0, 32);
-
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `Kuitansi-BOSP-${invoiceNumClean}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } finally {
-    if (document.body.contains(container)) {
-      document.body.removeChild(container);
+    } catch {
+      // Abaikan jika browser tidak mendukung FontFaceSet
     }
   }
+
+  const W = 780;
+  const PAD_X = 28;
+  const INNER_W = W - PAD_X * 2; // 724px
+  const SCALE = 2;
+
+  const measureCanvas = document.createElement('canvas');
+  measureCanvas.width = W;
+  measureCanvas.height = 100;
+  const mCtx = measureCanvas.getContext('2d');
+  if (!mCtx) {
+    throw new Error('Canvas 2D context tidak tersedia.');
+  }
+
+  const lineItems = item.invoice?.lineItems || [];
+  const terbilangText = terbilangRupiah(item.amount);
+  const printTimestamp = getFormattedPrintTime();
+
+  // --- HITUNG METRIK HEADER ---
+  const headerTopPad = 24;
+  mCtx.font = `800 11px ${RECEIPT_MONO_FONT}`;
+  const statusText = 'LUNAS / DIVERIFIKASI';
+  const statusPillW = Math.ceil(mCtx.measureText(statusText).width) + 28;
+  const statusPillH = 26;
+
+  mCtx.font = `800 10px ${RECEIPT_MONO_FONT}`;
+  const tagText = 'SIPLAH KEMENDIKDASMEN';
+  const tagPillW = Math.ceil(mCtx.measureText(tagText).width) + 18;
+  const tagPillH = 22;
+
+  const leftColMaxW = INNER_W - statusPillW - 22;
+  const ministryText = 'Kementerian Pendidikan Dasar dan Menengah RI';
+  mCtx.font = `500 11px ${RECEIPT_SANS_FONT}`;
+  const ministryFitsInline = tagPillW + 10 + mCtx.measureText(ministryText).width <= leftColMaxW;
+  const ministryWrapLines = ministryFitsInline
+    ? []
+    : wrapCanvasText(mCtx, ministryText, leftColMaxW);
+
+  const titleYOffset = ministryFitsInline
+    ? tagPillH + 10
+    : tagPillH + 5 + ministryWrapLines.length * 15 + 8;
+
+  mCtx.font = `400 12px ${RECEIPT_SANS_FONT}`;
+  const headerSubLines = wrapCanvasText(
+    mCtx,
+    'Bukti Sah Transaksi Pengadaan Barang & Jasa Dana Bantuan Operasional Satuan Pendidikan',
+    leftColMaxW
+  );
+  const leftHeaderBottom = headerTopPad + titleYOffset + 26 + 4 + headerSubLines.length * 17;
+  const rightHeaderBottom = headerTopPad + statusPillH + 7 + 15;
+  const headerDividerY = Math.max(leftHeaderBottom, rightHeaderBottom) + 16;
+
+  const metaGap = 14;
+  const metaColW = (INNER_W - metaGap * 3) / 4;
+  const metaValues = [
+    { label: 'NOMOR KUITANSI', value: item.invoice?.number || '-', color: '#F8FAFC', font: `700 12px ${RECEIPT_MONO_FONT}` },
+    { label: 'TANGGAL TRANSAKSI', value: item.invoice?.date || '-', color: '#F8FAFC', font: `600 12px ${RECEIPT_MONO_FONT}` },
+    { label: 'TAHAP PENYALURAN', value: `BOSP ${item.stage}`, color: '#38BDF8', font: `700 12px ${RECEIPT_SANS_FONT}` },
+    { label: 'KATEGORI BELANJA', value: item.category || '-', color: '#F8FAFC', font: `600 12px ${RECEIPT_SANS_FONT}` },
+  ];
+  const metaWrapped = metaValues.map((mv) => {
+    mCtx.font = mv.font;
+    return {
+      ...mv,
+      lines: wrapCanvasText(mCtx, mv.value, metaColW),
+    };
+  });
+  const maxMetaLines = Math.max(...metaWrapped.map((m) => m.lines.length), 1);
+  const metaTopY = headerDividerY + 14;
+  const headerAccentH = 3;
+  const headerH = metaTopY + 15 + maxMetaLines * 17 + 20 + headerAccentH;
+
+  // --- HITUNG METRIK IDENTITAS PIHAK ---
+  const partyGap = 20;
+  const partyBoxW = (INNER_W - partyGap) / 2;
+  const partyInnerW = partyBoxW - 32;
+
+  const schoolAddress = [
+    school.address,
+    school.kecamatan,
+    school.kabupaten,
+    school.provinsi,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  mCtx.font = `800 14px ${RECEIPT_SANS_FONT}`;
+  const schoolNameLines = wrapCanvasText(mCtx, school.name, partyInnerW);
+  const vendorNameLines = wrapCanvasText(
+    mCtx,
+    item.invoice?.vendorName || 'Mitra Pengadaan SIPLah',
+    partyInnerW
+  );
+
+  mCtx.font = `500 11.5px ${RECEIPT_MONO_FONT}`;
+  const schoolMetaLines = wrapCanvasText(
+    mCtx,
+    `NPSN: ${school.npsn}  |  Jenjang: ${school.jenjang} (${school.status})`,
+    partyInnerW
+  );
+  const vendorMetaLines = wrapCanvasText(
+    mCtx,
+    `NPWP: ${item.invoice?.npwp || '00.000.000.0-000.000'}`,
+    partyInnerW
+  );
+
+  mCtx.font = `400 11px ${RECEIPT_SANS_FONT}`;
+  const schoolAddrLines = wrapCanvasText(mCtx, schoolAddress || '-', partyInnerW);
+  const vendorAddrLines = wrapCanvasText(
+    mCtx,
+    item.invoice?.vendorAddress || 'Alamat Toko Terdaftar SIPLah',
+    partyInnerW
+  );
+
+  const leftPartyH =
+    14 +
+    18 +
+    schoolNameLines.length * 18 +
+    5 +
+    schoolMetaLines.length * 16 +
+    4 +
+    schoolAddrLines.length * 15 +
+    14;
+  const rightPartyH =
+    14 +
+    18 +
+    vendorNameLines.length * 18 +
+    5 +
+    vendorMetaLines.length * 16 +
+    4 +
+    vendorAddrLines.length * 15 +
+    14;
+  const partyBoxH = Math.max(leftPartyH, rightPartyH);
+  const partiesSectionY = headerH;
+  const partiesSectionH = 22 + partyBoxH + 22;
+
+  // --- HITUNG METRIK TABEL BARANG ---
+  const tableSectionY = partiesSectionY + partiesSectionH;
+  const tableTopPad = 22;
+  const colWidths = { no: 44, name: 320, qty: 90, price: 130, subtotal: 140 };
+  const tableHeaderH = 34;
+
+  const effectiveLineItems =
+    lineItems.length > 0
+      ? lineItems
+      : [
+          {
+            name: item.name,
+            qty: item.unitSummary || '1 Paket',
+            unitPrice: item.amount,
+            subtotal: item.amount,
+          },
+        ];
+
+  const preparedRows = effectiveLineItems.map((li, idx) => {
+    mCtx.font = `600 13px ${RECEIPT_SANS_FONT}`;
+    const nameLines = wrapCanvasText(mCtx, li.name, colWidths.name - 20);
+    mCtx.font = `400 11px ${RECEIPT_SANS_FONT}`;
+    const catLines = wrapCanvasText(mCtx, `Kategori: ${item.category}`, colWidths.name - 20);
+    mCtx.font = `600 12px ${RECEIPT_MONO_FONT}`;
+    const qtyLines = wrapCanvasText(mCtx, li.qty, colWidths.qty - 14);
+    const contentH = Math.max(
+      nameLines.length * 18 + 3 + catLines.length * 15,
+      qtyLines.length * 16,
+      18
+    );
+    return {
+      idx,
+      li,
+      nameLines,
+      catLines,
+      qtyLines,
+      rowH: 11 + contentH + 11,
+    };
+  });
+
+  const rowsTotalH = preparedRows.reduce((sum, r) => sum + r.rowH, 0);
+  const totalBoxTopGap = 16;
+  const totalAmountStr = formatRupiah(item.amount);
+  mCtx.font = `800 22px ${RECEIPT_MONO_FONT}`;
+  const totalAmountW = Math.ceil(mCtx.measureText(totalAmountStr).width);
+  const totalLeftMaxW = Math.max(240, INNER_W - 36 - totalAmountW - 24);
+  mCtx.font = `italic 600 12px ${RECEIPT_SANS_FONT}`;
+  const terbilangLines = wrapCanvasText(
+    mCtx,
+    `Terbilang: "${terbilangText}"`,
+    totalLeftMaxW
+  );
+  const totalBoxH = Math.max(14 + 16 + 4 + terbilangLines.length * 17 + 14, 64);
+  const tableSectionH = tableTopPad + tableHeaderH + rowsTotalH + totalBoxTopGap + totalBoxH + 12;
+
+  // --- HITUNG METRIK PERUNTUKAN ---
+  const allocSectionY = tableSectionY + tableSectionH;
+  mCtx.font = `400 12px ${RECEIPT_SANS_FONT}`;
+  const allocLines = wrapCanvasText(
+    mCtx,
+    item.allocation || 'Pengadaan barang/jasa operasional sekolah sesuai rencana kerja anggaran sekolah (ARKAS).',
+    INNER_W - 32
+  );
+  const allocBoxH = 12 + 16 + 4 + allocLines.length * 18 + 12;
+  const allocSectionH = 10 + allocBoxH + 18;
+
+  // --- HITUNG METRIK PENGESAHAN / TANDA TANGAN ---
+  const signSectionY = allocSectionY + allocSectionH;
+  const signColW = 224;
+  const signSpaceGap = 46;
+  mCtx.font = `800 13px ${RECEIPT_SANS_FONT}`;
+  const treasurerLines = wrapCanvasText(
+    mCtx,
+    item.invoice?.treasurerName || 'Bendahara BOSP',
+    signColW - 16
+  );
+  const principalLines = wrapCanvasText(
+    mCtx,
+    item.invoice?.principalName || 'Kepala Sekolah',
+    signColW - 16
+  );
+  const maxSignerLines = Math.max(treasurerLines.length, principalLines.length, 1);
+  const signColContentH = 15 + signSpaceGap + 6 + maxSignerLines * 17 + 2 + 12;
+  const stampH = 74;
+  const signSectionH = 20 + Math.max(signColContentH, stampH) + 22;
+
+  // --- HITUNG METRIK FOOTER ---
+  const footerSectionY = signSectionY + signSectionH;
+  mCtx.font = `600 10px ${RECEIPT_MONO_FONT}`;
+  const printStampText = `Dicetak: ${printTimestamp}`;
+  const printStampW = Math.ceil(mCtx.measureText(printStampText).width);
+  const footerLeftMaxW = Math.max(260, INNER_W - printStampW - 24);
+  mCtx.font = `400 10px ${RECEIPT_SANS_FONT}`;
+  const footerLines = wrapCanvasText(
+    mCtx,
+    'Dokumen kuitansi digital ini dicetak dari Portal Transparansi BOSP DARADIK. Terdaftar pada basis data ARKAS & SIPLah Kemendikdasmen RI.',
+    footerLeftMaxW
+  );
+  const footerH = Math.max(12 + footerLines.length * 14 + 12, 46);
+
+  const TOTAL_H = footerSectionY + footerH;
+
+  // --- RENDER KANVAS FINAL 2X DPI (SUDUT TAJAM 0PX) ---
+  const canvas = document.createElement('canvas');
+  canvas.width = W * SCALE;
+  canvas.height = TOTAL_H * SCALE;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Gagal membuat kanvas kuitansi PNG.');
+  }
+  ctx.scale(SCALE, SCALE);
+
+  // Latar penuh kertas putih siku tajam (tanpa radius tumpul di pojok luar)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, W, TOTAL_H);
+
+  // 1. GAMBAR HEADER KOP RESMI (FULL-BLEED KE POJOK ATAS)
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(0, 0, W, headerH - headerAccentH);
+  ctx.fillStyle = '#2E6496';
+  ctx.fillRect(0, headerH - headerAccentH, W, headerAccentH);
+
+  // Tag biru SIPLah Kemendikdasmen
+  drawRoundedRectPath(ctx, PAD_X, headerTopPad, tagPillW, tagPillH, 5);
+  ctx.fillStyle = '#2E6496';
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `800 10px ${RECEIPT_MONO_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tagText, PAD_X + tagPillW / 2, headerTopPad + tagPillH / 2 + 0.5);
+
+  // Keterangan kementerian
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = `500 11px ${RECEIPT_SANS_FONT}`;
+  if (ministryFitsInline) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ministryText, PAD_X + tagPillW + 10, headerTopPad + tagPillH / 2 + 0.5);
+  } else {
+    drawWrappedLines(ctx, ministryWrapLines, PAD_X, headerTopPad + tagPillH + 5, 15);
+  }
+
+  // Badge LUNAS / DIVERIFIKASI (kanan atas)
+  const statusPillX = W - PAD_X - statusPillW;
+  drawRoundedRectPath(ctx, statusPillX, headerTopPad, statusPillW, statusPillH, 13);
+  ctx.fillStyle = 'rgba(16, 185, 129, 0.16)';
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#10B981';
+  ctx.stroke();
+  ctx.fillStyle = '#34D399';
+  ctx.font = `800 11px ${RECEIPT_MONO_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(statusText, statusPillX + statusPillW / 2, headerTopPad + statusPillH / 2 + 0.5);
+
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = `600 11px ${RECEIPT_MONO_FONT}`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('ARKAS TAHUN 2026', W - PAD_X, headerTopPad + statusPillH + 7);
+
+  // Judul Utama & Subjudul Kuitansi
+  const titleY = headerTopPad + titleYOffset;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `800 20px ${RECEIPT_SANS_FONT}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('KUITANSI PEMBELIAN BOSP', PAD_X, titleY);
+
+  ctx.fillStyle = '#CBD5E1';
+  ctx.font = `400 12px ${RECEIPT_SANS_FONT}`;
+  drawWrappedLines(ctx, headerSubLines, PAD_X, titleY + 26 + 4, 17);
+
+  // Garis pemisah & Metadata 4 kolom di Header
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD_X, headerDividerY);
+  ctx.lineTo(W - PAD_X, headerDividerY);
+  ctx.stroke();
+
+  metaWrapped.forEach((m, i) => {
+    const colX = PAD_X + i * (metaColW + metaGap);
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = `700 10px ${RECEIPT_SANS_FONT}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(m.label, colX, metaTopY);
+
+    ctx.fillStyle = m.color;
+    ctx.font = m.font;
+    drawWrappedLines(ctx, m.lines, colX, metaTopY + 15, 17);
+  });
+
+  // 2. GAMBAR IDENTITAS DUA PIHAK
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fillRect(0, partiesSectionY, W, partiesSectionH);
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, partiesSectionY + partiesSectionH);
+  ctx.lineTo(W, partiesSectionY + partiesSectionH);
+  ctx.stroke();
+
+  const partyBoxY = partiesSectionY + 22;
+  const drawPartyBox = (
+    x: number,
+    heading: string,
+    titleLines: string[],
+    metaLines: string[],
+    addrLines: string[]
+  ) => {
+    drawRoundedRectPath(ctx, x, partyBoxY, partyBoxW, partyBoxH, 8);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#CBD5E1';
+    ctx.stroke();
+
+    let py = partyBoxY + 14;
+    ctx.fillStyle = '#2E6496';
+    ctx.font = `800 10px ${RECEIPT_SANS_FONT}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(heading.toUpperCase(), x + 16, py);
+    py += 18;
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `800 14px ${RECEIPT_SANS_FONT}`;
+    py = drawWrappedLines(ctx, titleLines, x + 16, py, 18) + 5;
+
+    ctx.fillStyle = '#475569';
+    ctx.font = `500 11.5px ${RECEIPT_MONO_FONT}`;
+    py = drawWrappedLines(ctx, metaLines, x + 16, py, 16) + 4;
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = `400 11px ${RECEIPT_SANS_FONT}`;
+    drawWrappedLines(ctx, addrLines, x + 16, py, 15);
+  };
+
+  drawPartyBox(
+    PAD_X,
+    'Satuan Pendidikan (Penerima Barang / KPA):',
+    schoolNameLines,
+    schoolMetaLines,
+    schoolAddrLines
+  );
+  drawPartyBox(
+    PAD_X + partyBoxW + partyGap,
+    'Toko Mitra SIPLah (Penyedia Barang / Jasa):',
+    vendorNameLines,
+    vendorMetaLines,
+    vendorAddrLines
+  );
+
+  // 3. GAMBAR TABEL RINCIAN BARANG
+  const tblX = PAD_X;
+  const tblHeaderY = tableSectionY + tableTopPad;
+  const xColNo = tblX;
+  const xColName = xColNo + colWidths.no;
+  const xColQty = xColName + colWidths.name;
+  const xColPrice = xColQty + colWidths.qty;
+  const xColSub = xColPrice + colWidths.price;
+
+  ctx.fillStyle = '#F1F5F9';
+  ctx.fillRect(tblX, tblHeaderY, INNER_W, tableHeaderH);
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tblX, tblHeaderY);
+  ctx.lineTo(tblX + INNER_W, tblHeaderY);
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(tblX, tblHeaderY + tableHeaderH);
+  ctx.lineTo(tblX + INNER_W, tblHeaderY + tableHeaderH);
+  ctx.stroke();
+
+  ctx.fillStyle = '#475569';
+  ctx.font = `800 11px ${RECEIPT_SANS_FONT}`;
+  ctx.textBaseline = 'middle';
+  const thMidY = tblHeaderY + tableHeaderH / 2 + 0.5;
+  ctx.textAlign = 'center';
+  ctx.fillText('NO', xColNo + colWidths.no / 2, thMidY);
+  ctx.textAlign = 'left';
+  ctx.fillText('RINCIAN BARANG / SPESIFIKASI PENGADAAN', xColName + 10, thMidY);
+  ctx.textAlign = 'center';
+  ctx.fillText('VOL / QTY', xColQty + colWidths.qty / 2, thMidY);
+  ctx.textAlign = 'right';
+  ctx.fillText('HARGA SATUAN', xColPrice + colWidths.price - 10, thMidY);
+  ctx.fillText('SUBTOTAL', xColSub + colWidths.subtotal - 10, thMidY);
+
+  let rowY = tblHeaderY + tableHeaderH;
+  preparedRows.forEach((row) => {
+    const ry = rowY + 11;
+    ctx.fillStyle = '#64748B';
+    ctx.font = `500 12px ${RECEIPT_MONO_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(String(row.idx + 1), xColNo + colWidths.no / 2, ry);
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `600 13px ${RECEIPT_SANS_FONT}`;
+    const afterNameY = drawWrappedLines(ctx, row.nameLines, xColName + 10, ry, 18);
+    ctx.fillStyle = '#64748B';
+    ctx.font = `400 11px ${RECEIPT_SANS_FONT}`;
+    drawWrappedLines(ctx, row.catLines, xColName + 10, afterNameY + 3, 15);
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `600 12px ${RECEIPT_MONO_FONT}`;
+    drawWrappedLines(ctx, row.qtyLines, xColQty + colWidths.qty / 2, ry, 16, 'center');
+
+    ctx.fillStyle = '#475569';
+    ctx.font = `500 12px ${RECEIPT_MONO_FONT}`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(formatRupiah(Math.round(row.li.unitPrice)), xColPrice + colWidths.price - 10, ry);
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `700 13px ${RECEIPT_MONO_FONT}`;
+    ctx.fillText(formatRupiah(row.li.subtotal), xColSub + colWidths.subtotal - 10, ry);
+
+    rowY += row.rowH;
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tblX, rowY);
+    ctx.lineTo(tblX + INNER_W, rowY);
+    ctx.stroke();
+  });
+
+  // Total Box
+  const totalBoxY = rowY + totalBoxTopGap;
+  drawRoundedRectPath(ctx, PAD_X, totalBoxY, INNER_W, totalBoxH, 8);
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fill();
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = '#475569';
+  ctx.font = `800 11px ${RECEIPT_SANS_FONT}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('TOTAL PEMBAYARAN (LUNAS DIBAYAR BOSP):', PAD_X + 18, totalBoxY + 14);
+
+  ctx.fillStyle = '#2E6496';
+  ctx.font = `italic 600 12px ${RECEIPT_SANS_FONT}`;
+  drawWrappedLines(ctx, terbilangLines, PAD_X + 18, totalBoxY + 34, 17);
+
+  ctx.fillStyle = '#2E6496';
+  ctx.font = `800 22px ${RECEIPT_MONO_FONT}`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(formatRupiah(item.amount), PAD_X + INNER_W - 18, totalBoxY + totalBoxH / 2);
+
+  // 4. GAMBAR PERUNTUKAN ALOKASI
+  const allocBoxY = allocSectionY + 10;
+  drawRoundedRectPath(ctx, PAD_X, allocBoxY, INNER_W, allocBoxH, 8);
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.stroke();
+
+  ctx.fillStyle = '#2E6496';
+  ctx.font = `800 10px ${RECEIPT_SANS_FONT}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('PERUNTUKAN ALOKASI DANA BOSP:', PAD_X + 16, allocBoxY + 12);
+
+  ctx.fillStyle = '#334155';
+  ctx.font = `400 12px ${RECEIPT_SANS_FONT}`;
+  drawWrappedLines(ctx, allocLines, PAD_X + 16, allocBoxY + 32, 18);
+
+  // 5. GAMBAR TANDA TANGAN & STEMPEL DIGITAL
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, signSectionY);
+  ctx.lineTo(W, signSectionY);
+  ctx.stroke();
+
+  const stampW = 220;
+  const stampX = PAD_X;
+  const stampY = signSectionY + signSectionH - 22 - stampH;
+  drawRoundedRectPath(ctx, stampX, stampY, stampW, stampH, 10);
+  ctx.fillStyle = '#EBF3F8';
+  ctx.fill();
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = '#2E6496';
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#2E6496';
+  ctx.font = `800 9px ${RECEIPT_MONO_FONT}`;
+  ctx.fillText('TERVERIFIKASI SISTEM', stampX + stampW / 2, stampY + 12);
+
+  ctx.fillStyle = '#0F2742';
+  ctx.font = `800 12px ${RECEIPT_MONO_FONT}`;
+  ctx.fillText('ARKAS • SIPLah 2026', stampX + stampW / 2, stampY + 26);
+
+  ctx.fillStyle = '#475569';
+  ctx.font = `400 9.5px ${RECEIPT_SANS_FONT}`;
+  ctx.fillText('Kementerian Pendidikan Dasar', stampX + stampW / 2, stampY + 45);
+  ctx.fillText('& Menengah RI', stampX + stampW / 2, stampY + 57);
+
+  const drawSignatureCol = (
+    centerX: number,
+    topLabel: string,
+    roleTitle: string,
+    personLines: string[],
+    subRole: string
+  ) => {
+    const startY = signSectionY + 20;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = `600 11px ${RECEIPT_SANS_FONT}`;
+    ctx.fillText(topLabel, centerX, startY);
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `800 11px ${RECEIPT_SANS_FONT}`;
+    ctx.fillText(roleTitle, centerX, startY + 15);
+
+    const ruleY = startY + 15 + signSpaceGap;
+    ctx.strokeStyle = '#94A3B8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 88, ruleY);
+    ctx.lineTo(centerX + 88, ruleY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `800 13px ${RECEIPT_SANS_FONT}`;
+    const afterName = drawWrappedLines(ctx, personLines, centerX, ruleY + 6, 17, 'center');
+
+    ctx.fillStyle = '#64748B';
+    ctx.font = `500 10px ${RECEIPT_MONO_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(subRole, centerX, afterName + 2);
+  };
+
+  const remStart = PAD_X + stampW + 24;
+  const remColW = (W - PAD_X - remStart) / 2;
+  drawSignatureCol(
+    remStart + remColW * 0.5,
+    'Lunas Dibayar Oleh:',
+    'Bendahara Satuan Pendidikan',
+    treasurerLines,
+    'Pengelola Dana BOSP'
+  );
+  drawSignatureCol(
+    remStart + remColW * 1.5,
+    'Mengetahui / Menyetujui:',
+    'Kepala Satuan Pendidikan',
+    principalLines,
+    'Kuasa Pengguna Anggaran (KPA)'
+  );
+
+  // 6. GAMBAR FOOTER INTEGRITAS
+  ctx.fillStyle = '#F8FAFC';
+  ctx.fillRect(0, footerSectionY, W, footerH);
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, footerSectionY);
+  ctx.lineTo(W, footerSectionY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#64748B';
+  ctx.font = `400 10px ${RECEIPT_SANS_FONT}`;
+  drawWrappedLines(ctx, footerLines, PAD_X, footerSectionY + 12, 14);
+
+  ctx.fillStyle = '#475569';
+  ctx.font = `600 10px ${RECEIPT_MONO_FONT}`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(printStampText, W - PAD_X, footerSectionY + footerH / 2);
+
+  // Bingkai luar siku 90° tajam pada area dokumen putih di bawah header
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(1, headerH);
+  ctx.lineTo(1, TOTAL_H - 1);
+  ctx.lineTo(W - 1, TOTAL_H - 1);
+  ctx.lineTo(W - 1, headerH);
+  ctx.stroke();
+
+  const invoiceNumClean = (item.invoice?.number || 'BOSP')
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .slice(0, 32);
+
+  await triggerCanvasPngDownload(canvas, `Kuitansi-BOSP-${invoiceNumClean}.png`);
 }
 

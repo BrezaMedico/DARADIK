@@ -255,7 +255,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
   return (
     <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-6 animate-view-enter">
+      <div className="max-w-[820px] mx-auto space-y-6 animate-view-enter">
         {viewMode === 'list' ? (
           <TrackingLookupView
             ticketInput={ticketInput}

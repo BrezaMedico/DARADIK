@@ -46,14 +46,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </div>
 
         <nav
-          className="hidden sm:flex items-center gap-1 sm:gap-2"
+          className="hidden sm:flex items-center gap-1 sm:gap-1.5"
           aria-label="Navigasi Utama DARADIK"
         >
           <button
             type="button"
             data-tour-id="tour-kamus-bosp"
             onClick={onNavigateKamus}
-            className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
+            className={`nav-link-interactive px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
               currentView === 'kamus-bosp'
                 ? 'text-[#2E6496] bg-[#C9DFDC]/55'
                 : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
@@ -67,7 +67,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             type="button"
             data-tour-id="tour-pemindai-pesan"
             onClick={onNavigateScanner}
-            className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
+            className={`nav-link-interactive px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
               currentView === 'message-scanner'
                 ? 'text-[#2E6496] bg-[#C9DFDC]/55'
                 : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
@@ -81,7 +81,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             type="button"
             data-tour-id="tour-lapor"
             onClick={onNavigateReport}
-            className="px-2.5 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
+            className="sm:ml-3 px-2.5 sm:px-5 py-1.5 sm:py-2 rounded-lg daradik-cta-subtle text-[#FFFFFF] text-xs sm:text-sm font-bold active:translate-y-[1px] flex items-center gap-1 sm:gap-1.5 cursor-pointer"
           >
             <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true" />
             <span>Lapor</span>
