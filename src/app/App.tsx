@@ -30,8 +30,10 @@ import { AnonymousReportPage } from '@/features/anonymous-report';
 import { LiveTrackingPage } from '@/features/live-tracking';
 import { KamusBospPage } from '@/features/kamus-bosp';
 import { DinasDashboardPage } from '@/features/dinas-dashboard';
+import { MessageScannerPage } from '@/features/wa-scanner';
 import {
   detectInitialAdminRoute,
+  detectInitialScannerRoute,
   detectInitialSearchRoute,
   syncBrowserHistoryForView,
 } from './routeUtils';
@@ -55,11 +57,15 @@ function setCookie(name: string, value: string, days: number = 365) {
 
 export function App() {
   const [showIntro, setShowIntro] = useState<boolean>(
-    () => !detectInitialAdminRoute() && !detectInitialSearchRoute()
+    () =>
+      !detectInitialAdminRoute() &&
+      !detectInitialSearchRoute() &&
+      !detectInitialScannerRoute()
   );
   const [currentView, setCurrentView] = useState<AppView>(() => {
     if (detectInitialAdminRoute()) return 'dinas-dashboard';
     if (detectInitialSearchRoute()) return 'school-search';
+    if (detectInitialScannerRoute()) return 'message-scanner';
     return 'landing';
   });
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
@@ -156,6 +162,9 @@ export function App() {
       } else if (detectInitialSearchRoute()) {
         setSearchPageFilters(parseSchoolSearchUrlParams(window.location.search));
         setCurrentView('school-search');
+        setShowIntro(false);
+      } else if (detectInitialScannerRoute()) {
+        setCurrentView('message-scanner');
         setShowIntro(false);
       } else if (ticketParam) {
         setActiveTicketCode(ticketParam.trim());
@@ -260,6 +269,9 @@ export function App() {
       } else if (detectInitialSearchRoute()) {
         setSearchPageFilters(parseSchoolSearchUrlParams(window.location.search));
         setCurrentView('school-search');
+        setShowIntro(false);
+      } else if (detectInitialScannerRoute()) {
+        setCurrentView('message-scanner');
         setShowIntro(false);
       } else {
         const pathname = window.location.pathname.toLowerCase();
@@ -380,6 +392,18 @@ export function App() {
     navigateTo('anonymous-report');
   };
 
+  const handleReportFromStandaloneScanner = (
+    scenario: WaScenarioData,
+    school: SchoolData
+  ) => {
+    setSelectedSchool(school);
+    handleReportFromWaScenario(scenario);
+  };
+
+  const handleOpenMessageScanner = () => {
+    navigateTo('message-scanner');
+  };
+
   const handleOpenReportFromHeader = () => {
     setPreselectReportSchool(false);
     setReportCategoryPrefill('');
@@ -433,7 +457,7 @@ export function App() {
           currentView={currentView}
           onNavigateHome={() => navigateTo('landing')}
           onNavigateKamus={() => navigateTo('kamus-bosp')}
-          onNavigateTracking={handleOpenLiveTrackingFromHeader}
+          onNavigateScanner={handleOpenMessageScanner}
           onNavigateReport={handleOpenReportFromHeader}
         />
       )}
@@ -457,11 +481,22 @@ export function App() {
             selectedSchool={selectedSchool}
             onSelectSchoolAndOpenProfile={handleSelectSchoolAndOpenProfile}
             onOpenSearchPage={handleOpenSearchPage}
+            onOpenMessageScanner={handleOpenMessageScanner}
             onOpenAnonymousReport={handleOpenReportFromHeader}
             onOpenLiveTracking={handleOpenLiveTrackingFromHeader}
             onOpenKamusModal={() => navigateTo('kamus-bosp')}
             isIntroActive={showIntro}
           />
+        )}
+
+        {currentView === 'message-scanner' && (
+          <div className="app-top-offset">
+            <MessageScannerPage
+              onBackToLanding={handleBackToLanding}
+              onReportFromWaScenario={handleReportFromStandaloneScanner}
+              onShowToast={showToast}
+            />
+          </div>
         )}
 
         {currentView === 'school-search' && (
@@ -508,6 +543,7 @@ export function App() {
               prefilledOcrBospFact={reportOcrBospFactPrefill}
               onCancel={handleBackToLanding}
               onBackToHome={handleBackToLanding}
+              onOpenLiveTracking={handleOpenLiveTrackingFromHeader}
               onSubmitSuccess={handleReportSubmitted}
             />
           </div>
@@ -546,6 +582,7 @@ export function App() {
           onNavigateHome={() => navigateTo('landing')}
           onNavigateSearch={() => handleOpenSearchPage()}
           onNavigateKamus={() => navigateTo('kamus-bosp')}
+          onNavigateScanner={handleOpenMessageScanner}
           onNavigateTracking={handleOpenLiveTrackingFromHeader}
           onNavigateReport={handleOpenReportFromHeader}
           onStartTour={handleStartOnboardingTour}
@@ -559,7 +596,7 @@ export function App() {
           onHome={() => navigateTo('landing')}
           onSearch={() => handleOpenSearchPage()}
           onReport={handleOpenReportFromHeader}
-          onTracking={handleOpenLiveTrackingFromHeader}
+          onScanner={handleOpenMessageScanner}
           onKamus={() => navigateTo('kamus-bosp')}
         />
       )}

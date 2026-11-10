@@ -11,13 +11,162 @@ import {
 } from 'lucide-react';
 import { ScrollRevealOnce } from './ScrollRevealOnce';
 
+interface CapabilityCardItem {
+  num: string;
+  title: string;
+  desc: string;
+  icon: typeof ReceiptText;
+  action: () => void;
+  actionLabel: string;
+}
+
+const CapabilityFeatureCard: React.FC<{
+  card: CapabilityCardItem;
+  idx: number;
+  isGridVisible: boolean;
+}> = ({ card, idx, isGridVisible }) => {
+  const Icon = card.icon;
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 420, h: 230 });
+
+  useEffect(() => {
+    const el = buttonRef.current;
+    if (!el) return;
+
+    const updateSize = () => {
+      if (el.offsetWidth > 40 && el.offsetHeight > 40) {
+        setBoxSize({ w: el.offsetWidth, h: el.offsetHeight });
+      }
+    };
+
+    updateSize();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const w = boxSize.w;
+  const h = boxSize.h;
+  // Stroke ditempatkan di luar frame kartu (jarak 3.5px dari sisi luar border 1px)
+  const outset = 3.5;
+  const svgPad = 7;
+  const sw = w + svgPad * 2;
+  const sh = h + svgPad * 2;
+  const c = svgPad - outset;
+  const cardRadius = Math.min(16, Math.floor(Math.min(w, h) / 4));
+  const r = cardRadius + outset;
+  const d = Number((r * (1 - Math.SQRT1_2)).toFixed(2));
+  const sx = (c + d).toFixed(2);
+  const sy = (c + d).toFixed(2);
+  const ex = (sw - c - d).toFixed(2);
+  const ey = (sh - c - d).toFixed(2);
+
+  const topRightPath = `M ${sx} ${sy} A ${r} ${r} 0 0 1 ${c + r} ${c} L ${sw - c - r} ${c} A ${r} ${r} 0 0 1 ${sw - c} ${c + r} L ${sw - c} ${sh - c - r} A ${r} ${r} 0 0 1 ${ex} ${ey}`;
+  const leftBottomPath = `M ${sx} ${sy} A ${r} ${r} 0 0 0 ${c} ${c + r} L ${c} ${sh - c - r} A ${r} ${r} 0 0 0 ${c + r} ${sh - c} L ${sw - c - r} ${sh - c} A ${r} ${r} 0 0 0 ${ex} ${ey}`;
+
+  const staggerDelayClasses = [
+    'card-stagger-1',
+    'card-stagger-2',
+    'card-stagger-3',
+    'card-stagger-4',
+  ];
+  const mobileStackClass = `mobile-card-stack-${idx + 1}`;
+  const gradId = `card-stroke-grad-${card.num}`;
+
+  return (
+    <div
+      className={`scroll-reveal-slide-up mobile-card-stack-item ${mobileStackClass} h-full ${staggerDelayClasses[idx]} ${
+        isGridVisible ? 'scroll-reveal-visible' : 'scroll-reveal-hidden'
+      }`}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={card.action}
+        aria-label={`${card.title} - ${card.actionLabel}`}
+        className="group relative flex flex-col w-full text-left rounded-2xl border border-[#C9DFDC] bg-gradient-to-br from-[#F4F9FC]/90 via-[#FFFFFF] to-[#EAF3F8]/95 shadow-xs min-h-[210px] sm:min-h-[230px] h-full cursor-pointer daradik-feature-card"
+      >
+        <svg
+          viewBox={`0 0 ${sw} ${sh}`}
+          style={{
+            left: `${-(svgPad + 1)}px`,
+            top: `${-(svgPad + 1)}px`,
+            width: `${sw}px`,
+            height: `${sh}px`,
+          }}
+          className="daradik-card-stroke-svg"
+          fill="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#66A3BF" />
+              <stop offset="55%" stopColor="#2E6496" />
+              <stop offset="100%" stopColor="#1D4F7A" />
+            </linearGradient>
+          </defs>
+          <path
+            d={topRightPath}
+            pathLength={100}
+            stroke={`url(#${gradId})`}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            className="daradik-card-stroke-path"
+          />
+          <path
+            d={leftBottomPath}
+            pathLength={100}
+            stroke={`url(#${gradId})`}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            className="daradik-card-stroke-path"
+          />
+        </svg>
+
+        <div className="relative flex-1 flex flex-col justify-between w-full p-5 sm:p-6 overflow-hidden rounded-[15px] daradik-card-glass-sweep">
+          {/* Bagian Kiri Atas: Judul Diperbesar & Berwarna Biru Tua Senada Icon */}
+          <div className="relative z-10 space-y-1.5">
+            <h3 className="text-xl sm:text-[22px] font-extrabold text-[#2E6496] tracking-tight leading-snug">
+              {card.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-[#475569] leading-relaxed pr-2">
+              {card.desc}
+            </p>
+          </div>
+
+          {/* Bagian Bawah: Nomor Ditempelkan ke Bawah Tanpa Jarak & Icon Tebal Senada Judul */}
+          <div className="relative z-10 w-full mt-6 sm:mt-8 flex items-end justify-between -mb-5 sm:-mb-6">
+            <div className="flex items-end">
+              <span className="text-[76px] sm:text-[100px] font-black text-[#66A3BF]/30 tabular-nums tracking-tighter leading-[0.72] select-none pointer-events-none -ml-0.5">
+                {card.num}
+              </span>
+            </div>
+
+            <div className="pb-5 sm:pb-6">
+              <Icon
+                className="w-[52px] h-[52px] sm:w-16 sm:h-16 text-[#2E6496] stroke-[1.6] sm:stroke-[1.75] shrink-0 transition-transform duration-300 group-hover:scale-105"
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+        </div>
+      </button>
+    </div>
+  );
+};
+
 interface LandingFeaturesSectionProps {
+  onOpenSearchPage: () => void;
+  onOpenMessageScanner: () => void;
   onOpenAnonymousReport: () => void;
   onOpenLiveTracking: () => void;
   onOpenKamusModal: () => void;
 }
 
 export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
+  onOpenSearchPage,
+  onOpenMessageScanner,
   onOpenAnonymousReport,
   onOpenLiveTracking,
   onOpenKamusModal,
@@ -53,37 +202,22 @@ export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const staggerDelayClasses = [
-    'card-stagger-1',
-    'card-stagger-2',
-    'card-stagger-3',
-    'card-stagger-4',
-  ];
-
   const capabilityCards = [
     {
       num: '1',
       title: 'Transparansi Sekolah',
       desc: 'Cari informasi alokasi dana BOSP sekolah, rincian kuitansi SIPLah resmi, dan dokumentasi bukti fisik lapangan secara terbuka.',
       icon: ReceiptText,
-      action: () => {
-        if (typeof window !== 'undefined') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      },
+      action: onOpenSearchPage,
       actionLabel: 'Cari Data Sekolah',
     },
     {
       num: '2',
-      title: 'Pemindai AI',
+      title: 'Pemindai Pesan',
       desc: 'Periksa indikasi pungutan dari pesan WhatsApp wali murid secara otomatis untuk mencocokkan kewajaran dengan anggaran BOSP.',
       icon: ScanLine,
-      action: () => {
-        if (typeof window !== 'undefined') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      },
-      actionLabel: 'Mulai Pindai Chat',
+      action: onOpenMessageScanner,
+      actionLabel: 'Buka Pemindai Pesan',
     },
     {
       num: '3',
@@ -147,49 +281,14 @@ export const LandingFeaturesSection: React.FC<LandingFeaturesSectionProps> = ({
           ref={gridContainerRef}
           className="mobile-card-stack-container grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pb-28 sm:pb-0"
         >
-          {capabilityCards.map((card, idx) => {
-            const Icon = card.icon;
-            const mobileStackClass = `mobile-card-stack-${idx + 1}`;
-
-            return (
-              <div
-                key={card.num}
-                className={`scroll-reveal-slide-up mobile-card-stack-item ${mobileStackClass} h-full ${staggerDelayClasses[idx]} ${
-                  isGridVisible ? 'scroll-reveal-visible' : 'scroll-reveal-hidden'
-                }`}
-              >
-                <div
-                  className="group relative rounded-2xl p-5 sm:p-6 border border-[#C9DFDC] bg-gradient-to-br from-[#F4F9FC]/90 via-[#FFFFFF] to-[#EAF3F8]/95 shadow-xs hover:border-[#2E6496]/50 hover:shadow-sm transition-all duration-200 flex flex-col justify-between min-h-[210px] sm:min-h-[230px] h-full daradik-card-glass-sweep"
-                >
-                  {/* Bagian Kiri Atas: Judul Diperbesar & Berwarna Biru Tua Senada Icon */}
-                  <div className="relative z-10 space-y-1.5">
-                    <h3 className="text-xl sm:text-[22px] font-extrabold text-[#2E6496] tracking-tight leading-snug">
-                      {card.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#475569] leading-relaxed pr-2">
-                      {card.desc}
-                    </p>
-                  </div>
-
-                  {/* Bagian Bawah: Nomor Ditempelkan ke Bawah Tanpa Jarak & Icon Tebal Senada Judul */}
-                  <div className="relative z-10 mt-6 sm:mt-8 flex items-end justify-between -mb-5 sm:-mb-6">
-                    <div className="flex items-end">
-                      <span className="text-[76px] sm:text-[100px] font-black text-[#66A3BF]/30 tabular-nums tracking-tighter leading-[0.72] select-none pointer-events-none -ml-0.5">
-                        {card.num}
-                      </span>
-                    </div>
-
-                    <div className="pb-5 sm:pb-6">
-                      <Icon
-                        className="w-[52px] h-[52px] sm:w-16 sm:h-16 text-[#2E6496] stroke-[1.6] sm:stroke-[1.75] shrink-0"
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {capabilityCards.map((card, idx) => (
+            <CapabilityFeatureCard
+              key={card.num}
+              card={card}
+              idx={idx}
+              isGridVisible={isGridVisible}
+            />
+          ))}
         </div>
 
         {/* BAGIAN 2: TIMELINE VERTICAL ALUR KERJA (01, 02, 03, 04) */}

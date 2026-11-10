@@ -24,6 +24,7 @@ export interface LandingPageProps {
     page?: number;
   }) => void;
   onOpenAnonymousReport: () => void;
+  onOpenMessageScanner: () => void;
   onOpenLiveTracking: () => void;
   onOpenKamusModal: () => void;
   isIntroActive?: boolean;
@@ -33,6 +34,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onSelectSchoolAndOpenProfile,
   onOpenSearchPage,
   onOpenAnonymousReport,
+  onOpenMessageScanner,
   onOpenLiveTracking,
   onOpenKamusModal,
   isIntroActive = false,
@@ -139,6 +141,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <LandingVideoSection />
 
       <LandingFeaturesSection
+        onOpenSearchPage={() => onOpenSearchPage()}
+        onOpenMessageScanner={onOpenMessageScanner}
         onOpenAnonymousReport={onOpenAnonymousReport}
         onOpenLiveTracking={onOpenLiveTracking}
         onOpenKamusModal={onOpenKamusModal}

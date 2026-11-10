@@ -1,12 +1,12 @@
 import React from 'react';
-import { BookOpen, Search, Flag } from 'lucide-react';
+import { BookOpen, Flag, ScanLine } from 'lucide-react';
 import type { AppView } from '@/types/school';
 
 interface AppHeaderProps {
   currentView: AppView;
   onNavigateHome: () => void;
   onNavigateKamus: () => void;
-  onNavigateTracking: () => void;
+  onNavigateScanner: () => void;
   onNavigateReport: () => void;
 }
 
@@ -14,7 +14,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   currentView,
   onNavigateHome,
   onNavigateKamus,
-  onNavigateTracking,
+  onNavigateScanner,
   onNavigateReport,
 }) => {
   return (
@@ -65,16 +65,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           <button
             type="button"
-            data-tour-id="tour-lacak-lapor"
-            onClick={onNavigateTracking}
+            data-tour-id="tour-pemindai-pesan"
+            onClick={onNavigateScanner}
             className={`nav-link-interactive px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 cursor-pointer ${
-              currentView === 'live-tracking'
+              currentView === 'message-scanner'
                 ? 'text-[#2E6496] bg-[#C9DFDC]/55'
                 : 'text-[#1E293B] hover:text-[#2E6496] hover:bg-[#C9DFDC]/35'
             }`}
           >
-            <Search className="w-4 h-4 hidden sm:inline text-[#2E6496]" />
-            <span>Lacak Lapor</span>
+            <ScanLine className="w-4 h-4 hidden sm:inline text-[#2E6496]" aria-hidden="true" />
+            <span>Pemindai Pesan</span>
           </button>
 
           <button

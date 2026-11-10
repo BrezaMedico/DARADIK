@@ -10,12 +10,14 @@ import {
   Share2,
   Lock,
   FileCheck2,
+  ScanLine,
 } from 'lucide-react';
 
 export interface FooterProps {
   onNavigateHome: () => void;
   onNavigateSearch: () => void;
   onNavigateKamus: () => void;
+  onNavigateScanner?: () => void;
   onNavigateTracking: () => void;
   onNavigateReport: () => void;
   onStartTour: () => void;
@@ -26,6 +28,7 @@ export const Footer: React.FC<FooterProps> = ({
   onNavigateHome,
   onNavigateSearch,
   onNavigateKamus,
+  onNavigateScanner,
   onNavigateTracking,
   onNavigateReport,
   onStartTour,
@@ -89,6 +92,18 @@ export const Footer: React.FC<FooterProps> = ({
                   <span>Kamus Aturan BOSP</span>
                 </button>
               </li>
+              {onNavigateScanner && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={onNavigateScanner}
+                    className="text-[#475569] hover:text-[#2E6496] transition-colors text-left cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <ScanLine className="w-3.5 h-3.5 text-[#64748B]" />
+                    <span>Pemindai Pesan</span>
+                  </button>
+                </li>
+              )}
               <li>
                 <button
                   type="button"

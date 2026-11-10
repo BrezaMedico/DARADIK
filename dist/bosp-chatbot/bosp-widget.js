@@ -422,7 +422,7 @@
       q.includes('bangun gedung')
     ) {
       return {
-        teks: 'Dana BOSP dilarang dipakai untuk membangun gedung baru, membeli seragam atau sepatu pribadi siswa, serta membiayai wisata atau study tour. Kegiatan study tour atau perpisahan juga tidak boleh dipaksakan kepada orang tua siswa. Jika ada pengumuman iuran di grup WhatsApp, kamu bisa memeriksanya lewat fitur Cek Iuran WA.',
+        teks: 'Dana BOSP dilarang dipakai untuk membangun gedung baru, membeli seragam atau sepatu pribadi siswa, serta membiayai wisata atau study tour. Kegiatan study tour atau perpisahan juga tidak boleh dipaksakan kepada orang tua siswa. Jika ada pengumuman iuran di grup WhatsApp, kamu bisa memeriksanya lewat fitur Pemindai Pesan.',
         emosi: 'berpikir',
       };
     }
@@ -472,11 +472,13 @@
       /\bwa\b/i.test(q) ||
       q.includes('whatsapp') ||
       q.includes('scan') ||
+      q.includes('pindai') ||
+      q.includes('pemindai') ||
       q.includes('cek iuran') ||
       q.includes('grup kelas')
     ) {
       return {
-        teks: 'Untuk memeriksa pengumuman tarikan biaya dari grup kelas, pertama buka menu Cek Iuran WA di bagian atas website. Lalu, unggah gambar tangkapan layar chat WhatsApp atau tempelkan teks pengumuman iuran tersebut. Terakhir, klik tombol analisis agar sistem langsung memberitahu apakah iuran itu melanggar aturan BOSP atau tidak.',
+        teks: 'Untuk memeriksa pengumuman tarikan biaya dari grup kelas, pertama buka menu Pemindai Pesan di bagian atas website lalu pilih sekolahnya. Lalu, unggah gambar tangkapan layar chat WhatsApp atau tempelkan teks pengumuman iuran tersebut. Terakhir, sistem otomatis memberitahu apakah iuran itu melanggar aturan BOSP atau tidak.',
         emosi: 'semangat',
       };
     }
@@ -494,7 +496,7 @@
       q.includes('npsn')
     ) {
       return {
-        teks: 'Pertama, ketik nama sekolah atau nomor NPSN di halaman utama untuk melihat total dana BOSP, grafik anggaran, dan foto bukti belanjanya. Lalu, gunakan menu Cek Iuran WA jika ingin memeriksa pengumuman tarikan biaya dari grup orang tua. Terakhir, gunakan menu Lapor Anonim jika menemukan pungutan yang melanggar aturan.',
+        teks: 'Pertama, ketik nama sekolah atau nomor NPSN di halaman utama untuk melihat total dana BOSP, grafik anggaran, dan foto bukti belanjanya. Lalu, gunakan menu Pemindai Pesan jika ingin memeriksa pengumuman tarikan biaya dari grup orang tua. Terakhir, gunakan menu Lapor jika menemukan pungutan yang melanggar aturan.',
         emosi: 'semangat',
       };
     }
@@ -528,7 +530,7 @@
       q.includes('kok bisa')
     ) {
       return {
-        teks: 'Astaga, tarikan biaya sebesar itu jelas mencurigakan dan wajib dipertanyakan dasarnya! Sekolah negeri tidak diperbolehkan menarik iuran wajib bernilai besar tanpa dasar hukum yang jelas. Coba unggah rinciannya ke menu Cek Iuran WA atau laporkan langsung secara anonim ya.',
+        teks: 'Astaga, tarikan biaya sebesar itu jelas mencurigakan dan wajib dipertanyakan dasarnya! Sekolah negeri tidak diperbolehkan menarik iuran wajib bernilai besar tanpa dasar hukum yang jelas. Coba unggah rinciannya ke menu Pemindai Pesan atau laporkan langsung secara anonim ya.',
         emosi: 'kaget',
       };
     }
@@ -561,7 +563,7 @@
       q.includes('tiket')
     ) {
       return {
-        teks: 'Tenang, pelaporan di website ini seratus persen anonim tanpa perlu mengisi nama, email, atau nomor telepon pribadi kamu. Pertama, buka menu Lapor Anonim, lalu pilih sekolah, tulis kronologi singkat, dan lampirkan bukti fotonya. Terakhir, kirim laporan dan simpan kode tiketnya untuk memantau perkembangan investigasi di menu Pantau Tiket.',
+        teks: 'Tenang, pelaporan di website ini seratus persen anonim tanpa perlu mengisi nama, email, atau nomor telepon pribadi kamu. Pertama, buka menu Lapor, lalu pilih sekolah, tulis kronologi singkat, dan lampirkan bukti fotonya. Terakhir, kirim laporan dan simpan kode tiketnya untuk memantau perkembangan investigasi lewat tombol Lacak Lapor di halaman Lapor.',
         emosi: 'empati',
       };
     }
@@ -1461,6 +1463,7 @@
         case 'pantau-tiket':
         case 'lacak':
           return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+        case 'pemindai-pesan':
         case 'cek-iuran-wa':
         case 'scanner-wa':
         case 'wa':
@@ -1495,11 +1498,11 @@
         case 'lacak':
           view = 'live-tracking';
           break;
+        case 'pemindai-pesan':
         case 'cek-iuran-wa':
         case 'scanner-wa':
         case 'wa':
-          view = 'school-profile';
-          tab = 'wa-scanner';
+          view = 'message-scanner';
           break;
         case 'kamus-bosp':
         case 'kamus':
@@ -1573,11 +1576,14 @@
         /\bwa\b/i.test(q) ||
         q.includes('whatsapp') ||
         q.includes('scan') ||
+        q.includes('pindai') ||
+        q.includes('pemindai') ||
         q.includes('cek iuran') ||
         q.includes('grup') ||
+        t.includes('pemindai pesan') ||
         t.includes('cek iuran wa')
       ) {
-        addBtn('Buka Cek Iuran WA', 'cek-iuran-wa');
+        addBtn('Buka Pemindai Pesan', 'pemindai-pesan');
       }
 
       if (
@@ -1602,7 +1608,7 @@
 
       if (buttons.length === 0) {
         addBtn('Kamus Aturan BOSP', 'kamus-bosp');
-        addBtn('Cek Iuran WA', 'cek-iuran-wa');
+        addBtn('Pemindai Pesan', 'pemindai-pesan');
         addBtn('Lapor Anonim', 'lapor-anonim');
       }
 
@@ -1860,7 +1866,7 @@
           true,
           [
             { label: 'Kamus Aturan BOSP', target: 'kamus-bosp' },
-            { label: 'Cek Iuran WA', target: 'cek-iuran-wa' },
+            { label: 'Pemindai Pesan', target: 'pemindai-pesan' },
             { label: 'Lapor Anonim', target: 'lapor-anonim' },
           ]
         );

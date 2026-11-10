@@ -143,6 +143,7 @@ export type AppView =
   | 'landing'
   | 'school-search'
   | 'school-profile'
+  | 'message-scanner'
   | 'anonymous-report'
   | 'live-tracking'
   | 'kamus-bosp'

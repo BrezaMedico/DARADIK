@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft,
   Paperclip,
   Send,
   CheckCircle2,
@@ -14,7 +13,9 @@ import {
   Eye,
   Check,
   MessageSquare,
+  Search,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import type { ReportAttachmentMeta, SchoolData } from '@/types';
 import {
   fetchReportCaptchaChallenge,
@@ -60,6 +61,7 @@ export interface AnonymousReportPageProps {
   prefilledOcrBospFact?: string;
   onCancel: () => void;
   onBackToHome?: () => void;
+  onOpenLiveTracking?: () => void;
   onSubmitSuccess: (ticketCode: string, notes: string, category: string) => void;
 }
 
@@ -81,6 +83,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
   prefilledOcrBospFact = '',
   onCancel,
   onBackToHome,
+  onOpenLiveTracking,
   onSubmitSuccess,
 }) => {
   const isDirectItemPrefill = Boolean(prefilledCategory) || preselectSchool;
@@ -540,28 +543,42 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
           onBack={onBackToHome || onCancel}
         />
       ) : (
-        <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8 animate-view-enter">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="min-h-[40px] px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-              <span>Kembali</span>
-            </button>
+        <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-view-enter">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <BackButton onClick={onCancel} label="Kembali ke Beranda" />
+
+            {onOpenLiveTracking && (
+              <button
+                type="button"
+                onClick={onOpenLiveTracking}
+                className="min-h-[40px] px-3.5 sm:px-4 py-2 rounded-xl bg-[#2E6496] hover:bg-[#245385] text-xs sm:text-sm font-bold text-[#FFFFFF] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <Search className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Lacak Lapor</span>
+              </button>
+            )}
           </div>
 
-          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
-            <div className="w-full bg-[#FFFFFF] border-b border-[#E4E0D8]/80 overflow-hidden">
-              <img
-                src="/banner-lapor.jpg"
-                alt="Banner Pelaporan DARADIK"
-                className="w-full h-auto object-contain block select-none"
-              />
+          <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden md:grid md:grid-rows-2">
+            <div className="relative w-full bg-[#FFFFFF] border-b border-[#E4E0D8]/80 overflow-hidden">
+              <picture className="block w-full h-full">
+                <source
+                  media="(min-width: 768px)"
+                  srcSet="/banner-lapor-desktop.jpg"
+                  width={1024}
+                  height={388}
+                />
+                <img
+                  src="/banner-lapor.jpg"
+                  alt="Banner Pelaporan DARADIK"
+                  width={1024}
+                  height={392}
+                  className="w-full h-auto md:absolute md:inset-0 md:h-full object-contain md:object-cover md:object-[50%_48%] block select-none"
+                />
+              </picture>
             </div>
 
-            <div className="p-4 sm:p-8 space-y-4">
+            <div className="p-4 sm:p-8 space-y-4 flex flex-col justify-center md:min-h-[222px]">
               <div className="space-y-2">
                 <h1 className="font-sturdy-heading text-2xl sm:text-3xl font-extrabold text-[#1E293B] tracking-tight">
                   Kirim Laporan Pungutan Sekolah

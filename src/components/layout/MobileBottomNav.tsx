@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FileCheck2, Flag, Home, School } from 'lucide-react';
+import { BookOpen, Flag, Home, ScanLine, School } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { AppView } from '@/types/school';
 
@@ -8,7 +8,7 @@ interface MobileBottomNavProps {
   onHome: () => void;
   onSearch: () => void;
   onReport: () => void;
-  onTracking: () => void;
+  onScanner: () => void;
   onKamus: () => void;
 }
 
@@ -27,7 +27,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onHome,
   onSearch,
   onReport,
-  onTracking,
+  onScanner,
   onKamus,
 }) => {
   const items: NavItem[] = [
@@ -49,18 +49,18 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       id: 'report',
       label: 'Lapor',
       Icon: Flag,
-      views: ['anonymous-report'],
+      views: ['anonymous-report', 'live-tracking'],
       onClick: onReport,
       tourId: 'tour-lapor',
       primary: true,
     },
     {
-      id: 'tracking',
-      label: 'Lacak',
-      Icon: FileCheck2,
-      views: ['live-tracking'],
-      onClick: onTracking,
-      tourId: 'tour-lacak-lapor',
+      id: 'scanner',
+      label: 'Pemindai',
+      Icon: ScanLine,
+      views: ['message-scanner'],
+      onClick: onScanner,
+      tourId: 'tour-pemindai-pesan',
     },
     {
       id: 'kamus',

@@ -15,12 +15,20 @@ interface WaScannerWorkspaceProps {
   school: SchoolData;
   onReportFromWaScenario: (scenario: WaScenarioData) => void;
   onShowToast: (message: string) => void;
+  schoolSelectorSlot?: React.ReactNode;
+  isLocked?: boolean;
+  lockedMessage?: string;
+  headingAs?: 'h1' | 'h2';
 }
 
 export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
   school,
   onReportFromWaScenario,
   onShowToast,
+  schoolSelectorSlot,
+  isLocked = false,
+  lockedMessage,
+  headingAs = 'h2',
 }) => {
   const [inputMode, setInputMode] = useState<'upload' | 'text'>('upload');
 
@@ -37,11 +45,22 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    setOcrScanResult(null);
+    setActiveSource(null);
+    setDisplayedFileName('');
+    setScanError(null);
+    setRotationDeg(0);
+    setPreviewZoom(1);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [school.id, school.npsn, isLocked]);
+
   const executePipeline = async (
     source: File | string | HTMLCanvasElement,
     fileName: string,
     rotation: number = 0
   ) => {
+    if (isLocked) return;
     setScanError(null);
     setIsScanningWa(true);
     setActiveSource(source);
@@ -83,6 +102,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
   };
 
   const handleAnalyzeDirectText = async (textToAnalyze?: string) => {
+    if (isLocked) return;
     const text = (textToAnalyze !== undefined ? textToAnalyze : pastedText).trim();
     if (!text) {
       setScanError('Silakan tempel atau ketik teks pesan chat terlebih dahulu.');
@@ -92,7 +112,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
     setScanError(null);
     setIsScanningWa(true);
     setActiveSource(null);
-    setDisplayedFileName('Teks Obrolan WhatsApp');
+    setDisplayedFileName('Teks Pesan Sekolah');
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 350));
@@ -129,6 +149,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isLocked) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -146,6 +167,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (isLocked) return;
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -169,10 +191,16 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
       if (!items) return;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.startsWith('image/')) {
+          if (isLocked) {
+            onShowToast(
+              lockedMessage || 'Pilih sekolah terlebih dahulu untuk memindai gambar.'
+            );
+            break;
+          }
           const blob = items[i].getAsFile();
           if (blob) {
-            executePipeline(blob, `Screenshot_${Date.now()}.png`, 0);
-            onShowToast('Screenshot dari clipboard dimuat.');
+            executePipeline(blob, `Tangkapan_Layar_${Date.now()}.png`, 0);
+            onShowToast('Gambar dari papan klip berhasil dimuat.');
             break;
           }
         }
@@ -180,7 +208,7 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [school.items]);
+  }, [school.items, isLocked, lockedMessage]);
 
   const handlePasteFromClipboard = async () => {
     try {
@@ -289,7 +317,9 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
         <ScannerInputCard
           inputMode={inputMode}
           onInputModeChange={setInputMode}
-          onOpenFilePicker={() => fileInputRef.current?.click()}
+          onOpenFilePicker={() => {
+            if (!isLocked) fileInputRef.current?.click();
+          }}
           onDropFile={handleDrop}
           pastedText={pastedText}
           onPastedTextChange={setPastedText}
@@ -297,11 +327,15 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
           onAnalyzeDirectText={() => handleAnalyzeDirectText()}
           onLoadSampleImage={handleLoadSampleImage}
           onLoadSampleText={handleLoadSampleText}
+          schoolSelectorSlot={schoolSelectorSlot}
+          isLocked={isLocked}
+          lockedMessage={lockedMessage}
+          headingAs={headingAs}
         />
       )}
 
       {isScanningWa && (
-        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl p-10 sm:p-12 text-center shadow-xs flex flex-col items-center justify-center min-h-[260px] max-w-md mx-auto space-y-4 animate-view-enter">
+        <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-10 sm:p-14 text-center shadow-xs flex flex-col items-center justify-center min-h-[280px] w-full space-y-4 animate-view-enter">
           <div className="flex items-center justify-center gap-3">
             <span className="w-3.5 h-3.5 rounded-full bg-[#2E6496] animate-ai-dot-1" />
             <span className="w-3.5 h-3.5 rounded-full bg-[#66A3BF] animate-ai-dot-2" />
@@ -310,10 +344,10 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
 
           <div className="space-y-1">
             <h3 className="text-base sm:text-lg font-bold text-[#1E293B] tracking-tight">
-              Memeriksa Pesan WhatsApp...
+              Memindai Pesan Sekolah...
             </h3>
-            <p className="text-xs text-[#64748B]">
-              Mencocokkan kata kunci iuran dengan data pembelanjaan sekolah.
+            <p className="text-xs text-[#475569]">
+              Mencocokkan isi pesan iuran dengan data anggaran BOSP sekolah.
             </p>
           </div>
         </div>
@@ -327,8 +361,8 @@ export const WaScannerWorkspace: React.FC<WaScannerWorkspaceProps> = ({
               onClick={handleResetScan}
               className="school-btn-secondary min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-[#2E6496] shrink-0" />
-              <span>Periksa Screenshot / Teks Lain</span>
+              <RefreshCw className="w-3.5 h-3.5 text-[#2E6496] shrink-0" aria-hidden="true" />
+              <span>Pindai Gambar / Teks Lain</span>
             </button>
 
             <span className="text-xs font-medium text-[#64748B] truncate max-w-full sm:max-w-[240px]">

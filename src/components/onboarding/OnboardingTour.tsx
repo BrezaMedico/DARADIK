@@ -46,14 +46,14 @@ const LANDING_TOUR_STEPS: TourStep[] = [
     icon: 'kamus',
   },
   {
-    id: 'step-lacak',
-    targetSelector: '[data-tour-id="tour-lacak-lapor"]',
+    id: 'step-pemindai',
+    targetSelector: '[data-tour-id="tour-pemindai-pesan"]',
     stepNum: '3 dari 5',
-    title: 'Lacak Lapor',
+    title: 'Pemindai Pesan',
     description:
-      'Pantau tahapan dan hasil verifikasi aduan di Inspektorat dan Dinas Pendidikan secara transparan lewat kode tiket resmi.',
-    tip: 'Riwayat tiket Anda tersimpan otomatis di perangkat ini.',
-    icon: 'lacak',
+      'Pilih sekolah lalu pindai foto atau teks pesan untuk mengecek indikasi pungli dan kesesuaian dana BOSP.',
+    tip: 'Unggah lewat seret-lepas, Ctrl+V, atau cari berkas.',
+    icon: 'wa',
   },
   {
     id: 'step-lapor',
@@ -62,7 +62,7 @@ const LANDING_TOUR_STEPS: TourStep[] = [
     title: 'Lapor Pungutan Liar',
     description:
       'Sampaikan dugaan pungutan tanpa akun atau nomor HP. Metadata lokasi dan perangkat pada foto bukti dibersihkan otomatis.',
-    tip: 'Simpan kode tiket setelah kirim untuk memantau status aduan.',
+    tip: 'Tersedia tombol Lacak Lapor di bagian atas halaman ini untuk memantau status tiket aduan.',
     icon: 'lapor',
   },
   {
@@ -102,10 +102,10 @@ const PROFILE_TOUR_STEPS: TourStep[] = [
     id: 'step-profile-wa',
     targetSelector: '[data-tour-id="tour-profile-wa"]',
     stepNum: '3 dari 4',
-    title: 'Verifikasi Iuran WA',
+    title: 'Pemindai Pesan',
     description:
-      'Pindai dan verifikasi pesan tagihan atau iuran di grup WhatsApp sekolah untuk mencocokkan apakah pengeluaran tersebut sesuai aturan BOSP atau indikasi pungli.',
-    tip: 'Cukup salin teks pesan WA atau unggah tangkapan layar chat grup komite.',
+      'Pindai foto atau teks pengumuman sekolah untuk mengecek indikasi pungli serta kecocokannya dengan anggaran BOSP.',
+    tip: 'Unggah gambar chat lewat seret-lepas, Ctrl+V, atau cari berkas.',
     icon: 'wa',
   },
   {

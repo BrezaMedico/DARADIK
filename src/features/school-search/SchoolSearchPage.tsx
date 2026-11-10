@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { REGION_HIERARCHY, sortCitiesAlphabetically } from '@/data';
 import type { SchoolData } from '@/types';
 import { fetchPaginatedSchoolsFromSupabase } from '@/services/supabase';
@@ -305,14 +306,7 @@ export const SchoolSearchPage: React.FC<SchoolSearchPageProps> = ({
       <div className="max-w-5xl mx-auto space-y-6 animate-view-enter">
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={onBackToLanding}
-              className="min-h-[40px] px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-colors inline-flex items-center gap-2 cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-              <span>Kembali ke Beranda</span>
-            </button>
+            <BackButton onClick={onBackToLanding} label="Kembali ke Beranda" />
           </div>
 
           <div className="space-y-1">

@@ -30,6 +30,19 @@ export function detectInitialSearchRoute(): boolean {
   );
 }
 
+export function detectInitialScannerRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const pathname = window.location.pathname.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  return (
+    pathname === '/pemindai' ||
+    pathname === '/pemindai/' ||
+    pathname === '/scan' ||
+    pathname === '/scan/' ||
+    params.get('view') === 'pemindai'
+  );
+}
+
 export function syncBrowserHistoryForView(view: AppView, schoolNpsn?: string): void {
   if (typeof window === 'undefined') return;
   const currentPath = window.location.pathname.toLowerCase();
@@ -42,6 +55,10 @@ export function syncBrowserHistoryForView(view: AppView, schoolNpsn?: string): v
     if (currentPath !== '/search' && currentPath !== '/search/') {
       window.history.pushState(null, '', '/search');
     }
+  } else if (view === 'message-scanner') {
+    if (currentPath !== '/pemindai' && currentPath !== '/pemindai/') {
+      window.history.pushState(null, '', '/pemindai');
+    }
   } else if (view === 'school-profile') {
     const targetUrl = schoolNpsn ? `/?npsn=${schoolNpsn}` : '/';
     if (window.location.search !== `?npsn=${schoolNpsn}`) {
@@ -52,6 +69,10 @@ export function syncBrowserHistoryForView(view: AppView, schoolNpsn?: string): v
     currentPath === '/admin/' ||
     currentPath === '/search' ||
     currentPath === '/search/' ||
+    currentPath === '/pemindai' ||
+    currentPath === '/pemindai/' ||
+    currentPath === '/scan' ||
+    currentPath === '/scan/' ||
     window.location.search !== ''
   ) {
     window.history.pushState(null, '', '/');

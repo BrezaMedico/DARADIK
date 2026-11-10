@@ -31,7 +31,7 @@ export const ReportSuccessReceipt: React.FC<ReportSuccessReceiptProps> = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-view-enter">
+    <div className="max-w-5xl mx-auto space-y-6 animate-view-enter">
       <div className="bg-[#FFFFFF] border border-[#C9DFDC] rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xs">
         <div className="flex items-center justify-center mx-auto">
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">

@@ -209,8 +209,8 @@ export const SchoolProfilePage: React.FC<SchoolProfilePageProps> = ({
     'Ahmad Dahlan, S.Ag';
 
   return (
-    <div className="w-full py-4 sm:py-8 lg:py-10 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
+    <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto space-y-6">
         <SchoolIdentityHeader
           school={school}
           schoolType={schoolType}

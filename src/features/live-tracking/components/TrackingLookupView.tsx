@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  ArrowLeft,
   Building2,
   Search,
   Clock,
@@ -12,6 +11,7 @@ import {
   FileText,
   X,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import { formatWibDateTime } from '@/utils/reportTracking';
 import type { TicketBookmarkItem } from '../trackingCookieUtils';
 
@@ -45,14 +45,7 @@ export const TrackingLookupView: React.FC<TrackingLookupViewProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <button
-          type="button"
-          onClick={onBackToHome}
-          className="min-h-[40px] px-3.5 sm:px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#2E6496] shrink-0" />
-          <span>Kembali ke Pencarian</span>
-        </button>
+        <BackButton onClick={onBackToHome} label="Kembali ke Beranda" />
 
         {onOpenAnonymousReport && (
           <button

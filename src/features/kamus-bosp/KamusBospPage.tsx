@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, X, Flag } from 'lucide-react';
+import { Search, X, Flag } from 'lucide-react';
 import { KAMUS_BOSP_DATA, type KamusBospItem } from '@/data';
 import { fetchKamusBospFromSupabase } from '@/services/supabase';
+import { BackButton } from '@/components/common/BackButton';
 
 interface KamusBospPageProps {
   onBack: () => void;
@@ -61,18 +62,12 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
     activeCategory === 'all' || activeCategory === 'prohibited';
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 animate-view-enter">
-      {/* Navigasi Kembali */}
-      <div className="mb-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-sm text-[#475569] hover:text-[#2E6496] transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          <span>Kembali</span>
-        </button>
-      </div>
+    <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto space-y-6 animate-view-enter">
+        {/* Navigasi Kembali */}
+        <div className="flex items-center justify-between gap-3">
+          <BackButton onClick={onBack} label="Kembali ke Beranda" />
+        </div>
 
       {/* Header Halaman */}
       <header className="pb-8 border-b border-[#C9DFDC]">
@@ -312,6 +307,7 @@ export const KamusBospPage: React.FC<KamusBospPageProps> = ({
           <Flag className="w-4 h-4" aria-hidden="true" />
           <span>Buat Laporan Anonim</span>
         </button>
+      </div>
       </div>
     </div>
   );

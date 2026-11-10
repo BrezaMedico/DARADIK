@@ -61,23 +61,23 @@ export const PANDUAN_APLIKASI_DARADIK = `
 - Lalu, klik salah satu nama barang untuk membuka rincian tujuan penggunaannya.
 - Terakhir, klik tombol Lihat Foto Kwitansi untuk mengecek nota resmi SIPLah, atau klik tombol Foto Ruang Kelas untuk melihat bukti fisik barang beserta titik koordinat ruangannya.
 
-3. CARA MEMINDAI CHAT IURAN GRUP WHATSAPP (SCANNER AI):
-- Pertama, klik menu Cek Iuran WA di bagian atas atau pilih tab Scanner WA di halaman sekolah.
-- Lalu, unggah gambar tangkapan layar obrolan grup WhatsApp kelas atau tempelkan teks pengumuman iuran tersebut.
-- Terakhir, tekan tombol analisis agar sistem otomatis mengecek apakah iuran itu melanggar aturan BOSP atau sebenarnya sudah ditanggung pemerintah.
+3. CARA MEMINDAI PESAN SEKOLAH (PEMINDAI PESAN):
+- Pertama, klik menu Pemindai Pesan di bagian atas navigasi lalu cari dan pilih nama sekolah, atau buka tab Pemindai Pesan langsung di halaman profil sekolah.
+- Lalu, unggah gambar tangkapan layar obrolan/pengumuman lewat seret-lepas, Ctrl+V, atau Cari Berkas Gambar, atau tempel teks pesan.
+- Terakhir, sistem otomatis mengecek apakah iuran itu melanggar aturan BOSP atau sebenarnya sudah ditanggung pemerintah.
 
 4. CARA MEMBUAT LAPORAN ANONIM (LAPOR PUNGLI AMAN):
-- Pertama, klik tombol Lapor Anonim di navigasi atas atau klik tombol Laporkan Jika Tidak Ada pada barang sekolah.
+- Pertama, klik tombol Lapor di navigasi atas atau klik tombol Laporkan pada barang sekolah.
 - Lalu, pilih sekolah, pilih jenis pungutan, pihak yang meminta, tulis kronologi singkat, dan lampirkan foto bukti tanpa perlu memasukkan nama, email, atau nomor telepon pribadi.
 - Terakhir, hitung soal matematika singkat lalu kirim laporan dan simpan Kode Tiket Lacak yang muncul di layar.
 
-5. CARA MELACAK STATUS LAPORAN (PANTAU TIKET):
-- Pertama, buka menu Pantau Tiket di bagian atas website.
+5. CARA MELACAK STATUS LAPORAN (LACAK LAPOR):
+- Pertama, klik menu Lapor di bagian atas lalu klik tombol Lacak Lapor di pojok kanan atas halaman Lapor.
 - Lalu, ketik Kode Tiket Lacak laporan kamu dan tekan tombol Lacak.
 - Terakhir, kamu bisa melihat perkembangan investigasi mulai dari tahap Diterima, Verifikasi, Investigasi, hingga Tindak Lanjut, serta mengirim pesan balasan secara anonim kepada petugas.
 
 6. CARA MEMBUKA KAMUS ATURAN BOSP:
-- Klik tombol Kamus BOSP di halaman utama atau tombol Kamus Aturan BOSP di halaman profil sekolah untuk membaca daftar biaya yang wajib gratis dan yang tidak ditanggung BOSP.
+- Klik tombol Kamus BOSP di bagian atas navigasi untuk membaca daftar biaya yang wajib gratis dan yang tidak ditanggung BOSP.
 `;
 
 export const FINAL_SYSTEM_PROMPT = `
@@ -88,7 +88,7 @@ PANDUAN TOMBOL NAVIGASI CEPAT:
 Jika jawabanmu berkaitan atau mengarahkan pengguna ke fitur website DARADIK, sertakan 1-3 tombol aksi relevan pada properti "tombol":
 - "lapor-anonim": Formulir Lapor Pungli Anonim
 - "pantau-tiket": Pantau / Lacak Tiket Laporan
-- "cek-iuran-wa": Verifikasi Scanner Iuran WhatsApp
+- "pemindai-pesan": Fitur Pemindai Pesan & Foto Pengumuman
 - "kamus-bosp": Kamus Biaya & Aturan Resmi BOSP
 - "cari-sekolah": Pencarian Data Sekolah & Pagu BOSP
 - "beranda": Kembali ke Beranda Utama
@@ -172,11 +172,14 @@ export function getActionButtonsForQuery(query = '', replyText = '') {
     /\bwa\b/i.test(q) ||
     q.includes('whatsapp') ||
     q.includes('scan') ||
+    q.includes('pindai') ||
+    q.includes('pemindai') ||
     q.includes('cek iuran') ||
     q.includes('grup') ||
+    t.includes('pemindai pesan') ||
     t.includes('cek iuran wa')
   ) {
-    addBtn('Buka Cek Iuran WA', 'cek-iuran-wa');
+    addBtn('Buka Pemindai Pesan', 'pemindai-pesan');
   }
 
   if (
@@ -201,7 +204,7 @@ export function getActionButtonsForQuery(query = '', replyText = '') {
 
   if (buttons.length === 0) {
     addBtn('Kamus Aturan BOSP', 'kamus-bosp');
-    addBtn('Cek Iuran WA', 'cek-iuran-wa');
+    addBtn('Pemindai Pesan', 'pemindai-pesan');
     addBtn('Lapor Anonim', 'lapor-anonim');
   }
 
@@ -440,7 +443,7 @@ function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
     q.includes('bangun gedung')
   ) {
     return {
-      teks: 'Dana BOSP dilarang dipakai untuk membangun gedung baru, membeli seragam atau sepatu pribadi siswa, serta membiayai wisata atau study tour. Kegiatan study tour atau perpisahan juga tidak boleh dipaksakan kepada orang tua siswa. Jika ada pengumuman iuran di grup WhatsApp, kamu bisa memeriksanya lewat fitur Cek Iuran WA.',
+      teks: 'Dana BOSP dilarang dipakai untuk membangun gedung baru, membeli seragam atau sepatu pribadi siswa, serta membiayai wisata atau study tour. Kegiatan study tour atau perpisahan juga tidak boleh dipaksakan kepada orang tua siswa. Jika ada pengumuman iuran di grup WhatsApp, kamu bisa memeriksanya lewat fitur Pemindai Pesan.',
       emosi: 'berpikir',
     };
   }
@@ -492,12 +495,14 @@ function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
     /\bwa\b/i.test(q) ||
     q.includes('whatsapp') ||
     q.includes('scan') ||
+    q.includes('pindai') ||
+    q.includes('pemindai') ||
     q.includes('cek iuran') ||
     q.includes('grup kelas') ||
     q.includes('screenshot')
   ) {
     return {
-      teks: 'Untuk memeriksa pengumuman tarikan biaya dari grup kelas, pertama buka menu Cek Iuran WA di bagian atas website. Lalu, unggah gambar tangkapan layar chat WhatsApp atau tempelkan teks pengumuman iuran tersebut. Terakhir, klik tombol analisis agar sistem langsung memberitahu apakah iuran itu melanggar aturan BOSP atau tidak.',
+      teks: 'Untuk memeriksa pengumuman tarikan biaya dari grup kelas, pertama buka menu Pemindai Pesan di bagian atas website lalu pilih sekolahnya. Lalu, unggah gambar tangkapan layar chat WhatsApp atau tempelkan teks pengumuman iuran tersebut. Terakhir, sistem otomatis memberitahu apakah iuran itu melanggar aturan BOSP atau tidak.',
       emosi: 'semangat',
     };
   }
@@ -529,7 +534,7 @@ function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
     q.includes('web ini')
   ) {
     return {
-      teks: 'Pertama, ketik nama sekolah atau nomor NPSN di halaman utama untuk melihat total dana BOSP, grafik anggaran, dan foto bukti belanjanya. Lalu, gunakan menu Cek Iuran WA jika ingin memeriksa pengumuman tarikan biaya dari grup orang tua. Terakhir, gunakan menu Lapor Anonim jika menemukan pungutan yang melanggar aturan.',
+      teks: 'Pertama, ketik nama sekolah atau nomor NPSN di halaman utama untuk melihat total dana BOSP, grafik anggaran, dan foto bukti belanjanya. Lalu, gunakan menu Pemindai Pesan jika ingin memeriksa pengumuman tarikan biaya dari grup orang tua. Terakhir, gunakan menu Lapor jika menemukan pungutan yang melanggar aturan.',
       emosi: 'semangat',
     };
   }
@@ -563,7 +568,7 @@ function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
     q.includes('kok bisa')
   ) {
     return {
-      teks: 'Astaga, tarikan biaya sebesar itu jelas mencurigakan dan wajib dipertanyakan dasarnya! Sekolah negeri tidak diperbolehkan menarik iuran wajib bernilai besar tanpa dasar hukum yang jelas. Coba unggah rinciannya ke menu Cek Iuran WA atau laporkan langsung secara anonim ya.',
+      teks: 'Astaga, tarikan biaya sebesar itu jelas mencurigakan dan wajib dipertanyakan dasarnya! Sekolah negeri tidak diperbolehkan menarik iuran wajib bernilai besar tanpa dasar hukum yang jelas. Coba unggah rinciannya ke menu Pemindai Pesan atau laporkan langsung secara anonim ya.',
       emosi: 'kaget',
     };
   }
@@ -599,7 +604,7 @@ function _getLocalKnowledgeReplyInternal(userMessage = '', history = []) {
     q.includes('aman')
   ) {
     return {
-      teks: 'Tenang, pelaporan di website ini seratus persen anonim tanpa perlu mengisi nama, email, atau nomor telepon pribadi kamu. Pertama, buka menu Lapor Anonim, lalu pilih sekolah, tulis kronologi singkat, dan lampirkan bukti fotonya. Terakhir, kirim laporan dan simpan kode tiketnya untuk memantau perkembangan investigasi di menu Pantau Tiket.',
+      teks: 'Tenang, pelaporan di website ini seratus persen anonim tanpa perlu mengisi nama, email, atau nomor telepon pribadi kamu. Pertama, buka menu Lapor, lalu pilih sekolah, tulis kronologi singkat, dan lampirkan bukti fotonya. Terakhir, kirim laporan dan simpan kode tiketnya untuk memantau perkembangan investigasi lewat tombol Lacak Lapor di halaman Lapor.',
       emosi: 'empati',
     };
   }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ArrowLeft,
   Search,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
+import { BackButton } from '@/components/common/BackButton';
 import type {
   PublicReportTrackingPayload,
 } from '@/types';
@@ -255,7 +255,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
 
   return (
     <div className="w-full py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-6 animate-view-enter">
+      <div className="max-w-5xl mx-auto space-y-6 animate-view-enter">
         {viewMode === 'list' ? (
           <TrackingLookupView
             ticketInput={ticketInput}
@@ -279,14 +279,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
         ) : (
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={handleBackToList}
-                className="min-h-[40px] px-4 py-2 rounded-full bg-[#FFFFFF] hover:bg-[#EBF3F8] border border-[#C9DFDC] text-xs sm:text-sm font-semibold text-[#1E293B] shadow-2xs transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4 text-[#2E6496]" />
-                <span>Kembali ke Riwayat Laporan</span>
-              </button>
+              <BackButton onClick={handleBackToList} label="Kembali ke Riwayat Laporan" />
 
               {report && (
                 <button
@@ -341,13 +334,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                       Coba Lagi
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={handleBackToList}
-                    className="min-h-[40px] px-4 py-2 rounded-xl bg-[#FFFFFF] border border-[#C9DFDC] text-xs font-bold text-[#1E293B] hover:bg-[#FAF8F5] cursor-pointer shrink-0"
-                  >
-                    Kembali
-                  </button>
+                  <BackButton onClick={handleBackToList} label="Kembali" className="shrink-0" />
                 </div>
               </div>
             )}
@@ -365,14 +352,7 @@ export const LiveTrackingPage: React.FC<LiveTrackingPageProps> = ({
                     Pastikan kode tiket diketik lengkap sesuai huruf kapital, huruf kecil, dan angka (misalnya CHK-9xK4mP-7vR2nQ-B8wL).
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleBackToList}
-                  className="min-h-[40px] px-5 py-2 rounded-xl bg-[#2E6496] text-[#FFFFFF] text-xs font-bold hover:bg-[#245385] cursor-pointer inline-flex items-center gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Kembali ke Riwayat Laporan</span>
-                </button>
+                <BackButton onClick={handleBackToList} label="Kembali ke Riwayat Laporan" />
               </div>
             )}
 
