@@ -151,6 +151,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<SpotlightRect | null>(null);
+  const [cardHeight, setCardHeight] = useState<number>(240);
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({
     w: typeof window !== 'undefined' ? window.innerWidth : 1280,
     h: typeof window !== 'undefined' ? window.innerHeight : 800,
@@ -158,16 +159,35 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   const steps = tourType === 'school-profile' ? PROFILE_TOUR_STEPS : LANDING_TOUR_STEPS;
-  const currentStep = steps[currentStepIndex];
+  const safeStepIndex = currentStepIndex < steps.length ? currentStepIndex : 0;
+  const currentStep = steps[safeStepIndex];
 
   useEffect(() => {
+    if (isOpen) {
+      setCurrentStepIndex(0);
+    }
+  }, [isOpen, tourType]);
+
+  useEffect(() => {
+    const clearWidgetInlineOverrides = () => {
+      const widgetRoot = document.querySelector<HTMLElement>('.bosp-widget-root');
+      if (widgetRoot) {
+        widgetRoot.style.removeProperty('display');
+        widgetRoot.style.removeProperty('visibility');
+        widgetRoot.style.removeProperty('opacity');
+        widgetRoot.style.removeProperty('pointer-events');
+        widgetRoot.style.removeProperty('z-index');
+      }
+    };
+
     if (!isOpen) {
       document.body.classList.remove('is-tour-active', 'is-tour-step-chatbot');
+      clearWidgetInlineOverrides();
       return;
     }
 
     document.body.classList.add('is-tour-active');
-    const isChatbotStep = steps[currentStepIndex]?.id === 'step-tanya-bos';
+    const isChatbotStep = steps[safeStepIndex]?.id === 'step-tanya-bos';
     document.body.classList.toggle('is-tour-step-chatbot', isChatbotStep);
 
     const popupEl = document.querySelector('#bosp-chat-popup');
@@ -178,12 +198,31 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
     return () => {
       document.body.classList.remove('is-tour-active', 'is-tour-step-chatbot');
+      clearWidgetInlineOverrides();
     };
-  }, [isOpen, currentStepIndex, steps]);
+  }, [isOpen, safeStepIndex, steps]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const cardEl = cardRef.current;
+    if (!cardEl) return;
+
+    const measure = () => {
+      if (cardEl.offsetHeight > 0) {
+        setCardHeight(cardEl.offsetHeight);
+      }
+    };
+
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(cardEl);
+    return () => ro.disconnect();
+  }, [isOpen, safeStepIndex]);
 
   const updateSpotlightPosition = useCallback(() => {
     if (!isOpen) return;
-    const step = steps[currentStepIndex];
+    const step = steps[safeStepIndex];
     if (!step) return;
 
     setViewportSize({
@@ -261,12 +300,15 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       width: Math.min(window.innerWidth - 8, rect.width + pad * 2),
       height: rect.height + pad * 2,
     });
-  }, [isOpen, currentStepIndex, steps]);
+  }, [isOpen, safeStepIndex, steps]);
 
   useEffect(() => {
     if (!isOpen) return;
-    const step = steps[currentStepIndex];
+    const step = steps[safeStepIndex];
     if (!step) return;
+
+    const isMobile = window.innerWidth < 640;
+    const isProfileStep = step.targetSelector.includes('tour-profile');
 
     const timer = setTimeout(() => {
       const el = findVisibleTarget(step.targetSelector);
@@ -281,12 +323,14 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
             behavior: 'smooth',
           });
         } else if (!isInMobileBottomNav) {
-          if (step.targetSelector.includes('tour-profile')) {
+          if (isProfileStep) {
             el.click();
-            const scrollTarget = window.scrollY + rect.top - 120;
+            const desiredTop = isMobile ? 84 : 120;
+            const scrollTarget = Math.max(0, window.scrollY + rect.top - desiredTop);
+            const farAwayOnMobile = isMobile && Math.abs(rect.top - desiredTop) > 480;
             window.scrollTo({
-              top: Math.max(0, scrollTarget),
-              behavior: 'smooth',
+              top: scrollTarget,
+              behavior: farAwayOnMobile ? 'auto' : 'smooth',
             });
           } else if (window.scrollY > 80 && !step.targetSelector.includes('#bosp-chat-fab')) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -296,15 +340,15 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       updateSpotlightPosition();
     }, 60);
 
-    const interval = setInterval(updateSpotlightPosition, 80);
-    const stopInterval = setTimeout(() => clearInterval(interval), 650);
+    const interval = setInterval(updateSpotlightPosition, isMobile ? 60 : 80);
+    const stopInterval = setTimeout(() => clearInterval(interval), isMobile ? 1050 : 650);
 
     return () => {
       clearTimeout(timer);
       clearInterval(interval);
       clearTimeout(stopInterval);
     };
-  }, [isOpen, currentStepIndex, updateSpotlightPosition, steps]);
+  }, [isOpen, safeStepIndex, updateSpotlightPosition, steps]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -327,24 +371,24 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowRight') {
-        if (currentStepIndex < steps.length - 1) {
+        if (safeStepIndex < steps.length - 1) {
           setCurrentStepIndex((prev) => prev + 1);
         } else {
           onClose();
         }
       } else if (e.key === 'ArrowLeft') {
-        if (currentStepIndex > 0) {
+        if (safeStepIndex > 0) {
           setCurrentStepIndex((prev) => prev - 1);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentStepIndex, onClose, steps]);
+  }, [isOpen, safeStepIndex, onClose, steps]);
 
   if (!isOpen || !currentStep) return null;
 
-  const isLastStep = currentStepIndex === steps.length - 1;
+  const isLastStep = safeStepIndex === steps.length - 1;
 
   const handleNext = () => {
     if (isLastStep) {
@@ -355,7 +399,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
   };
 
   const handlePrev = () => {
-    if (currentStepIndex > 0) {
+    if (safeStepIndex > 0) {
       setCurrentStepIndex((prev) => prev - 1);
     }
   };
@@ -397,16 +441,18 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       };
     }
 
-    const estimatedCardHeight = cardRef.current?.offsetHeight || 220;
+    const estimatedCardHeight = cardRef.current?.offsetHeight || cardHeight || 240;
     const gap = 16;
 
     // Khusus langkah Tanya BOS: tempatkan kartu tepat di atas tombol launcher di pojok kanan bawah
     if (currentStep.id === 'step-tanya-bos') {
       const rightPadding = isMobile ? 12 : 20;
       const leftPos = Math.max(12, viewportSize.w - cardMaxWidth - rightPadding);
-      const actualCardHeight = cardRef.current
-        ? Math.max(cardRef.current.offsetHeight, isMobile ? 250 : 210)
-        : (isMobile ? 250 : 210);
+      const actualCardHeight = isMobile
+        ? estimatedCardHeight
+        : cardRef.current
+        ? Math.max(cardRef.current.offsetHeight, 210)
+        : 210;
       const topPos = Math.max(16, targetRect.top - actualCardHeight - gap);
 
       return {
@@ -464,6 +510,12 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
       top: `${Math.round(topPos)}px`,
       left: `${Math.round(leftPos)}px`,
       width: `${cardMaxWidth}px`,
+      ...(isMobile
+        ? {
+            maxHeight: `${Math.max(200, viewportSize.h - 24)}px`,
+            overflowY: 'auto' as const,
+          }
+        : {}),
     };
   };
 
@@ -637,7 +689,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
                 type="button"
                 onClick={() => setCurrentStepIndex(idx)}
                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                  idx === currentStepIndex
+                  idx === safeStepIndex
                     ? 'w-4 bg-[#2E6496]'
                     : 'w-1.5 bg-[#CBD5E1] hover:bg-[#94A3B8]'
                 }`}
@@ -647,7 +699,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {currentStepIndex > 0 && (
+            {safeStepIndex > 0 && (
               <button
                 type="button"
                 onClick={handlePrev}

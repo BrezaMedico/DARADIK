@@ -19,8 +19,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   return (
     <header className="app-header-fixed fixed left-0 right-0 z-50 px-2 sm:pl-6 sm:pr-16 lg:pl-8 lg:pr-20 xl:px-8">
-      <div className="max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-6 rounded-xl liquid-glass-nav-white flex items-center justify-between gap-2 sm:gap-4">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <div className="max-w-6xl mx-auto h-14 sm:h-16 pl-3 pr-14 sm:px-6 rounded-xl liquid-glass-nav-white flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             onClick={onNavigateHome}
@@ -37,7 +37,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {currentView === 'school-profile' && (
             <div
               title="Halaman ini menampilkan data contoh (sample data) untuk simulasi BOSP"
-              className="h-9 sm:h-9 px-3 rounded-full border-2 border-[#2E6496] text-[#2E6496] bg-white/80 hover:bg-white shadow-xs backdrop-blur-xs flex items-center gap-1.5 font-bold text-xs select-none shrink-0 transition-all duration-300"
+              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border-2 border-[#2E6496] text-[#2E6496] bg-white/80 hover:bg-white shadow-xs backdrop-blur-xs flex items-center gap-1.5 font-bold text-[11px] sm:text-xs select-none shrink-0 transition-all duration-300"
             >
               <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-pulse shrink-0" aria-hidden="true" />
               <span className="tracking-wide">Sample Data</span>
