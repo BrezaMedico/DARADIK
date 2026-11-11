@@ -23,13 +23,18 @@ export const EVIDENCE_SIGNED_URL_TTL_SECONDS = 300; // 5 menit
 let defaultSupabaseClient = null;
 
 function sanitizeAttachmentMetadata(att) {
+  const rawPath = String(att?.storagePath || '')
+    .replace(/\.\./g, '')
+    .replace(/^\/+/, '')
+    .trim()
+    .slice(0, 260);
+  const sizeFormatted = String(
+    att?.sizeFormatted || (rawPath ? '-' : 'Referensi Data')
+  ).slice(0, 20);
   return {
     name: String(att?.name || 'Berkas Lampiran').slice(0, 120),
-    sizeFormatted: String(att?.sizeFormatted || '-').slice(0, 20),
-    storagePath: String(att?.storagePath || '')
-      .replace(/\.\./g, '')
-      .replace(/^\/+/, '')
-      .slice(0, 260),
+    sizeFormatted,
+    storagePath: rawPath || null,
     mimeType: String(att?.mimeType || '').slice(0, 60),
     uploadedAt: String(att?.uploadedAt || new Date().toISOString()).slice(0, 40),
   };
@@ -297,11 +302,13 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
   }
 
   // 4. Validasi input dasar
-  const cleanSchoolName = String(schoolName || '').trim();
+  const cleanSchoolName = String(schoolName || '').trim().slice(0, 200);
   const cleanNpsn = String(schoolNpsn || '').trim();
-  const cleanCategory = String(category || '').trim();
-  const cleanRole = String(requesterRole || '').trim();
+  const cleanCategory = String(category || '').trim().slice(0, 300);
+  const cleanRole = String(requesterRole || '').trim().slice(0, 120);
   const cleanNotes = String(notes || '').trim();
+  const cleanOcrText = ocrText ? String(ocrText).trim().slice(0, 12000) : null;
+  const cleanOcrFact = ocrBospFact ? String(ocrBospFact).trim().slice(0, 12000) : null;
 
   if (!cleanSchoolName || !cleanNpsn) {
     return { status: 400, payload: { error: 'Sekolah tujuan dan NPSN wajib diisi.' } };
@@ -321,8 +328,8 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
 
   // 5. Enkripsi server-side (AES-256-GCM)
   const notesEncrypted = encryptReportText(cleanNotes);
-  const ocrTextEncrypted = ocrText ? encryptReportText(String(ocrText)) : null;
-  const ocrBospFactEncrypted = ocrBospFact ? encryptReportText(String(ocrBospFact)) : null;
+  const ocrTextEncrypted = cleanOcrText ? encryptReportText(cleanOcrText) : null;
+  const ocrBospFactEncrypted = cleanOcrFact ? encryptReportText(cleanOcrFact) : null;
 
   // 6. Buat identitas dan secret token
   const reportId = crypto.randomUUID();
@@ -344,7 +351,7 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
     };
   }
 
-  const { data, error } = await supabase.rpc('svc_submit_report', {
+  const rpcPayload = {
     p_id: reportId,
     p_token_hash: tokenHashHex,
     p_school_id: String(schoolId || cleanNpsn).trim(),
@@ -359,7 +366,37 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
     p_ocr_text_encrypted: ocrTextEncrypted,
     p_ocr_bosp_fact_encrypted: ocrBospFactEncrypted,
     p_encryption_algorithm: 'AES-256-GCM/dv1',
-  });
+  };
+
+  let { data, error } = await supabase.rpc('svc_submit_report', rpcPayload);
+
+  // Kompatibilitas aman jika DB target masih memblokir lampiran referensi tanpa file fisik:
+  // pindahkan label 'Referensi Data' ke catatan terenkripsi dan pertahankan hanya lampiran berkas valid.
+  const referenceOnlyItems = cleanAttachments.filter(
+    (att) => !att.storagePath && att.sizeFormatted === 'Referensi Data'
+  );
+  const fileAttachments = cleanAttachments.filter((att) => Boolean(att.storagePath));
+  const hasUnbackedNonReference = cleanAttachments.some(
+    (att) => !att.storagePath && att.sizeFormatted !== 'Referensi Data'
+  );
+
+  if (
+    error &&
+    error.message?.includes('Jalur berkas lampiran tidak valid') &&
+    referenceOnlyItems.length > 0 &&
+    !hasUnbackedNonReference
+  ) {
+    const refText = referenceOnlyItems.map((att) => att.name).join('; ');
+    const notesWithRef = `${cleanNotes}\n\n[Referensi Data Terlampir]: ${refText}`.slice(0, 8000);
+    const notesWithRefEncrypted = encryptReportText(notesWithRef);
+    const retryRes = await supabase.rpc('svc_submit_report', {
+      ...rpcPayload,
+      p_notes_encrypted: notesWithRefEncrypted,
+      p_attachments: fileAttachments,
+    });
+    data = retryRes.data;
+    error = retryRes.error;
+  }
 
   if (error || !data) {
     const isMissingRpc =

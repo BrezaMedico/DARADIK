@@ -349,18 +349,34 @@ export function compressImageFile(file: File): Promise<UploadedFileItem> {
             'image/jpeg',
             0.78
           );
-        } else {
+          } else {
+            resolve({
+              id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              name: file.name,
+              sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+              previewUrl: e.target?.result as string,
+              blob: file,
+            });
+          }
+        };
+        img.onerror = () => {
           resolve({
             id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             name: file.name,
             sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-            previewUrl: e.target?.result as string,
             blob: file,
           });
-        }
+        };
+        img.src = e.target?.result as string;
       };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+      reader.onerror = () => {
+        resolve({
+          id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          name: file.name,
+          sizeFormatted: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+          blob: file,
+        });
+      };
+      reader.readAsDataURL(file);
   });
 }

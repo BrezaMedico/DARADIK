@@ -202,6 +202,56 @@ BEGIN
   END LOOP;
 END $$;
 
+-- 7. Perbarui private.sanitize_attachments agar lampiran 'Referensi Data' tanpa berkas fisik
+--    tetap diizinkan dengan storagePath NULL, namun jalur berkas fisik tetap divalidasi ketat.
+CREATE OR REPLACE FUNCTION private.sanitize_attachments(p_att JSONB, p_max INT)
+RETURNS JSONB
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = ''
+AS $$
+DECLARE
+  v_out JSONB;
+BEGIN
+  IF p_att IS NULL OR jsonb_typeof(p_att) <> 'array' THEN
+    RETURN '[]'::jsonb;
+  END IF;
+  IF jsonb_array_length(p_att) > p_max THEN
+    RAISE EXCEPTION 'VALIDATION_ERROR: Jumlah lampiran melebihi batas maksimum.';
+  END IF;
+
+  SELECT coalesce(jsonb_agg(
+           jsonb_build_object(
+             'name',          left(coalesce(t.elem ->> 'name', 'Berkas Lampiran'), 120),
+             'sizeFormatted', left(coalesce(t.elem ->> 'sizeFormatted', '-'), 20),
+             'storagePath',   nullif(btrim(coalesce(t.elem ->> 'storagePath', '')), ''),
+             'mimeType',      left(coalesce(t.elem ->> 'mimeType', ''), 60),
+             'uploadedAt',    left(coalesce(t.elem ->> 'uploadedAt', ''), 40)
+           ) ORDER BY t.ord), '[]'::jsonb)
+  INTO v_out
+  FROM jsonb_array_elements(p_att) WITH ORDINALITY AS t(elem, ord)
+  WHERE jsonb_typeof(t.elem) = 'object';
+
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v_out) e
+    WHERE (
+      (e ->> 'storagePath') IS NULL
+      AND coalesce(e ->> 'sizeFormatted', '') <> 'Referensi Data'
+    ) OR (
+      (e ->> 'storagePath') IS NOT NULL
+      AND (e ->> 'storagePath') !~ '^(initial|followup)/[0-9a-f]{36}\.(jpg|png|webp|pdf)$'
+    )
+  ) THEN
+    RAISE EXCEPTION 'VALIDATION_ERROR: Jalur berkas lampiran tidak valid.';
+  END IF;
+
+  RETURN v_out;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.sanitize_attachments(JSONB, INT)
+  FROM PUBLIC, anon, authenticated;
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

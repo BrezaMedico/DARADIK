@@ -76,6 +76,9 @@ export async function uploadReportEvidenceFile(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.storagePath) {
+    if (res.status === 413) {
+      throw new Error('Ukuran berkas bukti terlalu besar. Gunakan foto atau dokumen maksimal 3 MB.');
+    }
     throw new Error(
       String(data?.error || 'Gagal mengunggah berkas bukti ke server aman.')
     );

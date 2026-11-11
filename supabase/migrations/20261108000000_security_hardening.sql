@@ -167,7 +167,7 @@ BEGIN
            jsonb_build_object(
              'name',          left(coalesce(t.elem ->> 'name', 'Berkas Lampiran'), 120),
              'sizeFormatted', left(coalesce(t.elem ->> 'sizeFormatted', '-'), 20),
-             'storagePath',   t.elem ->> 'storagePath',
+             'storagePath',   nullif(btrim(coalesce(t.elem ->> 'storagePath', '')), ''),
              'mimeType',      left(coalesce(t.elem ->> 'mimeType', ''), 60),
              'uploadedAt',    left(coalesce(t.elem ->> 'uploadedAt', ''), 40)
            ) ORDER BY t.ord), '[]'::jsonb)
@@ -177,8 +177,13 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM jsonb_array_elements(v_out) e
-    WHERE (e ->> 'storagePath') IS NULL
-       OR (e ->> 'storagePath') !~ '^(initial|followup)/[0-9a-f]{36}\.(jpg|png|webp|pdf)$'
+    WHERE (
+      (e ->> 'storagePath') IS NULL
+      AND coalesce(e ->> 'sizeFormatted', '') <> 'Referensi Data'
+    ) OR (
+      (e ->> 'storagePath') IS NOT NULL
+      AND (e ->> 'storagePath') !~ '^(initial|followup)/[0-9a-f]{36}\.(jpg|png|webp|pdf)$'
+    )
   ) THEN
     RAISE EXCEPTION 'VALIDATION_ERROR: Jalur berkas lampiran tidak valid.';
   END IF;

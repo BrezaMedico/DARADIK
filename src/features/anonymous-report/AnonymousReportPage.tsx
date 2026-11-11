@@ -243,6 +243,8 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       if (validationError?.includes('lampiran') || validationError?.includes('bukti')) {
         setValidationError(null);
       }
+    } catch {
+      setValidationError('Gagal memproses berkas lampiran. Gunakan foto JPG, PNG, WebP, atau PDF.');
     } finally {
       setIsCompressing(false);
       if (fileInputRef.current) {
@@ -310,8 +312,8 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       return;
     }
 
-    if (!additionalNotes.trim()) {
-      setValidationError('Tuliskan kronologi atau rincian kejadian laporan.');
+    if (!additionalNotes.trim() || additionalNotes.trim().length < 10) {
+      setValidationError('Tuliskan kronologi atau rincian kejadian laporan minimal 10 karakter.');
       return;
     }
 
@@ -345,11 +347,12 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
     setIsSubmitting(true);
     setValidationError(null);
 
-    const categoryLabel =
+    const categoryLabel = (
       jenisPungutan === 'lainnya'
         ? `Lainnya: ${jenisPungutanLainnya.trim()}`
         : JENIS_PUNGUTAN_OPTIONS.find((o) => o.value === jenisPungutan)?.label ||
-          jenisPungutan;
+          jenisPungutan
+    ).slice(0, 300);
 
     const roleLabel =
       pihakMeminta === 'Pihak Lain' && pihakLainnyaDetail.trim()
@@ -437,6 +440,7 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       handleRegenerateCaptcha();
       setIsSubmitting(false);
       setIsSubmitModalSuccess(false);
+      window.scrollTo({ top: 120, behavior: 'smooth' });
     }
   };
 

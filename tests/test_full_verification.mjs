@@ -546,6 +546,85 @@ async function runFullVerification() {
       assert.strictEqual(calledRpcs.includes('submit_reporter_additional_info'), false);
     });
 
+    await test('Pengiriman laporan dengan Referensi Data (BOSP/WA Scanner) & tanpa lampiran berhasil, path palsu tetap ditolak', async () => {
+      const capRef = await api('/api/reports/captcha');
+      const mRef = capRef.data.question.match(/(\d+)\s*([\+\-\*×])\s*(\d+)/);
+      const a1 = parseInt(mRef[1], 10);
+      const b1 = parseInt(mRef[3], 10);
+      const ansRef = mRef[2] === '+' ? a1 + b1 : mRef[2] === '-' ? a1 - b1 : a1 * b1;
+
+      const refRes = await api('/api/reports/submit', {
+        method: 'POST',
+        body: {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          kabupaten: 'Kota Bandung',
+          kecamatan: 'Coblong',
+          category: `Lainnya: Kejanggalan Item ${'X'.repeat(320)}`,
+          requesterRole: 'Komite Sekolah',
+          notes: 'Laporan dengan referensi item BOSP dan screenshot terunggah',
+          attachments: [
+            { name: 'Arsip Nota INV-01 & Geotag', sizeFormatted: 'Referensi Data' },
+            uploadedEvidence,
+          ],
+          ocrText: 'Halo wali murid '.repeat(900),
+          ocrBospFact: 'Fakta BOSP',
+          captchaAnswer: ansRef,
+          captchaToken: capRef.data.token,
+        },
+      });
+      assert.strictEqual(refRes.status, 200, `Laporan referensi gagal: ${JSON.stringify(refRes.data)}`);
+      assert(refRes.data.ticket_code, 'ticket_code harus terbit untuk laporan dengan Referensi Data');
+
+      const capEmpty = await api('/api/reports/captcha');
+      const mEmp = capEmpty.data.question.match(/(\d+)\s*([\+\-\*×])\s*(\d+)/);
+      const a2 = parseInt(mEmp[1], 10);
+      const b2 = parseInt(mEmp[3], 10);
+      const ansEmpty = mEmp[2] === '+' ? a2 + b2 : mEmp[2] === '-' ? a2 - b2 : a2 * b2;
+
+      const emptyRes = await api('/api/reports/submit', {
+        method: 'POST',
+        body: {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          category: 'seragam',
+          requesterRole: 'Wali Murid',
+          notes: 'Laporan teks lengkap tanpa berkas lampiran apa pun',
+          attachments: [],
+          captchaAnswer: ansEmpty,
+          captchaToken: capEmpty.data.token,
+        },
+      });
+      assert.strictEqual(emptyRes.status, 200);
+
+      const capBad = await api('/api/reports/captcha');
+      const mBad = capBad.data.question.match(/(\d+)\s*([\+\-\*×])\s*(\d+)/);
+      const a3 = parseInt(mBad[1], 10);
+      const b3 = parseInt(mBad[3], 10);
+      const ansBad = mBad[2] === '+' ? a3 + b3 : mBad[2] === '-' ? a3 - b3 : a3 * b3;
+
+      const badPathRes = await api('/api/reports/submit', {
+        method: 'POST',
+        body: {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          category: 'seragam',
+          requesterRole: 'Wali Murid',
+          notes: 'Percobaan injeksi jalur lampiran tidak valid',
+          attachments: [
+            { name: 'evil.jpg', sizeFormatted: '10 KB', storagePath: 'unauthorized/evil.jpg' },
+          ],
+          captchaAnswer: ansBad,
+          captchaToken: capBad.data.token,
+        },
+      });
+      assert.strictEqual(badPathRes.status, 400);
+      assert(badPathRes.data.error.includes('Jalur berkas lampiran tidak valid'));
+    });
+
     console.log('\n================================================================');
     console.log(`HASIL: ${passedCount}/${totalCount} PENGUJIAN LENGKAP LOLOS (100%)`);
     console.log('STATUS: SEMUA FUNGSIONALITAS BERJALAN LANCAR TANPA MASALAH');
