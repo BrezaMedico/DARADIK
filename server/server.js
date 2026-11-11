@@ -17,6 +17,7 @@ import {
   handleTrackReport,
   handleReplyReport,
   handleGetOfficerEvidenceUrls,
+  handleDecryptOfficerReport,
 } from './reportService.js';
 import { handleScanJudge } from './scanJudgeService.js';
 
@@ -67,6 +68,7 @@ export {
   handleTrackReport,
   handleReplyReport,
   handleGetOfficerEvidenceUrls,
+  handleDecryptOfficerReport,
   handleScanJudge,
 };
 
@@ -204,6 +206,16 @@ export function createExpressApp(options = {}) {
   app.post('/api/reports/officer-evidence-urls', async (req, res) => {
     const maskedIp = getMaskedIp(req);
     const result = await handleGetOfficerEvidenceUrls(
+      req.body,
+      req.headers.authorization,
+      maskedIp
+    );
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/reports/officer-decrypt', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleDecryptOfficerReport(
       req.body,
       req.headers.authorization,
       maskedIp

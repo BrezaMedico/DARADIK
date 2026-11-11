@@ -648,21 +648,12 @@ export async function handleReplyReport(body, maskedIp, customClient = null) {
   };
 }
 
-/**
- * Handler penerbitan Signed URL singkat (5 menit) khusus Petugas Dinas Pendidikan terautentikasi.
- * Identitas dan role diverifikasi ulang dari JWT Supabase + tabel officer_profiles (tidak pernah percaya role frontend).
- */
-export async function handleGetOfficerEvidenceUrls(
-  body,
-  authHeader,
-  maskedIp = 'anonymous',
-  supabaseClient = null
-) {
+async function authenticateOfficerRequest(authHeader, supabaseClient = null) {
   let supabase;
   try {
     supabase = getServiceSupabaseClient(supabaseClient);
   } catch (err) {
-    return { status: 503, payload: { error: err.message } };
+    return { ok: false, status: 503, payload: { error: err.message } };
   }
 
   const rawAuth = String(authHeader || '').trim();
@@ -670,6 +661,7 @@ export async function handleGetOfficerEvidenceUrls(
   const accessToken = bearerMatch ? bearerMatch[1].trim() : '';
   if (!accessToken) {
     return {
+      ok: false,
       status: 401,
       payload: { error: 'UNAUTHORIZED: Token sesi petugas tidak ditemukan.' },
     };
@@ -678,6 +670,7 @@ export async function handleGetOfficerEvidenceUrls(
   const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
   if (userError || !userData?.user?.id) {
     return {
+      ok: false,
       status: 401,
       payload: { error: 'UNAUTHORIZED: Sesi petugas tidak valid atau telah kedaluwarsa.' },
     };
@@ -696,12 +689,44 @@ export async function handleGetOfficerEvidenceUrls(
 
   if (profileError || !isAuthorizedRole) {
     return {
+      ok: false,
       status: 403,
       payload: {
-        error: 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan aktif berwenang yang dapat mengakses bukti.',
+        error: 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan aktif berwenang yang dapat mengakses data pengaduan.',
       },
     };
   }
+
+  return { ok: true, supabase, officerUid };
+}
+
+function safeDecryptTextField(value) {
+  if (value === null || value === undefined) return null;
+  const str = String(value);
+  if (!str) return '';
+  if (!str.trim().startsWith('dv1.')) return str;
+  try {
+    return decryptReportText(str);
+  } catch {
+    return '[Teks terenkripsi tidak dapat didekripsi]';
+  }
+}
+
+/**
+ * Handler penerbitan Signed URL singkat (5 menit) khusus Petugas Dinas Pendidikan terautentikasi.
+ * Identitas dan role diverifikasi ulang dari JWT Supabase + tabel officer_profiles (tidak pernah percaya role frontend).
+ */
+export async function handleGetOfficerEvidenceUrls(
+  body,
+  authHeader,
+  maskedIp = 'anonymous',
+  supabaseClient = null
+) {
+  const auth = await authenticateOfficerRequest(authHeader, supabaseClient);
+  if (!auth.ok) {
+    return { status: auth.status, payload: auth.payload };
+  }
+  const { supabase, officerUid } = auth;
 
   const rl = await enforceRateLimit(supabase, 'officer_evidence', `${officerUid}:${maskedIp}`, 120, 60);
   if (!rl.allowed) {
@@ -756,6 +781,76 @@ export async function handleGetOfficerEvidenceUrls(
     payload: {
       signedUrls,
       expiresIn: EVIDENCE_SIGNED_URL_TTL_SECONDS,
+    },
+  };
+}
+
+/**
+ * Handler dekripsi isi laporan & pesan terenkripsi khusus Petugas Dinas Pendidikan aktif.
+ * Kunci enkripsi tetap berada di server; client hanya mengirim reportId terotorisasi (bukan ciphertext sembarang).
+ */
+export async function handleDecryptOfficerReport(
+  body,
+  authHeader,
+  maskedIp = 'anonymous',
+  supabaseClient = null
+) {
+  const auth = await authenticateOfficerRequest(authHeader, supabaseClient);
+  if (!auth.ok) {
+    return { status: auth.status, payload: auth.payload };
+  }
+  const { supabase, officerUid } = auth;
+
+  const rl = await enforceRateLimit(supabase, 'officer_decrypt', `${officerUid}:${maskedIp}`, 120, 60);
+  if (!rl.allowed) {
+    return {
+      status: 429,
+      payload: { error: `Batas permintaan dekripsi tercapai. Coba lagi dalam ${rl.retry_after} detik.` },
+    };
+  }
+
+  const reportId = String(body?.reportId || '').trim();
+  if (!reportId) {
+    return { status: 400, payload: { error: 'Identitas laporan diperlukan.' } };
+  }
+
+  const { data: reportRow, error: reportError } = await supabase
+    .from('anonymous_reports')
+    .select('id, notes_encrypted, ocr_text, ocr_bosp_fact')
+    .eq('id', reportId)
+    .maybeSingle();
+
+  if (reportError) {
+    return {
+      status: 500,
+      payload: { error: `Gagal memuat isi laporan terenkripsi: ${reportError.message}` },
+    };
+  }
+  if (!reportRow) {
+    return { status: 404, payload: { error: 'Data laporan tidak ditemukan.' } };
+  }
+
+  const { data: msgRows } = await supabase
+    .from('report_messages')
+    .select('id, message')
+    .eq('report_id', reportId);
+
+  const decryptedMessages = {};
+  if (Array.isArray(msgRows)) {
+    for (const m of msgRows) {
+      if (m?.id) {
+        decryptedMessages[String(m.id)] = safeDecryptTextField(m.message) || '';
+      }
+    }
+  }
+
+  return {
+    status: 200,
+    payload: {
+      notes: safeDecryptTextField(reportRow.notes_encrypted) || '',
+      ocrText: safeDecryptTextField(reportRow.ocr_text),
+      ocrBospFact: safeDecryptTextField(reportRow.ocr_bosp_fact),
+      messages: decryptedMessages,
     },
   };
 }

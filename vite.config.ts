@@ -77,6 +77,7 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         url !== '/api/reports/track' &&
         url !== '/api/reports/reply' &&
         url !== '/api/reports/officer-evidence-urls' &&
+        url !== '/api/reports/officer-decrypt' &&
         url !== '/api/scan-vision' &&
         url !== '/api/scanner/vision' &&
         url !== '/api/scan-judge' &&
@@ -144,6 +145,15 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         if (url === '/api/reports/officer-evidence-urls') {
           const authHeader = req.headers?.authorization || '';
           const result = await serverMod.handleGetOfficerEvidenceUrls(body, authHeader, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
+
+        if (url === '/api/reports/officer-decrypt') {
+          const authHeader = req.headers?.authorization || '';
+          const result = await serverMod.handleDecryptOfficerReport(body, authHeader, maskedIp);
           res.statusCode = result.status;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.end(JSON.stringify(result.payload));

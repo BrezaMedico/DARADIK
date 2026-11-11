@@ -625,6 +625,32 @@ async function runFullVerification() {
       assert(badPathRes.data.error.includes('Jalur berkas lampiran tidak valid'));
     });
 
+    await test('Admin/petugas aktif dapat membaca dekripsi kronologi laporan, sedangkan non-petugas ditolak', async () => {
+      const unauthDecrypt = await api('/api/reports/officer-decrypt', {
+        method: 'POST',
+        body: { reportId: createdReport.id },
+      });
+      assert.strictEqual(unauthDecrypt.status, 401);
+
+      const nonOfficerDecrypt = await api('/api/reports/officer-decrypt', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tokenNonOfficer}` },
+        body: { reportId: createdReport.id },
+      });
+      assert.strictEqual(nonOfficerDecrypt.status, 403);
+
+      const officerDecrypt = await api('/api/reports/officer-decrypt', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tokenOfficer}` },
+        body: { reportId: createdReport.id },
+      });
+      assert.strictEqual(officerDecrypt.status, 200);
+      assert.strictEqual(
+        officerDecrypt.data.notes,
+        'Dugaan pungli seragam Rp 300.000 via transfer rekening pribadi komite'
+      );
+    });
+
     console.log('\n================================================================');
     console.log(`HASIL: ${passedCount}/${totalCount} PENGUJIAN LENGKAP LOLOS (100%)`);
     console.log('STATUS: SEMUA FUNGSIONALITAS BERJALAN LANCAR TANPA MASALAH');
