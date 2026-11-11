@@ -33,13 +33,73 @@ export const PIPER_MODEL_PATH = (
   path.resolve(__dirname, 'models', 'id_ID-news_tts-medium.onnx')
 ).trim();
 
-export const ALLOWED_ORIGINS = (
-  process.env.ALLOWED_ORIGINS ||
-  'http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173'
-)
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+export const PRODUCTION_ALLOWED_ORIGINS = [
+  'https://daradik.vercel.app',
+  'https://daradik.onrender.com',
+];
+
+export const DEVELOPMENT_ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:4173',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+];
+
+function normalizeOrigin(origin) {
+  const clean = String(origin || '').trim().replace(/\/+$/, '');
+  if (!clean || clean === '*') return null;
+  try {
+    const parsed = new URL(clean);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveAllowedOrigins({
+  nodeEnv = process.env.NODE_ENV,
+  vercelEnv = process.env.VERCEL_ENV,
+  rawAllowedOrigins = process.env.ALLOWED_ORIGINS,
+  renderExternalUrl = process.env.RENDER_EXTERNAL_URL,
+  vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL,
+} = {}) {
+  const isProduction =
+    String(nodeEnv || '').toLowerCase() === 'production' ||
+    String(vercelEnv || '').toLowerCase() === 'production';
+
+  const origins = new Set(PRODUCTION_ALLOWED_ORIGINS);
+
+  if (!isProduction) {
+    for (const devOrigin of DEVELOPMENT_ALLOWED_ORIGINS) {
+      origins.add(devOrigin);
+    }
+  }
+
+  const extraCandidates = [
+    ...String(rawAllowedOrigins || '').split(','),
+    renderExternalUrl || '',
+    vercelProductionUrl ? `https://${vercelProductionUrl}` : '',
+  ];
+
+  for (const candidate of extraCandidates) {
+    const normalized = normalizeOrigin(candidate);
+    if (!normalized) continue;
+    if (isProduction) {
+      const u = new URL(normalized);
+      const isLocalHost =
+        u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '::1';
+      if (u.protocol !== 'https:' || isLocalHost) continue;
+    }
+    origins.add(normalized);
+  }
+
+  return Array.from(origins);
+}
+
+export const ALLOWED_ORIGINS = resolveAllowedOrigins();
 
 export const MAX_INPUT_LENGTH = 300;
 export const VALID_EMOTIONS = new Set([

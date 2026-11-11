@@ -30,10 +30,8 @@ import {
   MAX_DAILY_REPORTS,
   PIHAK_MEMINTA_OPTIONS,
   compressImageFile,
-  generateMathChallenge,
   getCookie,
   getDailyReportData,
-  hashCaptchaAnswer,
   recordReportSubmissionQuota,
   saveTicketBookmarkToBrowserCookie,
   setCookie,
@@ -159,8 +157,12 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
     () => getDailyReportData().count
   );
 
-  const [mathChallenge, setMathChallenge] =
-    useState<MathChallengeState>(generateMathChallenge);
+  const [mathChallenge, setMathChallenge] = useState<MathChallengeState>({
+    textToDraw: 'Muat...',
+    salt: '',
+    timestamp: 0,
+    token: '',
+  });
   const [mathInput, setMathInput] = useState<string>('');
 
   const handleRegenerateCaptcha = async () => {
@@ -174,7 +176,15 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
         salt: '',
       });
     } catch {
-      setMathChallenge(generateMathChallenge());
+      setMathChallenge({
+        textToDraw: 'Gagal',
+        salt: '',
+        timestamp: 0,
+        token: '',
+      });
+      setValidationError(
+        'Gagal memuat tantangan keamanan server. Silakan muat ulang soal verifikasi.'
+      );
     }
   };
 
@@ -310,24 +320,16 @@ export const AnonymousReportPage: React.FC<AnonymousReportPageProps> = ({
       return;
     }
 
-    if (mathChallenge.salt) {
-      if (Date.now() - mathChallenge.timestamp > 180000) {
-        setValidationError('Waktu soal verifikasi telah habis. Silakan hitung soal baru.');
-        handleRegenerateCaptcha();
-        return;
-      }
+    if (!mathChallenge.token) {
+      setValidationError('Tantangan verifikasi server belum siap. Silakan muat ulang soal verifikasi.');
+      handleRegenerateCaptcha();
+      return;
+    }
 
-      const calculatedHash = hashCaptchaAnswer(
-        mathInput.trim(),
-        mathChallenge.salt,
-        mathChallenge.timestamp
-      );
-
-      if (calculatedHash !== mathChallenge.token) {
-        setValidationError('Hasil hitungan matematika belum tepat. Silakan coba kembali.');
-        handleRegenerateCaptcha();
-        return;
-      }
+    if (Date.now() - mathChallenge.timestamp > 540000) {
+      setValidationError('Waktu soal verifikasi telah habis. Silakan hitung soal baru.');
+      handleRegenerateCaptcha();
+      return;
     }
 
     setValidationError(null);

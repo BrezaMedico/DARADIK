@@ -661,7 +661,10 @@ SET search_path = ''
 AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM public.officer_profiles op WHERE op.id = auth.uid() AND op.is_active = TRUE
+    SELECT 1 FROM public.officer_profiles op
+    WHERE op.id = auth.uid()
+      AND op.is_active = TRUE
+      AND op.role IN ('officer', 'supervisor')
   ) THEN
     RAISE EXCEPTION 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan yang berwenang melihat antrean laporan.';
   END IF;
@@ -695,7 +698,10 @@ DECLARE
   v_report public.anonymous_reports%ROWTYPE;
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM public.officer_profiles op WHERE op.id = auth.uid() AND op.is_active = TRUE
+    SELECT 1 FROM public.officer_profiles op
+    WHERE op.id = auth.uid()
+      AND op.is_active = TRUE
+      AND op.role IN ('officer', 'supervisor')
   ) THEN
     RAISE EXCEPTION 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan yang berwenang memeriksa detail laporan.';
   END IF;
@@ -733,7 +739,10 @@ SET search_path = ''
 AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM public.officer_profiles op WHERE op.id = auth.uid() AND op.is_active = TRUE
+    SELECT 1 FROM public.officer_profiles op
+    WHERE op.id = auth.uid()
+      AND op.is_active = TRUE
+      AND op.role IN ('officer', 'supervisor')
   ) THEN
     RAISE EXCEPTION 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan yang berwenang membuka bukti laporan.';
   END IF;

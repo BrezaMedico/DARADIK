@@ -38,6 +38,7 @@ export async function getActiveOfficerSession(): Promise<OfficerProfileRecord | 
     .select('id, email, full_name, jabatan, unit_kerja, role, is_active')
     .eq('id', session.user.id)
     .eq('is_active', true)
+    .in('role', ['officer', 'supervisor'])
     .maybeSingle();
 
   if (profileError || !profile) {
@@ -67,6 +68,7 @@ export async function signInOfficerWithPassword(
     .select('id, email, full_name, jabatan, unit_kerja, role, is_active')
     .eq('id', data.user.id)
     .eq('is_active', true)
+    .in('role', ['officer', 'supervisor'])
     .maybeSingle();
 
   if (profileError || !profile) {
@@ -145,36 +147,84 @@ export async function fetchOfficerReportDetailSnapshot(
   const schoolIdentity = await fetchOfficialSchoolIdentityByNpsn(schoolNpsn);
 
   const rawAttachments = normalizeAttachments(r.attachments_json);
-  const resolvedAttachments = await Promise.all(
-    rawAttachments.map(async (att) => {
-      let finalUrl = att.url || '';
-      if (!finalUrl && att.storagePath) {
-        try {
-          const { data: signed } = await supabase.storage
-            .from('report-evidence')
-            .createSignedUrl(att.storagePath, 3600);
-          if (signed?.signedUrl) {
-            finalUrl = signed.signedUrl;
-          }
-        } catch {}
+  const typedRawMessages = rawMessages as Record<string, unknown>[];
+  const allPaths = Array.from(
+    new Set(
+      [
+        ...rawAttachments.map((a) => a.storagePath),
+        ...typedRawMessages.flatMap((m) =>
+          normalizeAttachments(m.attachments_json).map((a) => a.storagePath)
+        ),
+      ].filter((p): p is string => Boolean(p && !p.includes('..') && !p.startsWith('/')))
+    )
+  );
 
-        if (!finalUrl) {
-          try {
-            const { data: pub } = supabase.storage
-              .from('report-evidence')
-              .getPublicUrl(att.storagePath);
-            if (pub?.publicUrl) {
-              finalUrl = pub.publicUrl;
-            }
-          } catch {}
+  const signedUrlMap: Record<string, string> = {};
+  if (allPaths.length > 0) {
+    let resolvedViaBackend = false;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        const resp = await fetch('/api/reports/officer-evidence-urls', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            reportId: String(r.id || reportId),
+            storagePaths: allPaths,
+          }),
+        });
+        if (resp.ok) {
+          const payload = (await resp.json().catch(() => ({}))) as {
+            signedUrls?: Record<string, string>;
+          };
+          if (payload?.signedUrls && typeof payload.signedUrls === 'object') {
+            Object.assign(signedUrlMap, payload.signedUrls);
+            resolvedViaBackend = true;
+          }
+        } else if (resp.status === 401 || resp.status === 403) {
+          resolvedViaBackend = true;
         }
       }
-      return {
-        ...att,
-        url: finalUrl || undefined,
-      };
-    })
-  );
+    } catch {
+      // Backend tidak terjangkau; lanjutkan hanya lewat pemeriksaan otorisasi RPC & signed URL 5 menit
+    }
+
+    if (!resolvedViaBackend) {
+      await Promise.all(
+        allPaths.map(async (storagePath) => {
+          try {
+            const { data: authorized, error: authErr } = await supabase.rpc(
+              'officer_can_access_evidence',
+              {
+                p_report_id: String(r.id || reportId),
+                p_storage_path: storagePath,
+              }
+            );
+            if (authErr || authorized !== true) return;
+            const { data: signed } = await supabase.storage
+              .from('report-evidence')
+              .createSignedUrl(storagePath, 300);
+            if (signed?.signedUrl) {
+              signedUrlMap[storagePath] = signed.signedUrl;
+            }
+          } catch {
+            // Tidak pernah menggunakan getPublicUrl untuk bukti pengaduan
+          }
+        })
+      );
+    }
+  }
+
+  const resolvedAttachments = rawAttachments.map((att) => ({
+    ...att,
+    url: att.storagePath ? signedUrlMap[att.storagePath] || undefined : undefined,
+  }));
 
   const fullReport: OfficerFullReportRow = {
     id: String(r.id || ''),
@@ -238,12 +288,15 @@ export async function fetchOfficerReportDetailSnapshot(
       note: String(n.note || ''),
       created_at: String(n.created_at || ''),
     })),
-    messages: rawMessages.map((m: Record<string, unknown>) => ({
+    messages: typedRawMessages.map((m: Record<string, unknown>) => ({
       id: String(m.id || ''),
       sender_type: String(m.sender_type) === 'OFFICER' ? 'OFFICER' : 'REPORTER',
       sender_label: String(m.sender_label || ''),
       message: String(m.message || ''),
-      attachments_json: normalizeAttachments(m.attachments_json),
+      attachments_json: normalizeAttachments(m.attachments_json).map((att) => ({
+        ...att,
+        url: att.storagePath ? signedUrlMap[att.storagePath] || undefined : undefined,
+      })),
       created_at: String(m.created_at || ''),
     })),
     autoTransitionedOnOpen,

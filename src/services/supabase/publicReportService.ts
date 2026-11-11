@@ -1,11 +1,8 @@
 import {
-  supabase,
-  cleanRpcErrorMessage,
   normalizeAttachments,
   normalizeMethods,
 } from './client';
 import { getTrackingTokenForTicket } from '@/features/live-tracking/trackingCookieUtils';
-import { generateAnonymousEvidencePath } from '@/utils/cryptoSecurity';
 import type {
   PublicReportTrackingPayload,
   ReportAttachmentMeta,
@@ -19,30 +16,24 @@ export async function fetchReportCaptchaChallenge(): Promise<{
   question: string;
   token: string;
 }> {
-  try {
-    const res = await fetch('/api/reports/captcha', {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
+  const res = await fetch('/api/reports/captcha', {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
 
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch {
-    // Offline / direct fallback
+  if (!res.ok) {
+    throw new Error('Layanan verifikasi keamanan server tidak tersedia.');
   }
 
-  // Fallback: client-side challenge if backend proxy is unreached
-  const num1 = Math.floor(Math.random() * 12) + 3;
-  const num2 = Math.floor(Math.random() * 9) + 2;
-  const ans = num1 + num2;
-  const nonce = Math.random().toString(36).substring(2, 10);
-  const exp = Date.now() + 5 * 60 * 1000;
-  const payload = JSON.stringify({ a: ans, exp, n: nonce, direct: true });
-  const b64 = btoa(payload);
+  const data = await res.json();
+  if (!data?.question || !data?.token) {
+    throw new Error('Respons verifikasi keamanan server tidak valid.');
+  }
+
   return {
-    question: `${num1} + ${num2} = ?`,
-    token: `${b64}.direct`,
+    question: String(data.question),
+    token: String(data.token),
   };
 }
 
@@ -59,153 +50,83 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-// Uploads evidence securely.
-// Attempts backend proxy first, falling back to direct authorized Supabase storage.
+// Uploads evidence strictly through the protected server endpoint (never direct public Storage).
 export async function uploadReportEvidenceFile(
   blobOrFile: Blob | File,
   originalFileName: string,
   folder: 'initial' | 'followup' = 'initial'
 ): Promise<ReportAttachmentMeta> {
   const mimeType = blobOrFile.type || 'image/jpeg';
+  const fileBase64 = await blobToBase64(blobOrFile);
 
-  try {
-    const fileBase64 = await blobToBase64(blobOrFile);
-    const res = await fetch('/api/reports/upload', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        fileBase64,
-        originalName: originalFileName,
-        mimeType,
-        folder,
-      }),
-    });
+  const res = await fetch('/api/reports/upload', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      fileBase64,
+      originalName: originalFileName,
+      mimeType,
+      folder,
+    }),
+  });
 
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        name: String(data.name || 'Bukti_Anonim.jpg'),
-        sizeFormatted: String(data.sizeFormatted || '-'),
-        storagePath: String(data.storagePath || ''),
-        url: data.url ? String(data.url) : undefined,
-        mimeType: String(data.mimeType || mimeType),
-        uploadedAt: String(data.uploadedAt || new Date().toISOString()),
-      };
-    }
-  } catch {
-    // Fall through to direct Supabase upload
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.storagePath) {
+    throw new Error(
+      String(data?.error || 'Gagal mengunggah berkas bukti ke server aman.')
+    );
   }
-
-  // Direct Supabase storage upload
-  const { storagePath, maskedDisplayName } = generateAnonymousEvidencePath(folder, mimeType);
-  const { error: uploadError } = await supabase.storage
-    .from('report-evidence')
-    .upload(storagePath, blobOrFile, {
-      contentType: mimeType,
-      upsert: false,
-    });
-
-  if (uploadError) {
-    throw new Error(`Gagal mengunggah berkas bukti: ${uploadError.message}`);
-  }
-
-  const { data: pubData } = supabase.storage
-    .from('report-evidence')
-    .getPublicUrl(storagePath);
-
-  const sizeKb = Math.max(1, Math.round(blobOrFile.size / 1024));
 
   return {
-    name: maskedDisplayName,
-    sizeFormatted: `${sizeKb} KB`,
-    url: pubData?.publicUrl || '',
-    storagePath,
-    mimeType,
-    uploadedAt: new Date().toISOString(),
+    name: String(data.name || 'Bukti_Anonim.jpg'),
+    sizeFormatted: String(data.sizeFormatted || '-'),
+    storagePath: String(data.storagePath),
+    mimeType: String(data.mimeType || mimeType),
+    uploadedAt: String(data.uploadedAt || new Date().toISOString()),
   };
 }
 
-// Submits report with automatic proxy-or-direct fallback.
+// Submits report strictly through the encrypted backend endpoint (never plain-text fallback RPC).
 export async function submitPublicReportRpc(
   input: SubmitPublicReportInput
 ): Promise<SubmitPublicReportResult> {
-  try {
-    const res = await fetch('/api/reports/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(input),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        id: String(data.id || ''),
-        ticket_code: String(data.ticket_code || ''),
-        tracking_token: data.tracking_token ? String(data.tracking_token) : undefined,
-        school_name: String(data.school_name || input.schoolName),
-        school_npsn: String(data.school_npsn || input.schoolNpsn),
-        category: String(data.category || input.category),
-        status: (String(data.status || 'QUEUED') as ReportInternalStatus),
-        created_at: String(data.created_at || new Date().toISOString()),
-      };
-    }
-
-    const errData = await res.json().catch(() => ({}));
-    if (res.status === 400 && errData?.error && !errData.error.includes('PGRST202')) {
-      throw new Error(errData.error);
-    }
-  } catch (err) {
-    if (
-      err instanceof Error &&
-      err.message &&
-      !err.message.includes('fetch') &&
-      !err.message.includes('NetworkError') &&
-      !err.message.includes('Failed to fetch') &&
-      !err.message.includes('Layanan database pengaduan') &&
-      !err.message.includes('Sistem gagal')
-    ) {
-      throw err;
-    }
-  }
-
-  // Direct Supabase RPC fallback
-  const { data: rpcData, error: rpcError } = await supabase.rpc('submit_public_report', {
-    p_school_id: input.schoolId,
-    p_school_name: input.schoolName,
-    p_school_npsn: input.schoolNpsn,
-    p_kabupaten: input.kabupaten,
-    p_kecamatan: input.kecamatan,
-    p_category: input.category,
-    p_requester_role: input.requesterRole,
-    p_notes: input.notes,
-    p_attachments: input.attachments,
-    p_ocr_text: input.ocrText || null,
-    p_ocr_bosp_fact: input.ocrBospFact || null,
+  const res = await fetch('/api/reports/submit', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(input),
   });
 
-  if (rpcError) {
-    throw new Error(cleanRpcErrorMessage(rpcError.message));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      String(
+        data?.error ||
+          'Gagal mengirim laporan terenkripsi ke server. Pengiriman dihentikan demi menjaga kerahasiaan data.'
+      )
+    );
   }
 
-  if (!rpcData || typeof rpcData !== 'object') {
-    throw new Error('Sistem gagal menerbitkan tiket laporan. Silakan coba kembali.');
+  if (!data?.ticket_code || !data?.tracking_token) {
+    throw new Error('Sistem gagal menerbitkan tiket laporan terenkripsi. Silakan coba kembali.');
   }
 
-  const res = rpcData as Record<string, unknown>;
   return {
-    id: String(res.id || ''),
-    ticket_code: String(res.ticket_code || ''),
-    school_name: String(res.school_name || input.schoolName),
-    school_npsn: String(res.school_npsn || input.schoolNpsn),
-    category: String(res.category || input.category),
-    status: (String(res.status || 'QUEUED') as ReportInternalStatus),
-    created_at: String(res.created_at || new Date().toISOString()),
+    id: String(data.id || ''),
+    ticket_code: String(data.ticket_code),
+    tracking_token: String(data.tracking_token),
+    school_name: String(data.school_name || input.schoolName),
+    school_npsn: String(data.school_npsn || input.schoolNpsn),
+    category: String(data.category || input.category),
+    status: (String(data.status || 'QUEUED') as ReportInternalStatus),
+    created_at: String(data.created_at || new Date().toISOString()),
   };
 }
 
@@ -292,44 +213,34 @@ export async function fetchPublicReportTrackingRpc(
     }
   }
 
-  try {
-    const res = await fetch('/api/reports/track', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        ticketCode: cleanCode,
-        trackingToken: secretToken,
-      }),
-    });
-
-    if (res.status === 404) {
-      return null;
-    }
-
-    if (res.ok) {
-      const rawPayload = await res.json();
-      return parseTrackingPayload(rawPayload, cleanCode);
-    }
-  } catch {
-    // Direct Supabase fallback
-  }
-
-  const { data, error } = await supabase.rpc('get_public_report_tracking', {
-    p_ticket_code: cleanCode,
+  const res = await fetch('/api/reports/track', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      ticketCode: cleanCode,
+      trackingToken: secretToken,
+    }),
   });
 
-  if (error) {
-    throw new Error(`Gagal memuat status laporan dari server: ${cleanRpcErrorMessage(error.message)}`);
-  }
-
-  if (!data || typeof data !== 'object') {
+  if (res.status === 404) {
     return null;
   }
 
-  return parseTrackingPayload(data, cleanCode);
+  const rawPayload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      String(
+        rawPayload?.error ||
+          'Gagal memuat status laporan terenkripsi dari server.'
+      )
+    );
+  }
+
+  return parseTrackingPayload(rawPayload, cleanCode);
 }
 
 export async function submitReporterAdditionalInfoRpc(
@@ -356,33 +267,28 @@ export async function submitReporterAdditionalInfoRpc(
     }
   }
 
-  try {
-    const res = await fetch('/api/reports/reply', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        ticketCode: cleanCode,
-        trackingToken: secretToken,
-        message,
-        attachments,
-      }),
-    });
-
-    if (res.ok) return;
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('submit_reporter_additional_info', {
-    p_ticket_code: cleanCode,
-    p_message: message,
-    p_attachments: attachments,
+  const res = await fetch('/api/reports/reply', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      ticketCode: cleanCode,
+      trackingToken: secretToken,
+      message,
+      attachments,
+    }),
   });
 
-  if (error) {
-    throw new Error(cleanRpcErrorMessage(error.message));
-  }
+  if (res.ok) return;
+
+  const data = await res.json().catch(() => ({}));
+  throw new Error(
+    String(
+      data?.error ||
+        'Gagal mengirim balasan terenkripsi ke server. Pengiriman dihentikan.'
+    )
+  );
 }

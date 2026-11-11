@@ -76,6 +76,7 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         url !== '/api/reports/submit' &&
         url !== '/api/reports/track' &&
         url !== '/api/reports/reply' &&
+        url !== '/api/reports/officer-evidence-urls' &&
         url !== '/api/scan-vision' &&
         url !== '/api/scanner/vision' &&
         url !== '/api/scan-judge' &&
@@ -140,6 +141,15 @@ function bospChatbotMiddlewarePlugin(): Plugin {
           return;
         }
 
+        if (url === '/api/reports/officer-evidence-urls') {
+          const authHeader = req.headers?.authorization || '';
+          const result = await serverMod.handleGetOfficerEvidenceUrls(body, authHeader, maskedIp);
+          res.statusCode = result.status;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify(result.payload));
+          return;
+        }
+
         if (url === '/api/chat') {
           const result = await serverMod.handleChatRequest(body, maskedIp);
           res.statusCode = result.status;
@@ -164,6 +174,12 @@ function bospChatbotMiddlewarePlugin(): Plugin {
         }
       } catch (err: any) {
         fs.appendFileSync(path.resolve(__dirname, 'server-error.log'), `[${new Date().toISOString()}] ${err?.stack || err}\n`);
+        if (url.startsWith('/api/reports/')) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify({ error: 'Layanan keamanan laporan mengalami kegagalan internal.' }));
+          return;
+        }
         try {
           const serverMod = await getServerModule();
           const fallback = serverMod.handleChatRequest ? await serverMod.handleChatRequest({ message: 'halo' }) : null;

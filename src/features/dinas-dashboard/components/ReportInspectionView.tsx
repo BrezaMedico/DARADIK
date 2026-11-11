@@ -98,11 +98,7 @@ export const ReportInspectionView: React.FC<ReportInspectionViewProps> = ({
               const isPdf =
                 att.mimeType === 'application/pdf' ||
                 att.name.toLowerCase().endsWith('.pdf');
-              const fileUrl =
-                att.url ||
-                (att.storagePath
-                  ? `https://eteimuixvdbcnzokckff.supabase.co/storage/v1/object/public/report-evidence/${att.storagePath}`
-                  : '');
+              const fileUrl = att.url || '';
 
               return (
                 <div
