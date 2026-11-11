@@ -9,7 +9,7 @@
 | Fitur | Deskripsi |
 |---|---|
 | Pencarian & Filter Sekolah | Mencari sekolah berdasarkan nama, NPSN, provinsi, kabupaten/kota, jenjang (SD/SMP/SMA/SMK), dan status (Negeri/Swasta) melalui halaman utama maupun `/search`. |
-| Profil & Anggaran BOSP | Menampilkan ringkasan pagu dana BOSP tahun berjalan, pencairan Tahap 1 dan Tahap 2, serta diagram komposisi persentase belanja sekolah (`/?npsn=<NPSN>`). |
+| Profil & Anggaran BOSP | Menampilkan ringkasan pagu dana BOSP tahun berjalan, pencairan Tahap 1 dan Tahap 2, serta diagram komposisi persentase belanja sekolah. |
 | Pencarian Belanja Semantik | Menelusuri bukti realisasi pengeluaran sekolah dengan pencocokan kata kunci, sinonim, koreksi ejaan, kategori terkait, serta detail nota dan bukti fisik. |
 | Pemindai Pesan | Tersedia di halaman mandiri `/pemindai` (cari sekolah tujuan teratas lalu unggah gambar lewat seret-lepas, `Ctrl+V`, atau cari berkas) maupun di tab Profil Sekolah untuk mengekstrak teks chat/pengumuman via OCR (`Tesseract.js`) + AI dan mengecek indikasi pungli terhadap aturan BOSP. |
 | Kamus Juknis BOSP | Menyediakan referensi resmi ketentuan pembiayaan yang ditanggung dana BOSP dan jenis pungutan yang dilarang sesuai Permendikdasmen No. 8 Tahun 2026 & Permendikbud No. 75 Tahun 2016. |
@@ -68,10 +68,6 @@ Isi konfigurasi sesuai layanan yang digunakan. Variabel penting meliputi:
 - **AI & Backend:** `GEMINI_API_KEY`, `GEMINI_MODEL` (default runtime `gemini-3.5-flash-lite`), `PORT`, `ALLOWED_ORIGINS`
 - **Keamanan Laporan & CAPTCHA:** `REPORT_ENCRYPTION_KEY`, `REPORT_ENCRYPTION_ACTIVE_KEY_ID`, `CAPTCHA_SECRET`
 - **TTS Lokal (Opsional):** `PIPER_BINARY_PATH`, `PIPER_MODEL_PATH`
-
-Detail format nilai tersedia pada `.env.example`.
-
-> **Keamanan:** Jangan pernah mengunggah file `.env` ke GitHub. `SUPABASE_SERVICE_ROLE_KEY`, `REPORT_ENCRYPTION_KEY`, `CAPTCHA_SECRET`, `DATABASE_URL`, dan `GEMINI_API_KEY` hanya boleh disimpan pada environment server (seperti Render/Vercel), bukan di bundle frontend.
 
 ### Menjalankan Mode Development
 
