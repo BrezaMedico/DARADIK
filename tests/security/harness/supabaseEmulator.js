@@ -99,9 +99,14 @@ export async function createEmulator({ stage = 'hardened', jwtSecret } = {}) {
   await db.exec(fs.readFileSync(path.join(__dirname, 'baseline.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(ROOT, 'supabase_reports_migration.sql'), 'utf8'));
   if (stage === 'hardened') {
-    await db.exec(
-      fs.readFileSync(path.join(ROOT, 'supabase', 'migrations', '20261108000000_security_hardening.sql'), 'utf8')
-    );
+    const migrationsDir = path.join(ROOT, 'supabase', 'migrations');
+    const migrationFiles = fs
+      .readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+    for (const file of migrationFiles) {
+      await db.exec(fs.readFileSync(path.join(migrationsDir, file), 'utf8'));
+    }
   }
 
   const objectStore = new Map(); // "bucket/path" -> { bytes, contentType }
@@ -165,6 +170,18 @@ export async function createEmulator({ stage = 'hardened', jwtSecret } = {}) {
         if (!u || u.password !== body.password) return send(res, 400, { error: 'invalid_grant', error_description: 'Invalid login credentials' });
         const access = signJwt({ sub: u.id, role: 'authenticated', email: body.email, exp: Math.floor(Date.now() / 1000) + 3600 }, secret);
         return send(res, 200, { access_token: access, token_type: 'bearer', user: { id: u.id, email: body.email } });
+      }
+
+      if (p === '/auth/v1/user' && req.method === 'GET') {
+        const userClaims = claimsFromHeaders(req);
+        if (!userClaims.sub || userClaims.role !== 'authenticated') {
+          return send(res, 401, { error: 'invalid_token', message: 'Invalid user token' });
+        }
+        return send(res, 200, {
+          id: userClaims.sub,
+          email: userClaims.email || null,
+          role: 'authenticated',
+        });
       }
 
       claims = claimsFromHeaders(req);

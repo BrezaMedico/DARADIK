@@ -366,6 +366,186 @@ async function runFullVerification() {
       assert.strictEqual(detailRes.json.report.ticket_code, createdReport.ticket_code);
     });
 
+    // -------------------------------------------------------------------------
+    // SECTION 8: AUDIT PERBAIKAN 4 MASALAH KEAMANAN KRITIS (CORS, NO-FALLBACK, STORAGE 300S, RLS ROLE)
+    // -------------------------------------------------------------------------
+    await test('Upload bukti tidak mengekspos URL publik dan track menerbitkan signed URL 5 menit (300 detik)', async () => {
+      assert.strictEqual(uploadedEvidence.url, undefined, 'Upload endpoint tidak boleh mengembalikan getPublicUrl');
+      const trackSignLog = emu.requestLog.filter(
+        (entry) => entry.type === 'storage-sign' && entry.bucket === 'report-evidence'
+      );
+      assert(trackSignLog.length >= 1, 'Signed URL harus dibuat saat pelacakan');
+      assert(
+        trackSignLog.every((entry) => entry.expiresIn === 300),
+        `Semua signed URL bukti wajib berumur 300 detik (5 menit), ditemukan: ${JSON.stringify(trackSignLog)}`
+      );
+    });
+
+    await test('Endpoint bukti petugas memverifikasi JWT + role DB (menolak spoofing role frontend) dan pakai TTL 300s', async () => {
+      const noAuth = await api('/api/reports/officer-evidence-urls', {
+        method: 'POST',
+        body: { reportId: createdReport.id, storagePaths: [uploadedEvidence.storagePath], role: 'supervisor' },
+      });
+      assert.strictEqual(noAuth.status, 401);
+
+      const nonOfficerAttempt = await api('/api/reports/officer-evidence-urls', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tokenNonOfficer}` },
+        body: { reportId: createdReport.id, storagePaths: [uploadedEvidence.storagePath], role: 'supervisor' },
+      });
+      assert.strictEqual(nonOfficerAttempt.status, 403, 'Non-petugas walau mengirim role=supervisor di body wajib ditolak 403');
+
+      const authorizedRes = await api('/api/reports/officer-evidence-urls', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tokenOfficer}` },
+        body: {
+          reportId: createdReport.id,
+          storagePaths: [uploadedEvidence.storagePath, 'initial/unauthorized_other.png'],
+        },
+      });
+      assert.strictEqual(authorizedRes.status, 200);
+      assert.strictEqual(authorizedRes.data.expiresIn, 300);
+      assert(authorizedRes.data.signedUrls[uploadedEvidence.storagePath], 'Path milik laporan harus dapat signed URL');
+      assert.strictEqual(
+        authorizedRes.data.signedUrls['initial/unauthorized_other.png'],
+        undefined,
+        'Path yang bukan milik laporan tidak boleh diberi signed URL'
+      );
+    });
+
+    await test('RLS & RPC petugas menolak petugas non-aktif, non-supervisor, dan eskalasi officer_profiles', async () => {
+      const inactiveUser = await emu.createUser('nonaktif@disdik.go.id');
+      await emu.db.query(
+        `INSERT INTO public.officer_profiles (id, email, full_name, jabatan, unit_kerja, role, is_active)
+         VALUES ($1, 'nonaktif@disdik.go.id', 'Ex Petugas', 'Pengawas', 'Disdik', 'officer', FALSE)`,
+        [inactiveUser.id]
+      );
+      const tokenInactive = emu.userJwt(inactiveUser.id);
+      const rpcRes = await emu.rest('POST', '/rest/v1/rpc/officer_get_reports_queue', {
+        key: emu.keys.anon,
+        bearer: tokenInactive,
+      });
+      assert(rpcRes.status === 400 || rpcRes.status === 401 || rpcRes.status === 403, 'Petugas non-aktif harus ditolak');
+
+      const officerRevokeRes = await emu.rest('POST', '/rest/v1/rpc/officer_revoke_report_access_token', {
+        key: emu.keys.anon,
+        bearer: tokenOfficer,
+        body: { p_report_id: createdReport.id },
+      });
+      assert(
+        officerRevokeRes.status === 400 || officerRevokeRes.status === 401 || officerRevokeRes.status === 403,
+        'Petugas role=officer harus ditolak untuk aksi supervisor'
+      );
+
+      const escalateRes = await emu.rest('PATCH', `/rest/v1/officer_profiles?id=eq.${officerUser.id}`, {
+        key: emu.keys.anon,
+        bearer: tokenOfficer,
+        body: { role: 'supervisor' },
+      });
+      assert(escalateRes.status === 401 || escalateRes.status === 403, 'Petugas dilarang memodifikasi role di officer_profiles');
+    });
+
+    await test('CORS menolak origin tidak terdaftar dan memisahkan konfigurasi dev vs production', async () => {
+      const { createExpressApp } = await import('../server/server.js');
+      const prodApp = createExpressApp({
+        corsEnv: {
+          nodeEnv: 'production',
+          rawAllowedOrigins: 'http://localhost:5173,*',
+        },
+      });
+      const prodServer = prodApp.listen(0, '127.0.0.1');
+      await new Promise((r) => prodServer.once('listening', r));
+      const prodPort = prodServer.address().port;
+      try {
+        const allowOfficial = await fetch(`http://127.0.0.1:${prodPort}/api/reports/captcha`, {
+          headers: { Origin: 'https://daradik.vercel.app' },
+        });
+        assert.strictEqual(allowOfficial.headers.get('access-control-allow-origin'), 'https://daradik.vercel.app');
+        assert.strictEqual(allowOfficial.headers.get('access-control-allow-credentials'), 'true');
+
+        const rejectEvil = await fetch(`http://127.0.0.1:${prodPort}/api/reports/captcha`, {
+          headers: { Origin: 'https://evil-attacker.example' },
+        });
+        assert.strictEqual(rejectEvil.status, 403);
+        assert.strictEqual(rejectEvil.headers.get('access-control-allow-origin'), null);
+
+        const rejectWildcardVercel = await fetch(`http://127.0.0.1:${prodPort}/api/reports/captcha`, {
+          headers: { Origin: 'https://fake-daradik.vercel.app' },
+        });
+        assert.strictEqual(rejectWildcardVercel.status, 403);
+
+        const rejectLocalInProd = await fetch(`http://127.0.0.1:${prodPort}/api/reports/captcha`, {
+          headers: { Origin: 'http://localhost:5173' },
+        });
+        assert.strictEqual(rejectLocalInProd.status, 403, 'Origin localhost wajib ditolak di mode production');
+      } finally {
+        prodServer.close();
+      }
+    });
+
+    await test('Tidak ada fallback plaintext RPC jika svc_submit_report/track/reply gagal', async () => {
+      const { handleGetCaptcha, handleSubmitReport, handleTrackReport, handleReplyReport } =
+        await import('../server/reportService.js');
+      const cap = await handleGetCaptcha();
+      const match = cap.payload.question.match(/(\d+)\s*([\+\-\*×])\s*(\d+)/);
+      const a = parseInt(match[1], 10);
+      const op = match[2];
+      const b = parseInt(match[3], 10);
+      const ans = op === '+' ? a + b : op === '-' ? a - b : a * b;
+
+      const calledRpcs = [];
+      const failingClient = {
+        rpc: async (fnName) => {
+          calledRpcs.push(fnName);
+          if (fnName === 'svc_rate_limit') {
+            return { data: { allowed: true, retry_after: 0 }, error: null };
+          }
+          return {
+            data: null,
+            error: { code: 'PGRST202', message: `Could not find function public.${fnName}` },
+          };
+        },
+      };
+
+      const submitAttempt = await handleSubmitReport(
+        {
+          schoolId: 'SMKN1_BDG',
+          schoolName: 'SMK Negeri 1 Bandung',
+          schoolNpsn: '20219876',
+          category: 'seragam',
+          requesterRole: 'Wali Murid',
+          notes: 'Pungutan sensitif tidak boleh dikirim plaintext',
+          captchaAnswer: ans,
+          captchaToken: cap.payload.token,
+        },
+        '127.0.0.1',
+        failingClient
+      );
+      assert.strictEqual(submitAttempt.status, 500);
+
+      const trackAttempt = await handleTrackReport(
+        { ticketCode: createdReport.ticket_code, trackingToken: createdReport.tracking_token },
+        '127.0.0.1',
+        failingClient
+      );
+      assert.strictEqual(trackAttempt.status, 500);
+
+      const replyAttempt = await handleReplyReport(
+        {
+          ticketCode: createdReport.ticket_code,
+          trackingToken: createdReport.tracking_token,
+          message: 'Balasan sensitif wajib terenkripsi',
+        },
+        '127.0.0.1',
+        failingClient
+      );
+      assert.strictEqual(replyAttempt.status, 500);
+
+      assert.strictEqual(calledRpcs.includes('submit_public_report'), false);
+      assert.strictEqual(calledRpcs.includes('get_public_report_tracking'), false);
+      assert.strictEqual(calledRpcs.includes('submit_reporter_additional_info'), false);
+    });
+
     console.log('\n================================================================');
     console.log(`HASIL: ${passedCount}/${totalCount} PENGUJIAN LENGKAP LOLOS (100%)`);
     console.log('STATUS: SEMUA FUNGSIONALITAS BERJALAN LANCAR TANPA MASALAH');

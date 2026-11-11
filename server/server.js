@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ALLOWED_ORIGINS, GEMINI_MODEL, PORT, getAiClient } from './config.js';
+import { GEMINI_MODEL, PORT, getAiClient, resolveAllowedOrigins } from './config.js';
 import {
   anonymizeClientIp,
   cleanBotTextForSpeechDisplay,
@@ -16,6 +16,7 @@ import {
   handleSubmitReport,
   handleTrackReport,
   handleReplyReport,
+  handleGetOfficerEvidenceUrls,
 } from './reportService.js';
 import { handleScanJudge } from './scanJudgeService.js';
 
@@ -65,15 +66,19 @@ export {
   handleSubmitReport,
   handleTrackReport,
   handleReplyReport,
+  handleGetOfficerEvidenceUrls,
   handleScanJudge,
 };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export function createExpressApp() {
+export function createExpressApp(options = {}) {
   const app = express();
   app.disable('x-powered-by');
+  const allowedOrigins = Array.isArray(options.allowedOrigins)
+    ? options.allowedOrigins
+    : resolveAllowedOrigins(options.corsEnv);
 
   app.use((_req, res, next) => {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -98,18 +103,14 @@ export function createExpressApp() {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (
-          ALLOWED_ORIGINS.includes('*') ||
-          ALLOWED_ORIGINS.includes(origin) ||
-          /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ||
-          /^https?:\/\/([a-z0-9-]+\.)*(vercel\.app|onrender\.com)$/i.test(origin)
-        ) {
+        if (!origin || allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
-        return callback(null, true);
+        return callback(new Error('Origin not allowed'));
       },
+      credentials: true,
       methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     })
   );
 
@@ -200,6 +201,16 @@ export function createExpressApp() {
     res.status(result.status).json(result.payload);
   });
 
+  app.post('/api/reports/officer-evidence-urls', async (req, res) => {
+    const maskedIp = getMaskedIp(req);
+    const result = await handleGetOfficerEvidenceUrls(
+      req.body,
+      req.headers.authorization,
+      maskedIp
+    );
+    res.status(result.status).json(result.payload);
+  });
+
   // Sajikan berkas statis produksi frontend (Single Page Application fallback)
   const distPath = path.resolve(__dirname, '..', 'dist');
   app.use(express.static(distPath));
@@ -212,6 +223,13 @@ export function createExpressApp() {
     res.sendFile(indexPath, (err) => {
       if (err) next();
     });
+  });
+
+  app.use((err, _req, res, next) => {
+    if (err && err.message === 'Origin not allowed') {
+      return res.status(403).json({ error: 'Origin not allowed' });
+    }
+    return next(err);
   });
 
   return app;

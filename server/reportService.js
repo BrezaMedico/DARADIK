@@ -18,7 +18,55 @@ import {
   detectFileMimeAndValidate,
 } from './reportCrypto.js';
 
+export const EVIDENCE_SIGNED_URL_TTL_SECONDS = 300; // 5 menit
+
 let defaultSupabaseClient = null;
+
+function sanitizeAttachmentMetadata(att) {
+  return {
+    name: String(att?.name || 'Berkas Lampiran').slice(0, 120),
+    sizeFormatted: String(att?.sizeFormatted || '-').slice(0, 20),
+    storagePath: String(att?.storagePath || '')
+      .replace(/\.\./g, '')
+      .replace(/^\/+/, '')
+      .slice(0, 260),
+    mimeType: String(att?.mimeType || '').slice(0, 60),
+    uploadedAt: String(att?.uploadedAt || new Date().toISOString()).slice(0, 40),
+  };
+}
+
+async function signAuthorizedReportAttachments({ supabase, ticketCode, tokenHashHex, attachments }) {
+  if (!Array.isArray(attachments)) return attachments;
+  return Promise.all(
+    attachments.map(async (att) => {
+      if (!att || typeof att !== 'object') return att;
+      const { url: _ignoredUrl, ...safeAtt } = att;
+      const storagePath = String(safeAtt.storagePath || '').trim();
+      if (!storagePath || storagePath.includes('..') || storagePath.startsWith('/')) {
+        return safeAtt;
+      }
+      try {
+        const { data: authorized, error: authError } = await supabase.rpc(
+          'svc_authorize_report_evidence',
+          {
+            p_ticket_code: ticketCode,
+            p_token_hash: tokenHashHex,
+            p_storage_path: storagePath,
+          }
+        );
+        if (authError || authorized !== true) {
+          return safeAtt;
+        }
+        const { data: signed } = await supabase.storage
+          .from('report-evidence')
+          .createSignedUrl(storagePath, EVIDENCE_SIGNED_URL_TTL_SECONDS);
+        return signed?.signedUrl ? { ...safeAtt, url: signed.signedUrl } : safeAtt;
+      } catch {
+        return safeAtt;
+      }
+    })
+  );
+}
 
 export function getServiceSupabaseClient(overrideClient = null) {
   if (overrideClient) return overrideClient;
@@ -174,7 +222,6 @@ export async function handleUploadEvidence(body, maskedIp, customClient = null) 
   }
 
   const sizeKb = Math.max(1, Math.round(buffer.length / 1024));
-  const { data: pubData } = supabase.storage.from('report-evidence').getPublicUrl(storagePath);
 
   return {
     status: 200,
@@ -182,7 +229,6 @@ export async function handleUploadEvidence(body, maskedIp, customClient = null) 
       name: maskedDisplayName,
       sizeFormatted: `${sizeKb} KB`,
       storagePath,
-      url: pubData?.publicUrl || '',
       mimeType: detectedMime,
       uploadedAt: new Date().toISOString(),
     },
@@ -284,19 +330,21 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
   const tokenHash = hashTrackingToken(trackingSecret);
   const tokenHashHex = `\\x${tokenHash.toString('hex')}`;
 
-  // 7. Bersihkan lampiran: pastikan metadata aman dan URL disimpan ke database
+  // 7. Bersihkan metadata lampiran (tanpa menyimpan URL publik)
   const cleanAttachments = Array.isArray(attachments)
-    ? attachments.map((att) => ({
-        name: String(att.name || 'Berkas Lampiran').slice(0, 120),
-        sizeFormatted: String(att.sizeFormatted || '-').slice(0, 20),
-        storagePath: String(att.storagePath || ''),
-        url: String(att.url || ''),
-        mimeType: String(att.mimeType || '').slice(0, 60),
-        uploadedAt: String(att.uploadedAt || new Date().toISOString()).slice(0, 40),
-      }))
+    ? attachments.slice(0, 5).map(sanitizeAttachmentMetadata)
     : [];
 
-  let { data, error } = await supabase.rpc('svc_submit_report', {
+  if (!notesEncrypted || !notesEncrypted.startsWith('dv1.')) {
+    return {
+      status: 500,
+      payload: {
+        error: 'Enkripsi laporan gagal dijalankan. Pengiriman dihentikan demi keamanan data.',
+      },
+    };
+  }
+
+  const { data, error } = await supabase.rpc('svc_submit_report', {
     p_id: reportId,
     p_token_hash: tokenHashHex,
     p_school_id: String(schoolId || cleanNpsn).trim(),
@@ -313,31 +361,18 @@ export async function handleSubmitReport(body, maskedIp, customClient = null) {
     p_encryption_algorithm: 'AES-256-GCM/dv1',
   });
 
-  // Fallback jika database Supabase target masih berjalan pada migrasi sebelumnya
-  if (error && (error.code === 'PGRST202' || error.message?.includes('PGRST202') || error.code === '42883')) {
-    const legacy = await supabase.rpc('submit_public_report', {
-      p_school_id: String(schoolId || cleanNpsn).trim(),
-      p_school_name: cleanSchoolName,
-      p_school_npsn: cleanNpsn,
-      p_kabupaten: String(kabupaten || 'Data belum tersedia').trim(),
-      p_kecamatan: String(kecamatan || 'Data belum tersedia').trim(),
-      p_category: cleanCategory,
-      p_requester_role: cleanRole,
-      p_notes: cleanNotes,
-      p_attachments: cleanAttachments,
-      p_ocr_text: ocrText || null,
-      p_ocr_bosp_fact: ocrBospFact || null,
-    });
-    if (!legacy.error && legacy.data) {
-      data = legacy.data;
-      error = null;
-    }
-  }
-
-  if (error) {
+  if (error || !data) {
+    const isMissingRpc =
+      error?.code === 'PGRST202' ||
+      error?.code === '42883' ||
+      Boolean(error?.message?.includes('PGRST202'));
     return {
-      status: 400,
-      payload: { error: `Gagal menyimpan laporan ke basis data: ${error.message}` },
+      status: isMissingRpc ? 500 : 400,
+      payload: {
+        error: isMissingRpc
+          ? 'Layanan pengiriman terenkripsi tidak tersedia di basis data. Pengiriman dibatalkan.'
+          : `Gagal menyimpan laporan terenkripsi ke basis data: ${error?.message || 'Respons kosong'}`,
+      },
     };
   }
 
@@ -408,24 +443,18 @@ export async function handleTrackReport(body, maskedIp, customClient = null) {
   const tokenHash = hashTrackingToken(cleanToken);
   const tokenHashHex = `\\x${tokenHash.toString('hex')}`;
 
-  let { data, error } = await supabase.rpc('svc_get_report_tracking', {
+  const { data, error } = await supabase.rpc('svc_get_report_tracking', {
     p_ticket_code: cleanCode,
     p_token_hash: tokenHashHex,
   });
 
-  if (error && (error.code === 'PGRST202' || error.message?.includes('PGRST202') || error.code === '42883')) {
-    const legacy = await supabase.rpc('get_public_report_tracking', {
-      p_ticket_code: cleanCode,
-    });
-    if (!legacy.error && legacy.data) {
-      data = legacy.data;
-      error = null;
-    }
-  }
-
   if (error) {
+    const isMissingRpc =
+      error.code === 'PGRST202' ||
+      error.code === '42883' ||
+      Boolean(error.message?.includes('PGRST202'));
     return {
-      status: 400,
+      status: isMissingRpc ? 500 : 400,
       payload: { error: `Gagal memverifikasi status laporan: ${error.message}` },
     };
   }
@@ -452,25 +481,17 @@ export async function handleTrackReport(body, maskedIp, customClient = null) {
   delete report.notes_encrypted;
   report.notes = decryptedNotes;
 
-  // Siapkan signed URL untuk berkas lampiran laporan
+  // Siapkan signed URL 5 menit setelah verifikasi otorisasi path milik laporan ini
   if (Array.isArray(report.attachments_json)) {
-    const signedList = await Promise.all(
-      report.attachments_json.map(async (att) => {
-        if (!att.storagePath) return att;
-        try {
-          const { data: signed } = await supabase.storage
-            .from('report-evidence')
-            .createSignedUrl(att.storagePath, 600); // 10 menit
-          return { ...att, url: signed?.signedUrl || '' };
-        } catch {
-          return att;
-        }
-      })
-    );
-    report.attachments_json = signedList;
+    report.attachments_json = await signAuthorizedReportAttachments({
+      supabase,
+      ticketCode: cleanCode,
+      tokenHashHex,
+      attachments: report.attachments_json,
+    });
   }
 
-  // Siapkan pesan dan signed URL untuk lampiran pesan
+  // Siapkan pesan dan signed URL 5 menit untuk lampiran pesan terotorisasi
   const rawMessages = Array.isArray(data.messages) ? data.messages : [];
   const processedMessages = await Promise.all(
     rawMessages.map(async (m) => {
@@ -483,22 +504,12 @@ export async function handleTrackReport(body, maskedIp, customClient = null) {
         }
       }
 
-      let atts = m.attachments_json;
-      if (Array.isArray(atts)) {
-        atts = await Promise.all(
-          atts.map(async (a) => {
-            if (!a.storagePath) return a;
-            try {
-              const { data: s } = await supabase.storage
-                .from('report-evidence')
-                .createSignedUrl(a.storagePath, 600);
-              return { ...a, url: s?.signedUrl || '' };
-            } catch {
-              return a;
-            }
-          })
-        );
-      }
+      const atts = await signAuthorizedReportAttachments({
+        supabase,
+        ticketCode: cleanCode,
+        tokenHashHex,
+        attachments: m.attachments_json,
+      });
 
       return {
         ...m,
@@ -565,38 +576,31 @@ export async function handleReplyReport(body, maskedIp, customClient = null) {
   const tokenHashHex = `\\x${tokenHash.toString('hex')}`;
   const encryptedMessage = encryptReportText(cleanMessage || '(Lampiran dikirimkan)');
 
+  if (!encryptedMessage || !encryptedMessage.startsWith('dv1.')) {
+    return {
+      status: 500,
+      payload: { error: 'Enkripsi balasan gagal dijalankan. Pengiriman dihentikan.' },
+    };
+  }
+
   const cleanAttachments = Array.isArray(attachments)
-    ? attachments.map((att) => ({
-        name: String(att.name || 'Berkas Lampiran').slice(0, 120),
-        sizeFormatted: String(att.sizeFormatted || '-').slice(0, 20),
-        storagePath: String(att.storagePath || ''),
-        mimeType: String(att.mimeType || '').slice(0, 60),
-        uploadedAt: String(att.uploadedAt || new Date().toISOString()).slice(0, 40),
-      }))
+    ? attachments.slice(0, 3).map(sanitizeAttachmentMetadata)
     : [];
 
-  let { data, error } = await supabase.rpc('svc_add_reporter_message', {
+  const { data, error } = await supabase.rpc('svc_add_reporter_message', {
     p_ticket_code: cleanCode,
     p_token_hash: tokenHashHex,
     p_message_encrypted: encryptedMessage,
     p_attachments: cleanAttachments,
   });
 
-  if (error && (error.code === 'PGRST202' || error.message?.includes('PGRST202') || error.code === '42883')) {
-    const legacy = await supabase.rpc('submit_reporter_additional_info', {
-      p_ticket_code: cleanCode,
-      p_message: cleanMessage || '(Lampiran dikirimkan)',
-      p_attachments: cleanAttachments,
-    });
-    if (!legacy.error) {
-      data = { updated_at: new Date().toISOString() };
-      error = null;
-    }
-  }
-
   if (error) {
+    const isMissingRpc =
+      error.code === 'PGRST202' ||
+      error.code === '42883' ||
+      Boolean(error.message?.includes('PGRST202'));
     return {
-      status: 400,
+      status: isMissingRpc ? 500 : 400,
       payload: { error: `Gagal mengirim balasan: ${error.message}` },
     };
   }
@@ -604,6 +608,118 @@ export async function handleReplyReport(body, maskedIp, customClient = null) {
   return {
     status: 200,
     payload: { success: true, updated_at: data?.updated_at || new Date().toISOString() },
+  };
+}
+
+/**
+ * Handler penerbitan Signed URL singkat (5 menit) khusus Petugas Dinas Pendidikan terautentikasi.
+ * Identitas dan role diverifikasi ulang dari JWT Supabase + tabel officer_profiles (tidak pernah percaya role frontend).
+ */
+export async function handleGetOfficerEvidenceUrls(
+  body,
+  authHeader,
+  maskedIp = 'anonymous',
+  supabaseClient = null
+) {
+  let supabase;
+  try {
+    supabase = getServiceSupabaseClient(supabaseClient);
+  } catch (err) {
+    return { status: 503, payload: { error: err.message } };
+  }
+
+  const rawAuth = String(authHeader || '').trim();
+  const bearerMatch = rawAuth.match(/^Bearer\s+(.+)$/i);
+  const accessToken = bearerMatch ? bearerMatch[1].trim() : '';
+  if (!accessToken) {
+    return {
+      status: 401,
+      payload: { error: 'UNAUTHORIZED: Token sesi petugas tidak ditemukan.' },
+    };
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+  if (userError || !userData?.user?.id) {
+    return {
+      status: 401,
+      payload: { error: 'UNAUTHORIZED: Sesi petugas tidak valid atau telah kedaluwarsa.' },
+    };
+  }
+
+  const officerUid = userData.user.id;
+  const { data: officerProfile, error: profileError } = await supabase
+    .from('officer_profiles')
+    .select('id, role, is_active')
+    .eq('id', officerUid)
+    .maybeSingle();
+
+  const isAuthorizedRole =
+    officerProfile?.is_active === true &&
+    (officerProfile.role === 'officer' || officerProfile.role === 'supervisor');
+
+  if (profileError || !isAuthorizedRole) {
+    return {
+      status: 403,
+      payload: {
+        error: 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan aktif berwenang yang dapat mengakses bukti.',
+      },
+    };
+  }
+
+  const rl = await enforceRateLimit(supabase, 'officer_evidence', `${officerUid}:${maskedIp}`, 120, 60);
+  if (!rl.allowed) {
+    return {
+      status: 429,
+      payload: { error: `Batas permintaan akses bukti tercapai. Coba lagi dalam ${rl.retry_after} detik.` },
+    };
+  }
+
+  const reportId = String(body?.reportId || '').trim();
+  const rawPaths = Array.isArray(body?.storagePaths) ? body.storagePaths : [];
+  if (!reportId || rawPaths.length === 0) {
+    return { status: 200, payload: { signedUrls: {}, expiresIn: EVIDENCE_SIGNED_URL_TTL_SECONDS } };
+  }
+
+  const uniquePaths = Array.from(
+    new Set(
+      rawPaths
+        .map((p) => String(p || '').trim())
+        .filter((p) => p && p.length <= 260 && !p.includes('..') && !p.startsWith('/'))
+    )
+  ).slice(0, 25);
+
+  const signedUrls = {};
+  await Promise.all(
+    uniquePaths.map(async (storagePath) => {
+      try {
+        const { data: authorized, error: authErr } = await supabase.rpc(
+          'svc_authorize_officer_evidence',
+          {
+            p_officer_uid: officerUid,
+            p_report_id: reportId,
+            p_storage_path: storagePath,
+          }
+        );
+        if (authErr || authorized !== true) return;
+
+        const { data: signed } = await supabase.storage
+          .from('report-evidence')
+          .createSignedUrl(storagePath, EVIDENCE_SIGNED_URL_TTL_SECONDS);
+        if (signed?.signedUrl) {
+          signedUrls[storagePath] = signed.signedUrl;
+        }
+      } catch {
+        // Otorisasi atau signing gagal -> path tidak diterbitkan URL
+      }
+    })
+  );
+
+  return {
+    status: 200,
+    payload: {
+      signedUrls,
+      expiresIn: EVIDENCE_SIGNED_URL_TTL_SECONDS,
+    },
   };
 }
 

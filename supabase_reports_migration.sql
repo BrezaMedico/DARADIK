@@ -441,30 +441,24 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 VALUES (
   'report-evidence',
   'report-evidence',
-  TRUE,
+  FALSE,
   5242880,
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 )
 ON CONFLICT (id) DO UPDATE
 SET
-  public = EXCLUDED.public,
+  public = FALSE,
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 DROP POLICY IF EXISTS "Public Read Report Evidence" ON storage.objects;
-CREATE POLICY "Public Read Report Evidence"
-ON storage.objects FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'report-evidence');
-
 DROP POLICY IF EXISTS "Anon Upload Report Evidence" ON storage.objects;
-CREATE POLICY "Anon Upload Report Evidence"
-ON storage.objects FOR INSERT
+DROP POLICY IF EXISTS "Deny All Public And Client Storage Access On report-evidence" ON storage.objects;
+CREATE POLICY "Deny All Public And Client Storage Access On report-evidence"
+ON storage.objects AS RESTRICTIVE FOR ALL
 TO anon, authenticated
-WITH CHECK (
-  bucket_id = 'report-evidence'
-  AND (storage.foldername(name))[1] IN ('initial', 'followup')
-);
+USING (bucket_id <> 'report-evidence')
+WITH CHECK (bucket_id <> 'report-evidence');
 
 -- -----------------------------------------------------------------------------
 -- 6. ROW LEVEL SECURITY (RLS) KETAT PADA TABEL LAPORAN
@@ -917,7 +911,9 @@ BEGIN
   SELECT *
   INTO v_officer
   FROM public.officer_profiles
-  WHERE id = auth.uid() AND is_active = TRUE;
+  WHERE id = auth.uid()
+    AND is_active = TRUE
+    AND role IN ('officer', 'supervisor');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'UNAUTHORIZED: Hanya petugas Dinas Pendidikan yang berwenang memeriksa detail laporan.';
@@ -1024,7 +1020,9 @@ BEGIN
   SELECT *
   INTO v_officer
   FROM public.officer_profiles
-  WHERE id = auth.uid() AND is_active = TRUE;
+  WHERE id = auth.uid()
+    AND is_active = TRUE
+    AND role IN ('officer', 'supervisor');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'UNAUTHORIZED: Anda tidak memiliki hak akses petugas untuk mengubah status laporan.';
@@ -1357,7 +1355,9 @@ BEGIN
   SELECT *
   INTO v_officer
   FROM public.officer_profiles
-  WHERE id = auth.uid() AND is_active = TRUE;
+  WHERE id = auth.uid()
+    AND is_active = TRUE
+    AND role IN ('officer', 'supervisor');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'UNAUTHORIZED: Hanya petugas resmi yang dapat menambahkan catatan internal.';
