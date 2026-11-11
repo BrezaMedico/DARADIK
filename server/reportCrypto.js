@@ -175,7 +175,7 @@ export function generateCaptchaChallenge() {
 
   const question = `${num1} ${op} ${num2} = ?`;
   const nonce = crypto.randomBytes(12).toString('hex');
-  const exp = Date.now() + 5 * 60 * 1000; // 5 menit
+  const exp = Date.now() + 10 * 60 * 1000; // 10 menit (selaras dengan batas 9 menit di UI)
 
   const payload = JSON.stringify({ a: answer, exp, n: nonce });
   const payloadB64u = Buffer.from(payload, 'utf8').toString('base64url');

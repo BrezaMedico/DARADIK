@@ -478,6 +478,40 @@ async function runFullVerification() {
           headers: { Origin: 'http://localhost:5173' },
         });
         assert.strictEqual(rejectLocalInProd.status, 403, 'Origin localhost wajib ditolak di mode production');
+
+        const { default: http } = await import('node:http');
+        const sameOriginStatus = await new Promise((resolve, reject) => {
+          const r = http.request(
+            {
+              host: '127.0.0.1',
+              port: prodPort,
+              path: '/api/reports/captcha',
+              method: 'GET',
+              headers: {
+                Host: 'daradik-preview-custom.vercel.app',
+                Origin: 'https://daradik-preview-custom.vercel.app',
+              },
+            },
+            (res) => {
+              res.resume();
+              resolve({
+                status: res.statusCode,
+                acao: res.headers['access-control-allow-origin'],
+                acac: res.headers['access-control-allow-credentials'],
+              });
+            }
+          );
+          r.on('error', reject);
+          r.end();
+        });
+        assert.strictEqual(sameOriginStatus.status, 200, 'Same-origin deployment HTTPS harus diizinkan');
+        assert.strictEqual(sameOriginStatus.acao, 'https://daradik-preview-custom.vercel.app');
+        assert.strictEqual(sameOriginStatus.acac, 'true');
+
+        const rejectNullOrigin = await fetch(`http://127.0.0.1:${prodPort}/api/reports/captcha`, {
+          headers: { Origin: 'null' },
+        });
+        assert.strictEqual(rejectNullOrigin.status, 403, 'Origin literal null wajib ditolak');
       } finally {
         prodServer.close();
       }
@@ -652,13 +686,17 @@ async function runFullVerification() {
     });
 
     console.log('\n================================================================');
-    console.log(`HASIL: ${passedCount}/${totalCount} PENGUJIAN LENGKAP LOLOS (100%)`);
-    console.log('STATUS: SEMUA FUNGSIONALITAS BERJALAN LANCAR TANPA MASALAH');
+    console.log(`HASIL: ${passedCount}/${totalCount} PENGUJIAN LENGKAP LOLOS`);
+    console.log(
+      passedCount === totalCount
+        ? 'STATUS: SEMUA FUNGSIONALITAS BERJALAN LANCAR TANPA MASALAH'
+        : 'STATUS: ADA PENGUJIAN YANG GAGAL'
+    );
     console.log('================================================================');
   } finally {
     server.close();
     await emu.close();
-    process.exit(0);
+    process.exit(passedCount === totalCount && totalCount > 0 ? 0 : 1);
   }
 }
 

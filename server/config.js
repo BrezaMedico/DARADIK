@@ -65,6 +65,8 @@ export function resolveAllowedOrigins({
   rawAllowedOrigins = process.env.ALLOWED_ORIGINS,
   renderExternalUrl = process.env.RENDER_EXTERNAL_URL,
   vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  vercelBranchUrl = process.env.VERCEL_BRANCH_URL,
+  vercelUrl = process.env.VERCEL_URL,
 } = {}) {
   const isProduction =
     String(nodeEnv || '').toLowerCase() === 'production' ||
@@ -82,6 +84,8 @@ export function resolveAllowedOrigins({
     ...String(rawAllowedOrigins || '').split(','),
     renderExternalUrl || '',
     vercelProductionUrl ? `https://${vercelProductionUrl}` : '',
+    vercelBranchUrl ? `https://${vercelBranchUrl}` : '',
+    vercelUrl ? `https://${vercelUrl}` : '',
   ];
 
   for (const candidate of extraCandidates) {

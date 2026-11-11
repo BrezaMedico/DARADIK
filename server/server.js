@@ -78,9 +78,16 @@ const __dirname = path.dirname(__filename);
 export function createExpressApp(options = {}) {
   const app = express();
   app.disable('x-powered-by');
+  const corsEnv = options.corsEnv || {};
+  const isProduction =
+    String(corsEnv.nodeEnv ?? process.env.NODE_ENV ?? '').toLowerCase() === 'production' ||
+    String(corsEnv.vercelEnv ?? process.env.VERCEL_ENV ?? '').toLowerCase() === 'production';
   const allowedOrigins = Array.isArray(options.allowedOrigins)
     ? options.allowedOrigins
-    : resolveAllowedOrigins(options.corsEnv);
+    : resolveAllowedOrigins(corsEnv);
+  const isTrustedProxy = Boolean(
+    process.env.VERCEL || process.env.RENDER || process.env.TRUST_PROXY === '1'
+  );
 
   app.use((_req, res, next) => {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -102,17 +109,81 @@ export function createExpressApp(options = {}) {
     next();
   });
 
+  const isOriginAllowed = (origin, req) => {
+    if (!origin) return true;
+    let parsedOrigin;
+    try {
+      parsedOrigin = new URL(String(origin).trim());
+    } catch {
+      return false;
+    }
+    if (parsedOrigin.protocol !== 'http:' && parsedOrigin.protocol !== 'https:') {
+      return false;
+    }
+
+    const normalizedOrigin = parsedOrigin.origin;
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return true;
+    }
+
+    // Mode development mengizinkan port localhost/loopback lokal apa pun (Vite auto-port, preview, dll.)
+    if (
+      !isProduction &&
+      parsedOrigin.protocol === 'http:' &&
+      (parsedOrigin.hostname === 'localhost' ||
+        parsedOrigin.hostname === '127.0.0.1' ||
+        parsedOrigin.hostname === '[::1]')
+    ) {
+      return true;
+    }
+
+    // Permintaan same-origin sah (misalnya frontend & /api berjalan pada domain deployment Vercel/Render yang sama)
+    const rawHostHeader = isTrustedProxy
+      ? req.headers['x-forwarded-host'] || req.headers.host || ''
+      : req.headers.host || '';
+    const serverHost = String(rawHostHeader).split(',')[0].trim().toLowerCase();
+    if (!serverHost) {
+      return false;
+    }
+
+    const isLoopbackHost =
+      parsedOrigin.hostname === 'localhost' ||
+      parsedOrigin.hostname === '127.0.0.1' ||
+      parsedOrigin.hostname === '[::1]';
+
+    const rawProto = isTrustedProxy
+      ? String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim().toLowerCase()
+      : req.socket?.encrypted
+        ? 'https'
+        : isProduction && !isLoopbackHost
+          ? 'https'
+          : 'http';
+
+    let normalizedServerHost = serverHost;
+    try {
+      normalizedServerHost = new URL(`${rawProto}://${serverHost}`).host.toLowerCase();
+    } catch {
+      return false;
+    }
+
+    return (
+      parsedOrigin.host.toLowerCase() === normalizedServerHost &&
+      parsedOrigin.protocol === `${rawProto}:`
+    );
+  };
+
   app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
+    cors((req, callback) => {
+      const origin = req.headers.origin;
+      if (!isOriginAllowed(origin, req)) {
         return callback(new Error('Origin not allowed'));
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      }
+      return callback(null, {
+        origin: origin ? true : false,
+        credentials: true,
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      });
     })
   );
 

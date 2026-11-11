@@ -287,7 +287,9 @@ export function renderMathCaptchaToCanvas(canvas: HTMLCanvasElement, text: strin
 // Re-encodes images on a canvas to strip EXIF and GPS metadata before upload.
 export function compressImageFile(file: File): Promise<UploadedFileItem> {
   return new Promise((resolve) => {
-    if (!file.type.startsWith('image/')) {
+    const looksLikeImage =
+      file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name);
+    if (!looksLikeImage) {
       const sizeKb = Math.max(1, Math.round(file.size / 1024));
       resolve({
         id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
